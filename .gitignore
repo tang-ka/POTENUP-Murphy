@@ -73,3 +73,9 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# JetBrains IDE (Rider)
+.idea/
+
+# Rider
+*.DotSettings.user

@@ -6,24 +6,27 @@
 #include "GameFramework/Actor.h"
 #include "VoiceChatActor.generated.h"
 
+class UVoiceRecorderComponent;
+
 UCLASS()
-class MURPHY_API AVoiceChatActor : public AActor
+class MURPHY_API AVoiceChatActor : public APawn
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AVoiceChatActor();
-
-protected:
-	// Called when the game starts or when spawned
+	
 	virtual void BeginPlay() override;
 
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+protected:
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+private:
+	void OnPressRecord();
+	void OnPressStop();
+	void OnPressPlay();
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VoiceChat")
-	class UVoiceRecorderComponent* VoiceRecorderComp;
+	TObjectPtr<UVoiceRecorderComponent> VoiceRecorderComp;
 };

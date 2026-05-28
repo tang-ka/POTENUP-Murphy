@@ -16,6 +16,9 @@ class MURPHY_API UVoiceRecorderComponent : public UActorComponent
 
 public:
 	UVoiceRecorderComponent();
+
+	UFUNCTION(BlueprintCallable, Category = "VoiceRecorder")
+	void PlayRecordedSamples();
 	
 	UFUNCTION(BlueprintCallable, Category = "VoiceRecorder")
 	void StartRecording();

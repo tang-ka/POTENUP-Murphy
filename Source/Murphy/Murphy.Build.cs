@@ -15,7 +15,10 @@ public class Murphy : ModuleRules
 			"Engine", 
 			"InputCore",
 			"EnhancedInput",
-			"DeveloperSettings"
+			"DeveloperSettings",
+			"AudioCapture",
+			"AudioMixer",
+			"SignalProcessing",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

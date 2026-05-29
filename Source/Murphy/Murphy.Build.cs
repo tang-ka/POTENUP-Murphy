@@ -20,6 +20,9 @@ public class Murphy : ModuleRules
 			"AudioCaptureCore",
 			"AudioMixer",
 			"SignalProcessing",
+			"HTTP",
+			"Json",
+			"JsonUtilities",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "AudioCapture", "AudioCapture" });

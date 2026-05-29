@@ -16,7 +16,7 @@ AVoiceChatActor::AVoiceChatActor()
 	
 	VoiceRecorderComp = CreateDefaultSubobject<UVoiceRecorderComponent>(TEXT("VoiceRecorderComp"));
 	
-	AutoReceiveInput = EAutoReceiveInput::Player0;
+	//! AutoReceiveInput = EAutoReceiveInput::Player0;
 }
 
 void AVoiceChatActor::BeginPlay()

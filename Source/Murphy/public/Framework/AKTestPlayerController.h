@@ -26,7 +26,8 @@ private:
 	void OnAudioRecordingFinished(const FString& SavedFilePath);
 	
 	// HTTP 통신 함수
-	void SendVoiceFileToServer(const FString& FilePath);
+	void SendVoiceFileToServer(const FString& FilePath);		// wav 파일 그대로 통신
+	void SendVoiceDataAsJsonBase64(const FString& FilePath);	// Base64로 인코딩 후 통신
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 
 private:

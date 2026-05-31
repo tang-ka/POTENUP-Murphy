@@ -138,8 +138,7 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 	USoundWaveProcedural* SoundWave = NewObject<USoundWaveProcedural>(this);
 	SoundWave->SetSampleRate(SampleRate);
 	SoundWave->NumChannels  = NumChannels;
-	SoundWave->Duration     = static_cast<float>(PCMDataSize) /
-							  (SampleRate * NumChannels * (BitsPerSample / 8));
+	SoundWave->Duration     = static_cast<float>(PCMDataSize) / (SampleRate * NumChannels * (BitsPerSample / 8));
 	SoundWave->SoundGroup   = SOUNDGROUP_Voice; // 보이스 그룹으로 설정
 	SoundWave->bLooping     = false;
 	

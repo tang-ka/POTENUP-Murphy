@@ -9,6 +9,7 @@
 #include "Json.h"
 #include "Murphy.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Base64.h"
 
 void AAKTestPlayerController::BeginPlay()
 {
@@ -17,7 +18,6 @@ void AAKTestPlayerController::BeginPlay()
 	// 빙의된 Pawn에서 VoiceRecorderComponent를 찾아 델리게이트 등록....
 	if (AVoiceChatActor* VoicePawn = Cast<AVoiceChatActor>(GetPawn()))
 	{	
-		// todo: [탕카] GetVoiceRecorderComp() 같은 getter 함수 추가
 		if (IsValid(VoicePawn->GetVoiceRecorderComp()))
 		{
 			VoicePawn->GetVoiceRecorderComp()->OnRecordingFinished.AddDynamic(this, &AAKTestPlayerController::OnAudioRecordingFinished);
@@ -34,8 +34,9 @@ void AAKTestPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 void AAKTestPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
 {
     if (!IsValid(TargetNPC)) return;
-	
-	SendVoiceFileToServer(SavedFilePath);
+		
+	SendVoiceFileToServer(SavedFilePath);  // multipart 방식 (wav 파일 그대로 넘기기)
+	// SendVoiceDataAsJsonBase64(SavedFilePath); // Base64 json 방식 (Base64로 인코딩 후 넘기기)
 }
 
 void AAKTestPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
@@ -75,7 +76,7 @@ void AAKTestPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
     AppendStr(FString::Printf(TEXT("\r\n--%s--\r\n"), *Boundary));
 	
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-    Request->SetURL(TEXT("http://127.0.0.1:8000/api/chat"));
+    Request->SetURL(TEXT("http://127.0.0.1:8001/api/chat"));
     Request->SetVerb(TEXT("POST"));
     Request->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
     Request->SetContent(Payload);
@@ -83,11 +84,47 @@ void AAKTestPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
     Request->ProcessRequest();
 }
 
+void AAKTestPlayerController::SendVoiceDataAsJsonBase64(const FString& WAVFilePath)
+{
+	TArray<uint8> RawAudioData;
+	if (!FFileHelper::LoadFileToArray(RawAudioData, *WAVFilePath))
+	{
+		PRINTLOGE_JW(TEXT("WAV 파일 로드 실패: %s"), *WAVFilePath);
+		return;
+	}
+	
+	// JSON 메타데이터 구성
+	TSharedPtr<FJsonObject> JsonObj = MakeShareable(new FJsonObject());
+	JsonObj->SetStringField(TEXT("session_id"), TEXT("sess_12345"));
+	JsonObj->SetStringField(TEXT("user_id"), TEXT("player_01"));
+	JsonObj->SetStringField(TEXT("user_tier"), TEXT("Bronze"));
+	JsonObj->SetStringField(TEXT("current_scene"), TEXT("immigration"));
+	JsonObj->SetStringField(TEXT("npc_current_emotion"), TEXT("Neutral"));
+	JsonObj->SetBoolField(TEXT("is_timeout"), false);
+	JsonObj->SetNumberField(TEXT("response_time_sec"), 10.0f);
+	
+	// WAV 바이너리를 Base64 문자열로 인코딩하여 JSON에 추가
+	FString AudioBase64 = FBase64::Encode(RawAudioData);
+	JsonObj->SetStringField(TEXT("user_audio_base64"), AudioBase64);
+	
+	FString JsonString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+	FJsonSerializer::Serialize(JsonObj.ToSharedRef(), Writer);
+    
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(TEXT("http://127.0.0.1:8000/api/chat"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetContentAsString(JsonString);
+	Request->OnProcessRequestComplete().BindUObject(this, &AAKTestPlayerController::OnResponseReceived);
+	Request->ProcessRequest();
+}
+
 void AAKTestPlayerController::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
 	if (!bWasSuccessful || !Response.IsValid() || Response->GetResponseCode() != 200)
 	{
-		PRINTLOG_JW(TEXT("서버 응답 오류 - 코드: %d"), Response.IsValid() ? Response->GetResponseCode() : -1);
+		PRINTLOGE_JW(TEXT("서버 응답 오류 - 코드: %d"), Response.IsValid() ? Response->GetResponseCode() : -1);
 		return;
 	}
 	

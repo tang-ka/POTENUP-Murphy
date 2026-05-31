@@ -30,12 +30,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Components")
 	TObjectPtr<UAudioComponent> VoiceComp;
 	
-	// [메타휴먼] 향후 메타휴먼 얼굴 파츠를 조립할 컴포넌트
+	// [메타휴먼] 메타휴먼 얼굴 파츠를 조립할 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|MetaHuman")
 	TObjectPtr<USkeletalMeshComponent> FaceMesh;
 	
 private:
-	// 오버랩 이벤트 함수
+	// === InteractionBox Overlap Event ===
 	UFUNCTION()
 	void OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()

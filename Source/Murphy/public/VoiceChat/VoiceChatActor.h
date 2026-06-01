@@ -29,4 +29,7 @@ private:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VoiceChat")
 	TObjectPtr<UVoiceRecorderComponent> VoiceRecorderComp;
+	
+public:
+	UVoiceRecorderComponent* GetVoiceRecorderComp() const { return VoiceRecorderComp; }
 };

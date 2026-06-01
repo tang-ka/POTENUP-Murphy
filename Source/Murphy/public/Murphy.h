@@ -5,7 +5,7 @@
 #include "Settings/LogSettings.h"
 #include "CoreMinimal.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(JW, Warning, All);
+DECLARE_LOG_CATEGORY_EXTERN(JW, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(HJ, Warning, All);
 DECLARE_LOG_CATEGORY_EXTERN(SH, Warning, All);
 DECLARE_LOG_CATEGORY_EXTERN(CW, Warning, All);
@@ -19,7 +19,15 @@ DECLARE_LOG_CATEGORY_EXTERN(CW, Warning, All);
 
 #define PRINTLOG_JW(format, ...) \
 if (GetDefault<ULogSettings>()->bEnableLog_JW) \
+{ UE_LOG(JW, Log, TEXT("%s %s"), *CALLINFO, *FString::Printf(format, ##__VA_ARGS__)); }
+
+#define PRINTLOGW_JW(format, ...) \
+if (GetDefault<ULogSettings>()->bEnableLog_JW) \
 { UE_LOG(JW, Warning, TEXT("%s %s"), *CALLINFO, *FString::Printf(format, ##__VA_ARGS__)); }
+
+#define PRINTLOGE_JW(format, ...) \
+if (GetDefault<ULogSettings>()->bEnableLog_JW) \
+{ UE_LOG(JW, Error, TEXT("%s %s"), *CALLINFO, *FString::Printf(format, ##__VA_ARGS__)); }
 
 #define PRINTLOG_HJ(format, ...) \
 if (GetDefault<ULogSettings>()->bEnableLog_HJ) \

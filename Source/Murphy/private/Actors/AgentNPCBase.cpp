@@ -1,12 +1,12 @@
 
-#include "Actors/AgentNPCBase.h"
+#include "Actors/Characters/AgentNPCBase.h"
 
 #include "HttpManager.h"
 #include "Murphy.h"
-#include "Framework/AKTestPlayerController.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "HttpModule.h"                       // 오디오 다운로드용
+#include "Framework/MurphyPlayerController.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
 
@@ -43,7 +43,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
 
-	if (AAKTestPlayerController* MyPC = Cast<AAKTestPlayerController>(OtherPawn->GetController()))
+	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
 		MyPC->SetActiveNPC(this);
 		PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active."));
@@ -56,7 +56,7 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
 	
-	if (AAKTestPlayerController* MyPC = Cast<AAKTestPlayerController>(OtherPawn->GetController()))
+	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
 		MyPC->SetActiveNPC(nullptr);
 	}

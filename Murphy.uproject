@@ -69,12 +69,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "AudioTracing",
-			"Enabled": true,
-			"MarketplaceURL": "com.epicgames.launcher://ue/Fab/product//8f2d9ef7-f171-468d-ad64-ca4dfd989b3c/",
-			"SupportedTargetPlatforms": [
-				"Win64"
-			]
 			"Name": "MassAI",
 			"Enabled": true
 		},

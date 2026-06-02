@@ -22,6 +22,59 @@
 			]
 		},
 		{
+			"Name": "MetaHuman",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux"
+			]
+		},
+		{
+			"Name": "MetaHumanCoreTech",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux"
+			]
+		},
+		{
+			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanLiveLink",
+			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanRuntime",
+			"Enabled": true
+		},
+		{
+			"Name": "MetaHumanCalibrationDiagnostics",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "MetaHumanCalibrationProcessing",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64",
+				"Linux"
+			]
+		},
+		{
+			"Name": "MetaHumanCharacterUAF",
+			"Enabled": true
+		},
+		{
+			"Name": "AudioTracing",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/Fab/product//8f2d9ef7-f171-468d-ad64-ca4dfd989b3c/",
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
 			"Name": "MassAI",
 			"Enabled": true
 		},

@@ -6,6 +6,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "HttpModule.h"                       // 오디오 다운로드용
+#include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
@@ -14,7 +15,7 @@ AAgentNPCBase::AAgentNPCBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	
-	InteractionBox = CreateDefaultSubobject<UBoxComponent>(FName("InteractionBox"));
+	InteractionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionBox"));
 	InteractionBox->SetupAttachment(RootComponent);
 	InteractionBox->SetBoxExtent(FVector(200.f, 200.f, 200.f));
 	
@@ -24,6 +25,14 @@ AAgentNPCBase::AAgentNPCBase()
 	VoiceComp = CreateDefaultSubobject<UAudioComponent>(TEXT("VoiceComp"));
 	VoiceComp->SetupAttachment(FaceMesh);
 	VoiceComp->bAutoActivate = false;
+	
+	EmojiComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComp"));
+	EmojiComp->SetupAttachment(GetMesh());
+	static ConstructorHelpers::FClassFinder<UUserWidget> EmojiUI(TEXT("/Game/UI/Blueprints/WBP_TestNPC.WBP_TestNPC_C"));
+	if (EmojiUI.Succeeded()) EmojiComp->SetWidgetClass(EmojiUI.Class);
+	EmojiComp->SetWidgetSpace(EWidgetSpace::Screen);
+	EmojiComp->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
+	EmojiComp->SetVisibility(false);
 }
 
 void AAgentNPCBase::BeginPlay()
@@ -46,6 +55,9 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
 		MyPC->SetActiveNPC(this);
+		
+		EmojiComp->SetVisibility(true);
+		
 		PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active."));
 	}
 }
@@ -59,18 +71,18 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
 		MyPC->SetActiveNPC(nullptr);
+		
+		EmojiComp->SetVisibility(false);
 	}
 }
 
 void AAgentNPCBase::UpdateEmotion(int32 EmotionLevel)
 {
-	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리
+	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리?
 }
 
 void AAgentNPCBase::ProcessDialogueResponse(const FString& Dialogue, int32 EmotionLevel, const FString& AudioURL)
 {
-	PRINTLOGW_JW(TEXT("[AgentNPC] AI 응답 대사: %s / 감정 수치: %d"), *Dialogue, EmotionLevel);
-	
 	UpdateEmotion(EmotionLevel);
 	
 	// TTS 재생 (프로토타입: 더미 사운드, 추후 AudioURL 기반 스트리밍으로 교체)
@@ -79,6 +91,8 @@ void AAgentNPCBase::ProcessDialogueResponse(const FString& Dialogue, int32 Emoti
 		// VoiceComp->Play();
 		DownloadAndPlayAudio(AudioURL);
 	}
+	
+	PRINTLOGW_JW(TEXT("[AgentNPC] AI 응답 대사: %s / 감정 수치: %d"), *Dialogue, EmotionLevel);
 }
 
 void AAgentNPCBase::DownloadAndPlayAudio(const FString& AudioURL)

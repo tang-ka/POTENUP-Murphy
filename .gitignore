@@ -80,3 +80,7 @@ Plugins/Developer/RiderLink/
 
 # Rider
 *.DotSettings.user
+
+
+# Meta Human
+Content/MetaHumans/Kristofer/SourceAssets/Kristofer.uasset

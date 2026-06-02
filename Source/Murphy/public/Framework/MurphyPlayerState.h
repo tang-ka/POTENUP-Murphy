@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
-#include "AirplanePlayerState.generated.h"
+#include "MurphyPlayerState.generated.h"
 
 /**
- * 
+ * 모든 레벨에서 공통으로 사용하는 PlayerState
  */
 UCLASS()
-class MURPHY_API AAirplanePlayerState : public APlayerState
+class MURPHY_API AMurphyPlayerState : public APlayerState
 {
 	GENERATED_BODY()
 };

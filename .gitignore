@@ -80,3 +80,8 @@ Plugins/Developer/RiderLink/
 
 # Rider
 *.DotSettings.user
+
+# Large Assets
+Content/CitySampleCrowd/Character/Male/NormalWeight/Textures/blazer/T_m_nrw_blazer_BN.uasset
+Content/CitySampleCrowd/Character/Male/NormalWeight/Textures/slacks/T_m_nrw_slacks_BN.uasset
+Content/CitySampleCrowd/Character/Shared/Materials/Clothing/Textures/leather/leather-sjqecg1c_Normal_VT.uasset

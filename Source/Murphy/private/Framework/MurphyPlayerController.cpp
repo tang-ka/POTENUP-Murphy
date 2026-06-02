@@ -1,54 +1,98 @@
 ﻿
-#include "Framework/AKTestPlayerController.h"
+#include "Framework/MurphyPlayerController.h"
 
-#include "Actors/Characters/AgentNPCBase.h"
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Actors/Characters/AgentNPCBase.h"
+
+#include "VoiceChat/VoiceRecorderComponent.h"
+#include "EnhancedInputComponent.h"
+#include "InputActionValue.h"
+
+#include "Json.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpResponse.h"
-#include "Json.h"
-#include "Murphy.h"
-#include "Misc/FileHelper.h"
 #include "Misc/Base64.h"
-#include "VoiceChat/VoiceRecorderComponent.h"
+#include "Misc/FileHelper.h"
 
-void AAKTestPlayerController::BeginPlay()
+#include "Murphy.h"
+
+
+void AMurphyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	if (AMurphyPlayer* MainPlayer = Cast<AMurphyPlayer>(GetLocalPlayer()))
+	if (AMurphyPlayer* MainPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		if (IsValid(MainPlayer->GetVoiceRecorderComp()))
 		{
-			MainPlayer->GetVoiceRecorderComp()->OnRecordingFinished.AddDynamic(this, &AAKTestPlayerController::OnAudioRecordingFinished);
+			MainPlayer->GetVoiceRecorderComp()->OnRecordingFinished.AddDynamic(this, &AMurphyPlayerController::OnAudioRecordingFinished);
 			PRINTLOG_JW(TEXT("OnRecordingFinished 바인딩 완료"));
 		}
 	}
+}
+
+void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
+{
+	TargetNPC = NewNPC;
+}
+
+void AMurphyPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
 	
-	// 빙의된 Pawn에서 VoiceRecorderComponent를 찾아 델리게이트 등록....
-	// if (AVoiceChatActor* VoicePawn = Cast<AVoiceChatActor>(GetPawn()))
-	// {	
-	// 	if (IsValid(VoicePawn->GetVoiceRecorderComp()))
-	// 	{
-	// 		VoicePawn->GetVoiceRecorderComp()->OnRecordingFinished.AddDynamic(this, &AAKTestPlayerController::OnAudioRecordingFinished);
-	// 		PRINTLOG_JW(TEXT("OnRecordingFinished 바인딩 완료"));
-	// 	}
-	// }
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		EnhancedInputComponent->BindAction(IA_Record, ETriggerEvent::Started, this, &AMurphyPlayerController::RecordStart);
+		EnhancedInputComponent->BindAction(IA_Record, ETriggerEvent::Completed, this, &AMurphyPlayerController::RecordEnd);
+		EnhancedInputComponent->BindAction(IA_PlayAudio, ETriggerEvent::Started, this, &AMurphyPlayerController::RecordAudioPlay);
+	}
 }
 
-void AAKTestPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
+void AMurphyPlayerController::RecordStart(const FInputActionValue& Value)
 {
-    TargetNPC = NewNPC;
+	if (!IsValid(TargetNPC))
+	{
+		PRINTLOGW_JW(TEXT("[VoiceTest] - NPC가 근처에 없습니다. 녹음을 시작하지 않습니다."));
+		return;
+	}
+	
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		PRINTLOGW_JW(TEXT("[VoiceTest] - Start Recording"));
+		MurphyPlayer->GetVoiceRecorderComp()->StartRecording();
+	}
 }
 
-void AAKTestPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
+void AMurphyPlayerController::RecordEnd(const FInputActionValue& Value)
 {
-    if (!IsValid(TargetNPC)) return;
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		if (MurphyPlayer->GetVoiceRecorderComp()->IsRecording())
+		{
+			PRINTLOGW_JW(TEXT("[VoiceTest] - Stop & Save"));
+			MurphyPlayer->GetVoiceRecorderComp()->StopRecording(TEXT("TestRecording"), true);
+		}
+	}
+}
+
+void AMurphyPlayerController::RecordAudioPlay(const FInputActionValue& Value)
+{
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		PRINTLOGW_JW(TEXT("[VoiceTest] - Play"));
+		MurphyPlayer->GetVoiceRecorderComp()->PlayRecordedSamples();
+	}
+}
+
+void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
+{
+	if (!IsValid(TargetNPC)) return;
 		
 	SendVoiceFileToServer(SavedFilePath);  // multipart 방식 (wav 파일 그대로 넘기기)
 	// SendVoiceDataAsJsonBase64(SavedFilePath); // Base64 json 방식 (Base64로 인코딩 후 넘기기)
 }
 
-void AAKTestPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
+void AMurphyPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
 {
     TArray<uint8> RawAudioData;
     if (!FFileHelper::LoadFileToArray(RawAudioData, *WAVFilePath))
@@ -89,11 +133,11 @@ void AAKTestPlayerController::SendVoiceFileToServer(const FString& WAVFilePath)
     Request->SetVerb(TEXT("POST"));
     Request->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
     Request->SetContent(Payload);
-    Request->OnProcessRequestComplete().BindUObject(this, &AAKTestPlayerController::OnResponseReceived);
+    Request->OnProcessRequestComplete().BindUObject(this, &AMurphyPlayerController::OnResponseReceived);
     Request->ProcessRequest();
 }
 
-void AAKTestPlayerController::SendVoiceDataAsJsonBase64(const FString& WAVFilePath)
+void AMurphyPlayerController::SendVoiceDataAsJsonBase64(const FString& WAVFilePath)
 {
 	TArray<uint8> RawAudioData;
 	if (!FFileHelper::LoadFileToArray(RawAudioData, *WAVFilePath))
@@ -125,11 +169,11 @@ void AAKTestPlayerController::SendVoiceDataAsJsonBase64(const FString& WAVFilePa
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	Request->SetContentAsString(JsonString);
-	Request->OnProcessRequestComplete().BindUObject(this, &AAKTestPlayerController::OnResponseReceived);
+	Request->OnProcessRequestComplete().BindUObject(this, &AMurphyPlayerController::OnResponseReceived);
 	Request->ProcessRequest();
 }
 
-void AAKTestPlayerController::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+void AMurphyPlayerController::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
 	if (!bWasSuccessful || !Response.IsValid() || Response->GetResponseCode() != 200)
 	{
@@ -147,3 +191,4 @@ void AAKTestPlayerController::OnResponseReceived(FHttpRequestPtr Request, FHttpR
 		TargetNPC->ProcessDialogueResponse(Dialogue, EmotionLevel, AudioURL);
 	}
 }
+

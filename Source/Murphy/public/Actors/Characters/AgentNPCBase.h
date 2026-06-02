@@ -8,6 +8,7 @@
 
 class UBoxComponent;
 class UAudioComponent;
+class UWidgetComponent;
 
 UCLASS()
 class MURPHY_API AAgentNPCBase : public ACharacter
@@ -33,6 +34,10 @@ protected:
 	// [메타휴먼] 메타휴먼 얼굴 파츠를 조립할 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|MetaHuman")
 	TObjectPtr<USkeletalMeshComponent> FaceMesh;
+	
+	// [이모지] Agent의 감정을 더 정확히 표현 할 이모지 위젯 컴포넌트 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|MetaHuman")
+	TObjectPtr<UWidgetComponent> EmojiComp;
 	
 private:
 	// === InteractionBox Overlap Event ===

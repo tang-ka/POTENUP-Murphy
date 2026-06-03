@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -13,5 +12,18 @@ UCLASS()
 class MURPHY_API AMurphyPlayerState : public APlayerState
 {
 	GENERATED_BODY()
+	
+public:
+	// AI 대화 결과 저장용 변수
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Murphy|State")
+	FString LastDialogResult;
+	
+	// AI Agent NPC 호감도
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Murphy|State")
+	int32 NPCAffection;
+	
+	// 시나리오 성공 상태 저장 (필요 시 확장)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Murphy|State")
+	bool bPassedCurrentScenario = false;
 };
 

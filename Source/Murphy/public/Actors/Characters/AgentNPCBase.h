@@ -18,6 +18,9 @@ class MURPHY_API AAgentNPCBase : public ACharacter
 public:
 	AAgentNPCBase();
 	
+	// 독점 대화 로직 관련 복제 프로퍼티 등록
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
 protected:
 	virtual void BeginPlay() override;
 
@@ -49,6 +52,22 @@ private:
 	// todo: Enum 처리
 	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
 	void UpdateEmotion(int32 EmotionLevel);
+	
+protected:
+	// 누군가 이미 대화 중인지 상태를 저장 (서버 -> 클라 동기화)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category="AI|Chat")
+	bool bIsTalkingWithPlayer = false;
+	
+public:
+	// === 독점 대화 로직 ===
+	UFUNCTION(BlueprintPure, Category="AI|Chat")
+	bool CanTalkWithPlayer() const { return !bIsTalkingWithPlayer; }
+
+	UFUNCTION(BlueprintCallable, Category="AI|Chat")
+	bool TryStartConversation();
+
+	UFUNCTION(BlueprintCallable, Category="AI|Chat")
+	void EndConversation();
 	
 public:
 	// PlayerController가 서버 응답 수신 후 NPC에게 결과를 전달하는 함수 

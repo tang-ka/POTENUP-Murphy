@@ -8,7 +8,6 @@
 
 void UCommonPopupWidget::NativeDestruct()
 {
-    Super::NativeDestruct();
     // 팝업이 닫힐 때 타이머 클리어 (잔여 타이머로 인한 오류 방지)
     if (LifeTimeHandle.IsValid())
     {

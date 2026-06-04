@@ -9,6 +9,7 @@
 #include "UI/Base/UITypes.h"         // EUILayer
 #include "UIManagerSubsystem.generated.h"
 
+class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
 
@@ -25,6 +26,7 @@ public:
 	UCommonPopupWidget* ShowPopup(const FUIPopupDesc& InDesc);
 	// LifeTime = 0.f 이면 UIManagerSettings::DefaultToastLifeTime 을 사용
 	void ShowToast(const FText& Message, float LifeTime = 0.f);
+	void ShowLevelEnterToast(const FText& LevelName, float LifeTime = 0.f);
 
 	// ── 레이어 배치 ──
 	void PushToLayer(EUILayer Layer, UUserWidget* Widget);
@@ -42,13 +44,21 @@ private:
 	// 위젯 클래스 로드 (지연)
 	TSubclassOf<UCommonPopupWidget> GetPopupClass();
 	TSubclassOf<UUserWidget> GetToastClass();
+	TSubclassOf<ULevelEnterToastPopupWidget> GetLevelEnterToastClass();
 
 	// EUILayer → ZOrder
 	static int32 LayerToZOrder(EUILayer Layer);
 
+	UFUNCTION()
+	void HandlePostLoadMapWithWorld(UWorld* LoadedWorld);
+	
+private:
 	UPROPERTY()
 	TSubclassOf<UCommonPopupWidget> CachedPopupClass;
 
 	UPROPERTY()
 	TSubclassOf<UUserWidget> CachedToastClass;
+	
+	UPROPERTY()
+	TSubclassOf<ULevelEnterToastPopupWidget> CachedLevelEnterToastClass;
 };

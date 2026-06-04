@@ -38,6 +38,7 @@ void UCommonPopupWidget::Setup(const FUIPopupDesc& InDesc)
         {
             Txt_OkayLabel->SetText(Desc.OkayText);
         }
+        Btn_Okay->OnClicked.Clear();
         Btn_Okay->OnClicked.AddDynamic(this, &UCommonPopupWidget::HandleOkay);
     }
 
@@ -47,6 +48,7 @@ void UCommonPopupWidget::Setup(const FUIPopupDesc& InDesc)
         {
             Txt_CancelLabel->SetText(Desc.CancelText);
         }
+        Btn_Cancel->OnClicked.Clear();
         Btn_Cancel->OnClicked.AddDynamic(this, &UCommonPopupWidget::HandleCancel);
     }
 

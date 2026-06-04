@@ -9,6 +9,7 @@
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
 #include "Interfaces/IHttpResponse.h"
+#include "Net/UnrealNetwork.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
 
 AAgentNPCBase::AAgentNPCBase()
@@ -46,6 +47,12 @@ void AAgentNPCBase::BeginPlay()
 	}
 }
 
+void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AAgentNPCBase, bIsTalkingWithPlayer);
+}
+
 void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -54,11 +61,14 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 
 	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
-		MyPC->SetActiveNPC(this);
-		
-		EmojiComp->SetVisibility(true);
-		
-		PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active."));
+		if (MyPC->IsLocalController())
+		{
+			MyPC->SetActiveNPC(this);
+			
+			EmojiComp->SetVisibility(true);
+			
+			PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active."));
+		}
 	}
 }
 
@@ -79,6 +89,22 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 void AAgentNPCBase::UpdateEmotion(int32 EmotionLevel)
 {
 	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리?
+}
+
+bool AAgentNPCBase::TryStartConversation()
+{
+	if (bIsTalkingWithPlayer)
+	{
+		return false;
+	}
+	
+	bIsTalkingWithPlayer = true;
+	return true;
+}
+
+void AAgentNPCBase::EndConversation()
+{
+	bIsTalkingWithPlayer = false;
 }
 
 void AAgentNPCBase::ProcessDialogueResponse(const FString& Dialogue, int32 EmotionLevel, const FString& AudioURL)
@@ -164,6 +190,6 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 	{
 		VoiceComp->SetSound(SoundWave);
 		VoiceComp->Play();
-		UE_LOG(LogTemp, Log, TEXT("[AgentNPC] NPC 음성 재생 시작 (%.1f초)"), SoundWave->Duration);
+		PRINTLOG_JW(TEXT("[AgentNPC] NPC 음성 재생 시작 (%.1f초)"), SoundWave->Duration);
 	}
 }

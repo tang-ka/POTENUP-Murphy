@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/IHttpRequest.h"
+#include "Data/AIDataTypes.h"
 #include "AgentNPCBase.generated.h"
 
 class UBoxComponent;
@@ -62,16 +63,16 @@ public:
 	// === 독점 대화 로직 ===
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	bool CanTalkWithPlayer() const { return !bIsTalkingWithPlayer; }
-
+	
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	bool TryStartConversation();
-
+	
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	void EndConversation();
 	
 public:
 	// PlayerController가 서버 응답 수신 후 NPC에게 결과를 전달하는 함수 
-	void ProcessDialogueResponse(const FString& Dialogue, int32 EmotionLevel, const FString& AudioURL);
+	void ProcessDialogueResponse(const FAIResponseData& ResponseData);
 	
 	// AudioURL로 HTTP GET 요청 시작
 	void DownloadAndPlayAudio(const FString& AudioURL);

@@ -14,6 +14,7 @@
 #include "Interfaces/IHttpResponse.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
 
 #include "Murphy.h"
 #include "Manager/LevelStreamingSubsystem.h"
@@ -61,8 +62,6 @@ void AMurphyPlayerController::Test_EndScenarioAndTravel(FName NextLevelKey)
 		LevelSubsystem->TravelAllPlayers(NextLevelKey);
 	}
 }
-
-
 
 void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJSONResponse)
 {
@@ -116,18 +115,18 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		
 		FAIRequestData RequestData;
 		RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
-		RequestData.request_id = TEXT("req_imm_0001");
+		RequestData.request_id = FGuid::NewGuid().ToString();
 		
-		RequestData.session.session_id = TEXT("session_001");
+		RequestData.session.session_id = CurrentSessionId;
 		RequestData.session.player_id = TEXT("player_001");
 		RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
 		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
-		RequestData.session.current_node_id = TEXT("IMM_002_PURPOSE");
-		RequestData.session.turn_index = 2;
+		RequestData.session.current_node_id = CurrentNodeId;
+		RequestData.session.turn_index = TurnIndex;
 		
 		RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
 		RequestData.npc.npc_role = TEXT("immigration_officer");
-		RequestData.npc.last_npc_message = TEXT("What is the purpose of your visit?");
+		RequestData.npc.last_npc_message = LastNpcMessage;
 		
 		RequestData.audio.mime_type = TEXT("audio/wav");
 		RequestData.audio.sample_rate_hz = 48000;
@@ -140,17 +139,21 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		RequestData.player_profile.tier = TEXT("Bronze");
 		RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
 		
-		RequestData.scenario_state.patience = 100;
-		RequestData.scenario_state.suspicion = 0;
-		RequestData.scenario_state.retry_count = 0;
-		RequestData.scenario_state.hint_count = 0;
-		RequestData.scenario_state.previous_fail_count = 0;
+		RequestData.scenario_state = CurrentScenarioState;
 		
 		RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
 		RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
 		RequestData.game_state.completed_intents = { TEXT("submit_passport") };
 		RequestData.game_state.current_objective = TEXT("State the visit purpose");
 		
+		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Request Before ---"));
+		PRINTLOGW_JW(TEXT("request_id: %s"), *RequestData.request_id);
+		PRINTLOGW_JW(TEXT("turn_index: %d"), RequestData.session.turn_index);
+		PRINTLOGW_JW(TEXT("session.current_node_id: %s"), *RequestData.session.current_node_id);
+		PRINTLOGW_JW(TEXT("npc.last_npc_message: %s"), *RequestData.npc.last_npc_message);
+		PRINTLOGW_JW(TEXT("scenario_state - patience: %d, suspicion: %d, retry_count: %d, hint_count: %d"),
+			RequestData.scenario_state.patience, RequestData.scenario_state.suspicion, RequestData.scenario_state.retry_count, RequestData.scenario_state.hint_count);
+
 		PRINTLOGW_JW(TEXT("[Voice Test] NetSubsystem을 통해 서버로 오디오 전송 시작"));
 		NetSubsystem->SendToAI(RequestData, SavedFilePath, Callback);
 	}
@@ -162,6 +165,29 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 	{
 		TargetNPC->ProcessDialogueResponse(ResponseData);
 		
+		// 응답 수신 후 상태 갱신
+		LastNpcMessage = ResponseData.npc.text;
+		
+		CurrentScenarioState.patience += ResponseData.state_delta.patience_delta;
+		CurrentScenarioState.suspicion += ResponseData.state_delta.suspicion_delta;
+		CurrentScenarioState.retry_count += ResponseData.state_delta.retry_count_delta;
+		CurrentScenarioState.hint_count += ResponseData.state_delta.hint_count_delta;
+		
+		TurnIndex += 1;
+		
+		if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
+		{
+			CurrentNodeId = ResponseData.next_node_id;
+		}
+		
+		// 필수 디버그 로그 추가 (응답 후)
+		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Response After ---"));
+		PRINTLOGW_JW(TEXT("response.current_node_id: %s"), *ResponseData.current_node_id);
+		PRINTLOGW_JW(TEXT("response.next_action: %s"), *ResponseData.next_action);
+		PRINTLOGW_JW(TEXT("response.next_node_id: %s"), *ResponseData.next_node_id);
+		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text);
+		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *CurrentNodeId);
+
 		// AI 응답이 도착해 대화가 끝나면 NPC점유 해제 및 상태 초기화
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 		{

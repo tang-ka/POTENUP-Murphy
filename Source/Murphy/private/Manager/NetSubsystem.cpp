@@ -49,7 +49,7 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	const FString Boundary = TEXT("----UnrealBoundary") + FString::FromInt(FMath::Rand());
 	TArray<uint8> Payload;
 	auto AppendStr = [&](const FString& Str)
-	{
+	{         
 		FTCHARToUTF8 Conv(*Str);
 		Payload.Append((uint8*)Conv.Get(), Conv.Length());
 	};
@@ -61,10 +61,12 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	// Request->SetURL(TEXT("http://127.0.0.1:8001/api/chat"));
-	Request->SetURL(TEXT("http://172.16.15.36:8000/api/game/ai/respond"));
+	// Request->SetURL(TEXT("http://172.16.15.36:8000/api/game/ai/respond")); // 승헌님 하드코딩
+	Request->SetURL(TEXT("http://127.0.0.1:8000/api/game/ai/respond"));
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
 	Request->SetContent(Payload);
+	Request->SetTimeout(300.f); // AI 응답에 시간이 걸릴 수 있으므로 타임아웃을 120초로 증가
 	Request->OnProcessRequestComplete().BindUObject(this, &UNetSubsystem::OnHttpResponseReceived);
 	Request->ProcessRequest();
 }
@@ -77,8 +79,6 @@ void UNetSubsystem::CancelPendingRequests()
 		PRINTLOGW_JW(TEXT("보류 중인 Struct 요청이 취소됨(위임 해제됨)"));
 	}
 }
-
-
 
 void UNetSubsystem::HandleServerResponseStruct(const FString& ResponseData)
 {

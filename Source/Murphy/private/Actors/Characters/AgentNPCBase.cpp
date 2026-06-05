@@ -127,7 +127,8 @@ void AAgentNPCBase::DownloadAndPlayAudio(const FString& AudioURL)
 	FString FinalURL = AudioURL;
 	if (!FinalURL.StartsWith(TEXT("http")))
 	{
-		FinalURL = TEXT("http://172.16.15.36:8000") + FinalURL;
+		// FinalURL = TEXT("http://172.16.15.36:8000") + FinalURL;
+		FinalURL = TEXT("http://127.0.0.1:8000") + FinalURL;
 	}
 	
 	Request->SetURL(FinalURL);

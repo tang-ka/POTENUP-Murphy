@@ -7,11 +7,11 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-
 #include "Actors/Characters/AgentNPCBase.h"
 #include "Framework/MurphyPlayerController.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Murphy.h"
+#include "UI/HUD/MainHUD.h"
 
 
 AMurphyPlayer::AMurphyPlayer()
@@ -25,6 +25,15 @@ void AMurphyPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	// MainHUDClassInstance 생성
+	if (MainHUDClass != nullptr)
+	{
+		MainHUDInstance = CreateWidget<UMainHUD>(GetWorld(), MainHUDClass);
+		if (MainHUDInstance != nullptr)
+		{
+			MainHUDInstance->AddToViewport();
+		}
+	}
 }
 
 void AMurphyPlayer::Tick(float DeltaSeconds)
@@ -134,6 +143,8 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 			PlayerInput->BindAction(IA_Record, ETriggerEvent::Started, this, &AMurphyPlayer::RecordStart);
 			PlayerInput->BindAction(IA_Record, ETriggerEvent::Completed, this, &AMurphyPlayer::RecordEnd);
 			PlayerInput->BindAction(IA_PlayAudio, ETriggerEvent::Started, this, &AMurphyPlayer::RecordAudioPlay);
+			PlayerInput->BindAction(IA_ToggleBag, ETriggerEvent::Started, this, &AMurphyPlayer::ToggleBagPressed);
+			PlayerInput->BindAction(IA_TogglePhone, ETriggerEvent::Started, this, &AMurphyPlayer::TogglePhonePressed);
 		}
 	}
 }
@@ -221,4 +232,13 @@ void AMurphyPlayer::RecordAudioPlay(const FInputActionValue& Value)
 {
 	PRINTLOGW_JW(TEXT("[VoiceTest] - Play"));
 	VoiceRecorderComp->PlayRecordedSamples();
+}
+
+void AMurphyPlayer::ToggleBagPressed()
+{
+	MainHUDInstance->RequestToggleBag();
+}
+
+void AMurphyPlayer::TogglePhonePressed()
+{
 }

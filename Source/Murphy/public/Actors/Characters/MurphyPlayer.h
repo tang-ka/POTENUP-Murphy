@@ -12,6 +12,7 @@ class UInputAction;
 class UVoiceRecorderComponent;
 
 class AAgentNPCBase;
+class UMainHUD;
 
 UENUM(BlueprintType)
 enum class EPlayerChatState : uint8
@@ -85,6 +86,10 @@ public:
 	UInputAction* IA_Record;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_PlayAudio;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_ToggleBag;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_TogglePhone;
 	
 	// === Input Action === 
 	virtual void Move(const FInputActionValue& Value);
@@ -92,4 +97,16 @@ public:
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
+
+	// Toggle Bag, Phone Action
+	void ToggleBagPressed();
+	void TogglePhonePressed();
+
+protected:
+	// === UI ===
+	UPROPERTY(EditAnywhere, Category = "Murphy|UI")
+	TSubclassOf<UMainHUD> MainHUDClass;
+	UPROPERTY()
+	TObjectPtr<UMainHUD> MainHUDInstance;
+	
 };

@@ -107,29 +107,36 @@ void AAgentNPCBase::EndConversation()
 	bIsTalkingWithPlayer = false;
 }
 
-void AAgentNPCBase::ProcessDialogueResponse(const FString& Dialogue, int32 EmotionLevel, const FString& AudioURL)
+void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 {
-	UpdateEmotion(EmotionLevel);
+	// 기획서 v0.1.0: patience_delta 등으로 감정을 파악하거나 npc.tone 을 활용 가능
+	UpdateEmotion(0); // TODO: ResponseData.npc.tone 등에 맞춰 구조 개선
 	
-	// TTS 재생 (프로토타입: 더미 사운드, 추후 AudioURL 기반 스트리밍으로 교체)
-	if (IsValid(VoiceComp))
+	// TTS 재생
+	if (IsValid(VoiceComp) && !ResponseData.npc.audio_url.IsEmpty())
 	{
-		// VoiceComp->Play();
-		DownloadAndPlayAudio(AudioURL);
+		DownloadAndPlayAudio(ResponseData.npc.audio_url);
 	}
-	
-	PRINTLOGW_JW(TEXT("[AgentNPC] AI 응답 대사: %s / 감정 수치: %d"), *Dialogue, EmotionLevel);
+	PRINTLOGW_JW(TEXT("[AgentNPC] AI 응답 대사: %s / Tone: %s"), *ResponseData.npc.text, *ResponseData.npc.tone);
 }
 
 void AAgentNPCBase::DownloadAndPlayAudio(const FString& AudioURL)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	Request->SetURL(AudioURL);
-	Request->SetVerb(TEXT("Get"));
+	
+	FString FinalURL = AudioURL;
+	if (!FinalURL.StartsWith(TEXT("http")))
+	{
+		// FinalURL = TEXT("http://172.16.15.36:8000") + FinalURL;
+		FinalURL = TEXT("http://127.0.0.1:8000") + FinalURL;
+	}
+	
+	Request->SetURL(FinalURL);
+	Request->SetVerb(TEXT("GET"));
 	Request->OnProcessRequestComplete().BindUObject(this, &AAgentNPCBase::OnAudioDownloaded);
 	Request->ProcessRequest();
 	
-	PRINTLOGW_JW(TEXT("[AgentNPC] 오디오 다운로드 시작: %s"), *AudioURL);
+	PRINTLOGW_JW(TEXT("[AgentNPC] 오디오 다운로드 시작: %s"), *FinalURL);
 }
 
 void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)

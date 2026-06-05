@@ -7,16 +7,24 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/LevelEnterToastPopupWidget.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
     // 위젯 생성은 PlayerController가 준비된 뒤여야 하므로
     // 여기서 CreateWidget 하지 않는다. 클래스 로드도 첫 사용 시점까지 미룬다.
+    
+    FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(
+        this,
+        &UUIManagerSubsystem::HandlePostLoadMapWithWorld
+    );
 }
 
 void UUIManagerSubsystem::Deinitialize()
 {
+    FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
+
     Super::Deinitialize();
 }
 
@@ -53,6 +61,17 @@ TSubclassOf<UUserWidget> UUIManagerSubsystem::GetToastClass()
     return CachedToastClass;
 }
 
+TSubclassOf<ULevelEnterToastPopupWidget> UUIManagerSubsystem::GetLevelEnterToastClass()
+{
+    if (!CachedLevelEnterToastClass)
+    {
+        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+        CachedLevelEnterToastClass = Settings->LevelEnterToastClass.LoadSynchronous();
+    }
+
+    return CachedLevelEnterToastClass;
+}
+
 int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
 {
     // 레이어 간 간격을 넉넉히 둬서 같은 레이어 내 미세 조정 여지를 남긴다.
@@ -66,6 +85,35 @@ int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
         case EUILayer::System:       return 500;
         default:                     return 0;
     }
+}
+
+void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
+{
+    if (!LoadedWorld || !LoadedWorld->IsGameWorld())
+    {
+        return;
+    }
+
+    const FString MapName = LoadedWorld->GetMapName();
+    FText ToastText;
+    
+    if (MapName.Contains(TEXT("Lv_Airplane")))
+    {
+        ToastText = FText::FromString(TEXT("비행기(기내)"));
+    }
+    else if (MapName.Contains(TEXT("Lv_Prologue")))
+    {
+        ToastText = FText::FromString(TEXT("입국심사"));
+    }
+    else
+    {
+        return;
+    }
+    
+    LoadedWorld->GetTimerManager().SetTimerForNextTick([this, ToastText]()
+    {
+        ShowLevelEnterToast(ToastText);
+    });
 }
 
 void UUIManagerSubsystem::PushToLayer(EUILayer Layer, UUserWidget* Widget)
@@ -141,6 +189,38 @@ void UUIManagerSubsystem::ShowToast(const FText& Message, float LifeTime)
 
     // ToastWidget 구현 후 Setup(Message, LifeTime) 연결 예정
     PushToLayer(EUILayer::Notification, Toast);
+}
+
+void UUIManagerSubsystem::ShowLevelEnterToast(const FText& LevelName, float LifeTime)
+{
+    // 0 이하이면 Settings의 기본값 사용
+    if (LifeTime <= 0.f)
+    {
+        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+        LifeTime = Settings->DefaultToastLifeTime;
+    }
+
+    APlayerController* PC = GetOwningController();
+    if (!PC)
+    {
+        return;
+    }
+
+    TSubclassOf<UUserWidget> LevelEnterToastClass = GetLevelEnterToastClass();
+    if (!LevelEnterToastClass)
+    {
+        return;
+    }
+
+    ULevelEnterToastPopupWidget* Toast = CreateWidget<ULevelEnterToastPopupWidget>(PC, LevelEnterToastClass);
+    if (!Toast)
+    {
+        return;
+    }
+    
+    Toast->SetUp(LevelName, LifeTime);
+    PushToLayer(EUILayer::Notification, Toast);
+    Toast->StartLifeTimeCountdown();
 }
 
 void UUIManagerSubsystem::FadeOut(float Duration, FSimpleDelegate OnComplete)

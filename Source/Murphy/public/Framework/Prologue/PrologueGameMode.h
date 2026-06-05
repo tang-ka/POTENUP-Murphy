@@ -6,31 +6,19 @@
 #include "GameFramework/GameModeBase.h"
 #include "PrologueGameMode.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class MURPHY_API APrologueGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+public:
+	APrologueGameMode();
+
 protected:
 	virtual void BeginPlay() override;
 	
-public:
-	UFUNCTION(BlueprintCallable)
-	void TransitionToBaggageClaim();
-	
 private:
-	UFUNCTION()
-	void OnImmigrationLevelLoaded();
-	
+	// 서버에서 Immigration 레벨이 보이면 모든 PC에 Pawn 스폰
 	UFUNCTION()
 	void OnImmigrationLevelShown();
-	
-	UFUNCTION()
-	void OnImmigrationLevelHidden();
-
-	UFUNCTION()
-	void OnBaggageClaimLevelShown();
 };

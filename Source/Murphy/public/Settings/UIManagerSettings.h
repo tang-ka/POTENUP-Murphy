@@ -6,6 +6,7 @@
 #include "Engine/DeveloperSettings.h"
 #include "UIManagerSettings.generated.h"
 
+class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
 
@@ -28,6 +29,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
 	TSoftClassPtr<UUserWidget> ToastClass;
 
+	/** Level Enter 토스트(알림) 위젯 클래스 */
+	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
+	TSoftClassPtr<ULevelEnterToastPopupWidget> LevelEnterToastClass;
+	
 	// ====== 토스트 기본값 ======
 
 	/** 토스트 메시지 기본 표시 시간 (초) */

@@ -20,6 +20,9 @@
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/NetSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
+#include "Manager/UIManagerSubsystem.h"
+#include "GameFramework/PlayerStart.h"
+#include "Kismet/GameplayStatics.h"
 
 void AMurphyPlayerController::BeginPlay()
 {
@@ -32,6 +35,11 @@ void AMurphyPlayerController::BeginPlay()
 			MainPlayer->GetVoiceRecorderComp()->OnRecordingFinished.AddDynamic(this, &AMurphyPlayerController::OnAudioRecordingFinished);
 			PRINTLOG_JW(TEXT("OnRecordingFinished 바인딩 완료"));
 		}
+	}
+	
+	if (IsLocalController())
+	{
+		SubscribeLevelEnterEvents();
 	}
 }
 
@@ -195,3 +203,154 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		}
 	}
 }
+
+void AMurphyPlayerController::SubscribeLevelEnterEvents()
+{
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
+	if (!LevelSubsystem)
+	{
+		PRINTLOG_SH(TEXT("SubscribeLevelEnterEvents: LevelStreamingSubsystem is null"));
+		return;
+	}
+
+	// BeginPlay 시점에는 SubLevel_Immigration의 OnLevelShown만 구독.
+	// SubLevel_BaggageClaim 구독은 TransitionToBaggageClaim에서 처리.
+	ULevelStreaming* ImmigrationLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_Immigration"));
+	if (ImmigrationLevel)
+	{
+		ImmigrationLevel->OnLevelShown.AddDynamic(this, &AMurphyPlayerController::OnImmigrationLevelShown);
+	}
+}
+
+void AMurphyPlayerController::OnImmigrationLevelShown()
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	UUIManagerSubsystem* UIManager = LP->GetSubsystem<UUIManagerSubsystem>();
+	if (!UIManager)
+	{
+		return;
+	}
+
+	UIManager->ShowLevelEnterToast(FText::FromString(TEXT("입국심사")));
+}
+
+void AMurphyPlayerController::TransitionToBaggageClaim()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
+	if (!LevelSubsystem)
+	{
+		PRINTLOG_SH(TEXT("TransitionToBaggageClaim: LevelStreamingSubsystem is null"));
+		return;
+	}
+
+	// BaggageClaim 레벨이 표시되면 플레이어 이동 & 토스트 출력
+	ULevelStreaming* BaggageLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_BaggageClaim"));
+	if (BaggageLevel)
+	{
+		BaggageLevel->OnLevelShown.AddDynamic(this, &AMurphyPlayerController::OnBaggageClaimLevelShown);
+	}
+
+	// Immigration 언로드 → 완료 콜백으로 BaggageClaim 로드
+	FLatentActionInfo LatentInfo;
+	LatentInfo.CallbackTarget = this;
+	LatentInfo.ExecutionFunction = FName("OnImmigrationLevelHidden");
+	LatentInfo.UUID = 2;
+	LatentInfo.Linkage = 0;
+
+	LevelSubsystem->UnloadSubLevel(TEXT("SubLevel_Immigration"), LatentInfo, false);
+}
+
+void AMurphyPlayerController::OnImmigrationLevelHidden()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+	
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
+	if (!LevelSubsystem)
+	{
+		PRINTLOG_SH(TEXT("OnImmigrationLevelHidden: LevelStreamingSubsystem is null"));
+		return;
+	}
+
+	LevelSubsystem->LoadSubLevel(TEXT("SubLevel_BaggageClaim"), true, false);
+}
+
+void AMurphyPlayerController::OnBaggageClaimLevelShown()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	// 플레이어를 PlayerStart[0] 위치로 이동
+
+
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	UUIManagerSubsystem* UIManager = LP->GetSubsystem<UUIManagerSubsystem>();
+	if (UIManager)
+	{
+		UIManager->ShowLevelEnterToast(FText::FromString(TEXT("수하물 수취장")));
+	}
+
+	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
+}
+
+void AMurphyPlayerController::Server_RequestReposition_Implementation(const FName& SubLevelName)
+{
+	APawn* MyPawn = GetPawn();
+	if (!MyPawn)
+	{
+		return;
+	}
+
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
+	if (!LevelSubsystem)
+	{
+		return;
+	}
+
+	ULevelStreaming* BaggageLevel =	LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_BaggageClaim"));
+	if (!BaggageLevel)
+	{
+		return;
+	} 
+
+	// BaggageClaim 서브레벨 소속 PlayerStart만 필터링
+	ULevel* BaggageLoadedLevel = BaggageLevel->GetLoadedLevel();
+	if (!BaggageLoadedLevel)
+	{
+		return;
+	}
+
+	TArray<AActor*> PlayerStarts;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+
+	AActor** FoundStart = PlayerStarts.FindByPredicate([&](AActor* Actor)
+	{
+		return Actor->GetLevel() == BaggageLoadedLevel;
+	});
+
+	if (!FoundStart) return;
+
+	MyPawn->SetActorLocationAndRotation(
+		(*FoundStart)->GetActorLocation(),
+		(*FoundStart)->GetActorRotation());
+}
+

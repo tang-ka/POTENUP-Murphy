@@ -5,6 +5,7 @@
 #include "Settings/LevelStreamingSettings.h"
 #include "GameFramework/GameMode.h"
 #include "Murphy.h"
+#include "Kismet/GameplayStatics.h"
 
 void ULevelStreamingSubsystem::TravelAllPlayers(FName LevelKey)
 {
@@ -41,6 +42,53 @@ void ULevelStreamingSubsystem::TravelAllPlayers(FName LevelKey)
 
 	// ServerTravel: 서버가 이동하면 모든 클라이언트도 자동으로 함께 이동
 	World->ServerTravel(LevelPath);
+}
+
+void ULevelStreamingSubsystem::LoadSubLevel(FName LevelName, bool bMakeVisibleAfterLoad, bool bShouldBlockOnLoad)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG_SH(TEXT("LoadSubLevel: World is null"));
+		return;
+	}
+	
+	FLatentActionInfo LatentInfo;
+	UGameplayStatics::LoadStreamLevel(
+		World,
+		LevelName,
+		bMakeVisibleAfterLoad,
+		bShouldBlockOnLoad,
+		LatentInfo);
+}
+
+void ULevelStreamingSubsystem::UnloadSubLevel(FName LevelName, const FLatentActionInfo& LatentInfo,
+	bool bShouldBlockOnUnload)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG_SH(TEXT("UnloadSubLevel: World is null"));
+		return;
+	}
+
+	UGameplayStatics::UnloadStreamLevel(
+		World,
+		LevelName,
+		LatentInfo,
+		bShouldBlockOnUnload);
+}
+
+ULevelStreaming* ULevelStreamingSubsystem::GetStreamingSubLevel(FName LevelName) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG_SH(TEXT("GetStreamingSubLevel: World is null"));
+		return nullptr;
+	}
+
+	return UGameplayStatics::GetStreamingLevel(World, LevelName);
 }
 
 const TMap<FName, TSoftObjectPtr<UWorld>>& ULevelStreamingSubsystem::GetLevelMap() const

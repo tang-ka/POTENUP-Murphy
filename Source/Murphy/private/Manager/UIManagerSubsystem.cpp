@@ -95,17 +95,24 @@ void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
     }
 
     const FString MapName = LoadedWorld->GetMapName();
-
-    // Lobby -> Airplane 케이스만 여기서 처리.
-    // Prologue는 SubLevel shown 콜백에서 처리한다.
-    if (!MapName.Contains(TEXT("Lv_Airplane")))
+    FText ToastText;
+    
+    if (MapName.Contains(TEXT("Lv_Airplane")))
+    {
+        ToastText = FText::FromString(TEXT("비행기(기내)"));
+    }
+    else if (MapName.Contains(TEXT("Lv_Prologue")))
+    {
+        ToastText = FText::FromString(TEXT("입국심사"));
+    }
+    else
     {
         return;
     }
-
-    LoadedWorld->GetTimerManager().SetTimerForNextTick([this]()
+    
+    LoadedWorld->GetTimerManager().SetTimerForNextTick([this, ToastText]()
     {
-        ShowLevelEnterToast(FText::FromString(TEXT("비행기(기내)")));
+        ShowLevelEnterToast(ToastText);
     });
 }
 
@@ -213,6 +220,7 @@ void UUIManagerSubsystem::ShowLevelEnterToast(const FText& LevelName, float Life
     
     Toast->SetUp(LevelName, LifeTime);
     PushToLayer(EUILayer::Notification, Toast);
+    Toast->StartLifeTimeCountdown();
 }
 
 void UUIManagerSubsystem::FadeOut(float Duration, FSimpleDelegate OnComplete)

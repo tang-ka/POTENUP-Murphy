@@ -32,6 +32,10 @@ public:
 	void SetActiveNPC(AAgentNPCBase* NewNPC);
 	AAgentNPCBase* GetTargetNPC() const { return TargetNPC; }
 
+	// SubLevel_Immigration을 언로드하고 SubLevel_BaggageClaim으로 전환 (로컬 클라이언트 전용)
+	UFUNCTION(BlueprintCallable, Category="Level Streaming")
+	void TransitionToBaggageClaim();
+
 private:
 	// 녹음 완료 델리게이트 바인딩 함수
 	UFUNCTION()
@@ -45,6 +49,22 @@ private:
 	// NetSubsystem에서 전달해주는 AI 응답(JSON)을 받아 처리할 콜백
 	UFUNCTION()
 	void OnAIResponseReceived(const FString& ResponseData);
+	
+#pragma region Level Enter Toast
+	void SubscribeLevelEnterEvents();
+
+	UFUNCTION()
+	void OnImmigrationLevelShown();
+
+	UFUNCTION()
+	void OnImmigrationLevelHidden();
+
+	UFUNCTION()
+	void OnBaggageClaimLevelShown();
+#pragma endregion
+	
+	UFUNCTION(Server, Reliable)
+	void Server_RequestReposition(const FName& SubLevelName);
 	
 private:
 	UPROPERTY()

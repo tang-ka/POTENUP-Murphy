@@ -51,3 +51,7 @@ void UAgentEmojiUI::SetDialog(FText Dialog)
 {
 	Text_Dialog->SetText(Dialog);
 }
+
+void UAgentEmojiUI::UpdateProgress()
+{
+}

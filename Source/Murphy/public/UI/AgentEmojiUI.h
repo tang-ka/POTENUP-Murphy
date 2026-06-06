@@ -24,6 +24,8 @@ public:
 	void SetEmoji(UTexture2D* Emoji); // todo: struct를 넘겨야 하나 
 	void SetDialog(FText Dialog);
 	
+	void UpdateProgress();
+	
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Image_EmotionGuage;
@@ -35,6 +37,6 @@ public:
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynMat;
 	
-	float Progress{0.7f}; 
+	float Progress{0.0f}; 
 	FLinearColor PBColor{FLinearColor(0.799f, 0.06f, 0.001f)};
 };

@@ -103,6 +103,8 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 {
 	if (!IsValid(TargetNPC)) return;
 	
+	TargetNPC->NotifyPlayerSpoke();
+	
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		if (MurphyPlayer->GetRecordTime() < 0.5f)
@@ -201,6 +203,62 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		{
 			MurphyPlayer->EndChatWithNPC();
 		}
+	}
+}
+
+void AMurphyPlayerController::SendTimeoutAudioToAI()
+{
+	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
+	{
+		FOnAIResponseDataReceived Callback;
+		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
+		
+		// OnAudioRecordingFinished와 동일하게 RequestData 세팅
+		FAIRequestData RequestData;
+		RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
+		RequestData.request_id = FGuid::NewGuid().ToString();
+		
+		RequestData.session.session_id = CurrentSessionId;
+		RequestData.session.player_id = TEXT("player_001");
+		RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
+		RequestData.session.current_node_id = CurrentNodeId;
+		RequestData.session.turn_index = TurnIndex;
+		
+		RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
+		RequestData.npc.npc_role = TEXT("immigration_officer");
+		RequestData.npc.last_npc_message = LastNpcMessage;
+		
+		RequestData.audio.mime_type = TEXT("audio/wav");
+		RequestData.audio.sample_rate_hz = 48000;
+		RequestData.audio.channels = 2;
+		RequestData.audio.duration_ms = 2800;
+		RequestData.audio.language_hint = TEXT("en-US");
+		
+		RequestData.player_profile.nickname = TEXT("Sean");
+		RequestData.player_profile.english_confidence = TEXT("beginner");
+		RequestData.player_profile.tier = TEXT("Bronze");
+		RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
+		
+		RequestData.scenario_state = CurrentScenarioState;
+		
+		RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
+		RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
+		RequestData.game_state.completed_intents = { TEXT("submit_passport") };
+		RequestData.game_state.current_objective = TEXT("State the visit purpose");
+		
+		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Request Before ---"));
+		PRINTLOGW_JW(TEXT("request_id: %s"), *RequestData.request_id);
+		PRINTLOGW_JW(TEXT("turn_index: %d"), RequestData.session.turn_index);
+		PRINTLOGW_JW(TEXT("session.current_node_id: %s"), *RequestData.session.current_node_id);
+		PRINTLOGW_JW(TEXT("npc.last_npc_message: %s"), *RequestData.npc.last_npc_message);
+		PRINTLOGW_JW(TEXT("scenario_state - patience: %d, suspicion: %d, retry_count: %d, hint_count: %d"),
+			RequestData.scenario_state.patience, RequestData.scenario_state.suspicion, RequestData.scenario_state.retry_count, RequestData.scenario_state.hint_count);
+
+		PRINTLOGW_JW(TEXT("[Voice Test] 타임아웃으로 빈 오디오 데이터를 서버로 전송합니다."));
+		
+		// 파일 경로를 빈 문자열 TEXT("")로 전달 (NetSubsystem 내부에서 빈 문자열이면 더미 데이터로 처리되도록 구현되어 있다고 가정)
+		NetSubsystem->SendToAI(RequestData, TEXT(""), Callback);
 	}
 }
 

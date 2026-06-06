@@ -29,7 +29,33 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	PendingStructResponseDelegate = OnResponseDelegate;
 	
 	TArray<uint8> RawAudioData;
-	if (!FFileHelper::LoadFileToArray(RawAudioData, *WAVFilePath))
+	
+	// 경로가 비어있다면 1분을 초과한 상황 -> 44byte짜리 빈 wav 생성 (AI 파싱 에러 방지)
+	if (WAVFilePath.IsEmpty())
+	{
+		const uint8 DummyWavHeader[44] = {
+			'R', 'I', 'F', 'F', 
+			0x24, 0x7D, 0x00, 0x00,  // File size - 8 = 32036 바이트
+			'W', 'A', 'V', 'E', 
+			'f', 'm', 't', ' ', 
+			16, 0, 0, 0,             // fmt chunk size
+			1, 0,                    // AudioFormat (PCM)
+			1, 0,                    // NumChannels (1)
+			0x80, 0x3E, 0x00, 0x00,  // SampleRate (16000 Hz)
+			0x00, 0x7D, 0x00, 0x00,  // ByteRate (32000)
+			2, 0,                    // BlockAlign
+			16, 0,                   // BitsPerSample (16)
+			'd', 'a', 't', 'a', 
+			0x00, 0x7D, 0x00, 0x00   // Data size (32000 바이트)
+		};
+		RawAudioData.Append(DummyWavHeader, 44);
+		
+		// [핵심] 헤더 뒤에 32000바이트의 0(무음 파형 데이터)을 꽉 채워줍니다!
+		RawAudioData.AddZeroed(32000); 
+		
+		PRINTLOGW_JW(TEXT("빈 파일 요청: 파이썬 에러 방지용 1초 무음 WAV(32044바이트)를 생성해 전송합니다."));
+	}
+	else if (!FFileHelper::LoadFileToArray(RawAudioData, *WAVFilePath))
 	{
 		PRINTLOGE_JW(TEXT("WAV 파일 로드 실패: %s"), *WAVFilePath);
 		HandleServerResponseStruct(TEXT(""));

@@ -31,7 +31,7 @@ public:
 	void CancelPendingRequests();
 	
 	// 실제 서버 응답 수신 시 호출될 내부 함수 (테스트용으로 노출됨)
-	void HandleServerResponse(const FString& ResponseData);
+	// void HandleServerResponse(const FString& ResponseData);
 	void HandleServerResponseStruct(const FString& ResponseData);
 	
 private:

@@ -97,6 +97,12 @@ void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJS
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 {
 	TargetNPC = NewNPC;
+	
+	// 오버랩에 따른 마이크 UI 상태(활성화/비활성화) 업데이트
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+	}
 }
 
 void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)

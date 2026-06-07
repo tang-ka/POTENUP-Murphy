@@ -105,6 +105,9 @@ public:
 	// Toggle Bag, Phone Action
 	void ToggleBagPressed();
 	void TogglePhonePressed();
+	
+	// Update Mic UI
+	void SetMicUIState(bool bIsRecording);
 
 protected:
 	// === UI ===

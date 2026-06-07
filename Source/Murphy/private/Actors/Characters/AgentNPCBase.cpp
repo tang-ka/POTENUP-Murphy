@@ -50,6 +50,8 @@ void AAgentNPCBase::BeginPlay()
 	Super::BeginPlay();
 	
 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
+	EmojiUI->SetNPCName(TEXT("BBung"));
+	if (!NPCName.IsEmpty()) EmojiUI->SetNPCName(NPCName);
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
 	
@@ -100,8 +102,22 @@ void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAgentNPCBase, bIsTalkingWithPlayer);
 }
 
+void AAgentNPCBase::ForShortAnswer()
+{
+	if (IsValid(VoiceComp) && IsValid(ForShortAnswerSound))
+	{
+		VoiceComp->SetSound(ForShortAnswerSound);
+		VoiceComp->Play();
+		
+		float SoundDuration = ForShortAnswerSound->GetDuration();
+		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+	}
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] 너무 짧은 대답 - 정해져 있는 대사 출력"));
+}
+
 void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                                 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;

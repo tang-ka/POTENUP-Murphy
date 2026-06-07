@@ -103,20 +103,23 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 {
 	if (!IsValid(TargetNPC)) return;
 	
-	TargetNPC->NotifyPlayerSpoke();
-	
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		if (MurphyPlayer->GetRecordTime() < 0.5f)
 		{			
 			PRINTLOGW_JW(TEXT("[Voice Test] 녹음 시간이 너무 짧습니다. AI 서버로 전송하지 않고 기본 응답을 처리합니다."));
+
+			TargetNPC->ForShortAnswer();
+			MurphyPlayer->EndChatWithNPC();
 			
-			// 최소 v0.1.0 응답 포맷으로 더미 JSON 생성
-			FString SimulatedJSONResponse = TEXT("{\"npc\":{\"speaker\":\"System\",\"text\":\"잘 못 들었어. 조금만 더 길게 말해줄래?\",\"tone\":\"neutral\",\"animation\":\"\",\"audio_url\":\"\"}}");
-			Test_SimulateAIResponse(SimulatedJSONResponse);
+			// 최소 v0.1.0 응답 포맷으로 더미 JSON 생성/
+			// FString SimulatedJSONResponse = TEXT("{\"npc\":{\"speaker\":\"System\",\"text\":\"잘 못 들었어. 조금만 더 길게 말해줄래?\",\"tone\":\"neutral\",\"animation\":\"\",\"audio_url\":\"\"}}");
+			// Test_SimulateAIResponse(SimulatedJSONResponse);
 			return;
 		}
 	}
+	
+	TargetNPC->NotifyPlayerSpoke();
 	
 	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
 	{
@@ -275,8 +278,8 @@ void AMurphyPlayerController::SubscribeLevelEnterEvents()
 		return;
 	}
 
-	// BeginPlay 시점에는 SubLevel_Immigration의 OnLevelShown만 구독.
-	// SubLevel_BaggageClaim 구독은 TransitionToBaggageClaim에서 처리.
+	// BeginPlay 시점에는 SubLevel_Immigration의 OnLevelShown만 구독
+	// SubLevel_BaggageClaim 구독은 TransitionToBaggageClaim에서 처리
 	ULevelStreaming* ImmigrationLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_Immigration"));
 	if (ImmigrationLevel)
 	{

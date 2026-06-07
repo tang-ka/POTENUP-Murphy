@@ -63,7 +63,10 @@ protected:
 	// AI 응답 대기 중 재생할 타이핑 사운드 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Components")
 	TObjectPtr<UAudioComponent> TypingAudioComp;
-
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
+	FString NPCName;
+	
 	// AI 서버 응답을 대기하며 타이핑 애니메이션을 재생해야 하는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
 	bool bIsWaitingForAIResponse = false;
@@ -78,11 +81,20 @@ public:
 	TObjectPtr<USoundBase> PassportSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
 	TObjectPtr<USoundBase> TypingSound;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
+	TObjectPtr<USoundBase> ForShortAnswerSound;
 
+	void ForShortAnswer();
+	
 	// todo: DataAsset이나 DataTable로 만들어야함. 아니면 Struct에 Enum을 추가? 
 	// 감정별 이모지 텍스처를 매핑해두는 딕셔너리 (블루프린트에서 할당)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Emoji")
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
+	
+private:
+	// todo: Enum 처리
+	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
+	void UpdateEmotion(EAgentEmotion EmotionLevel);
 	
 private:
 	// === InteractionBox Overlap Event ===
@@ -90,10 +102,6 @@ private:
 	void OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 	void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
-	// todo: Enum 처리
-	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
-	void UpdateEmotion(EAgentEmotion EmotionLevel);
 	
 protected:
 	// 누군가 이미 대화 중인지 상태를 저장 (서버 -> 클라 동기화)

@@ -36,7 +36,6 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	
-	
 protected:
 	// === VoiceRecorder ===
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="VoiceChat")
@@ -64,6 +63,11 @@ public:
 	void StartChatWithNPC(AAgentNPCBase* NPC);
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Chat")
 	void EndChatWithNPC();
+	
+	// 카메라 포커싱
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Chat")
+	FRotator CamTargetRot = FRotator(345.0f, 245.0f, 0.0f); // 고정 P=345.0f Y=245.0f R=0.0f
+	void FocusNPC(float DeltaSeconds);
 	
 	// 회전 완료 전 대화 종료 방지 및 회전 보장 플래그
 	bool bIsAligningWithNPC  = false;

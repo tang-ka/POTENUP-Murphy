@@ -166,6 +166,8 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 
 		PRINTLOGW_JW(TEXT("[Voice Test] NetSubsystem을 통해 서버로 오디오 전송 시작"));
 		NetSubsystem->SendToAI(RequestData, SavedFilePath, Callback);
+		
+		// todo: [현진] 마이크 UI 여기에서 비활성화
 	}
 }
 
@@ -202,6 +204,8 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 		{
 			MurphyPlayer->EndChatWithNPC();
+			
+			// todo: [현진] 마이크 UI 여기에서 활성화
 		}
 	}
 }

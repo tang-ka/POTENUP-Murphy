@@ -32,40 +32,29 @@ void AMurphyPlayer::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	
 	// NPC와 대화하는 중일 경우 
-	if (bIsAligningWithNPC  && TargetNPC)
+	if (bIsAligningWithNPC  && TargetNPC) FocusNPC(DeltaSeconds);
+}
+
+void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC && PC->IsLocalPlayerController())
 	{
-		FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetNPC->GetActorLocation());
-		TargetRot.Pitch = 0.0f;
-		TargetRot.Roll = 0.0f;
+		auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer());
+		if (Subsystem) Subsystem->AddMappingContext(IMC_Murphy, 0);
 		
-		FRotator Rot = FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaSeconds,  5.0f);
-		SetActorRotation(Rot);
-		
-		bool bActorAligned = GetActorRotation().Equals(TargetRot, 2.0f);
-		bool bCamAligned = true;
-		
-		// 카메라는 특정 시점으로 고정 시킬 수 있도륙
-		if (Controller)
-		{	
-			//P=344.600000 Y=245.199999 R=0.000000
-			FRotator CamTargetRot = FRotator(345.0f, 245.0f, 0.0f);
-			FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), CamTargetRot, DeltaSeconds,  5.0f);
-			Controller->SetControlRotation(CamRot);
-			
-			bCamAligned = Controller->GetControlRotation().Equals(CamTargetRot, 2.0f);
-		}
-		
-		if (bActorAligned && bCamAligned)
+		auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+		if (PlayerInput)
 		{
-			bIsAligningWithNPC  = false;
-			
-			if (bPendingEndChat)
-			{
-				EndChatWithNPC();
-			}
+			PlayerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMurphyPlayer::Move);
+			PlayerInput->BindAction(IA_MouseLook, ETriggerEvent::Triggered, this, &AMurphyPlayer::Look);
+			PlayerInput->BindAction(IA_Record, ETriggerEvent::Started, this, &AMurphyPlayer::RecordStart);
+			PlayerInput->BindAction(IA_Record, ETriggerEvent::Completed, this, &AMurphyPlayer::RecordEnd);
+			PlayerInput->BindAction(IA_PlayAudio, ETriggerEvent::Started, this, &AMurphyPlayer::RecordAudioPlay);
 		}
 	}
-	
 }
 
 void AMurphyPlayer::StartChatWithNPC(AAgentNPCBase* NPC)
@@ -106,6 +95,38 @@ void AMurphyPlayer::EndChatWithNPC()
 	SetChatState(EPlayerChatState::Idle);
 }
 
+void AMurphyPlayer::FocusNPC(float DeltaSeconds)
+{
+	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetNPC->GetActorLocation());
+	TargetRot.Pitch = 0.0f;
+	TargetRot.Roll = 0.0f;
+		
+	FRotator Rot = FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaSeconds,  5.0f);
+	SetActorRotation(Rot);
+		
+	bool bActorAligned = GetActorRotation().Equals(TargetRot, 2.0f);
+	bool bCamAligned = true;
+		
+	// 카메라는 특정 시점으로 고정 시킬 수 있도륙
+	if (Controller)
+	{	
+		FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), CamTargetRot, DeltaSeconds,  5.0f);
+		Controller->SetControlRotation(CamRot);
+			
+		bCamAligned = Controller->GetControlRotation().Equals(CamTargetRot, 2.0f);
+	}
+		
+	if (bActorAligned && bCamAligned)
+	{
+		bIsAligningWithNPC  = false;
+			
+		if (bPendingEndChat)
+		{
+			EndChatWithNPC();
+		}
+	}
+}
+
 float AMurphyPlayer::GetRecordTime() const
 {
 	if (GetWorld())
@@ -114,28 +135,6 @@ float AMurphyPlayer::GetRecordTime() const
 	}
 	
 	return 0.0f;
-}
-
-void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (PC && PC->IsLocalPlayerController())
-	{
-		auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer());
-		if (Subsystem) Subsystem->AddMappingContext(IMC_Murphy, 0);
-		
-		auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-		if (PlayerInput)
-		{
-			PlayerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMurphyPlayer::Move);
-			PlayerInput->BindAction(IA_MouseLook, ETriggerEvent::Triggered, this, &AMurphyPlayer::Look);
-			PlayerInput->BindAction(IA_Record, ETriggerEvent::Started, this, &AMurphyPlayer::RecordStart);
-			PlayerInput->BindAction(IA_Record, ETriggerEvent::Completed, this, &AMurphyPlayer::RecordEnd);
-			PlayerInput->BindAction(IA_PlayAudio, ETriggerEvent::Started, this, &AMurphyPlayer::RecordAudioPlay);
-		}
-	}
 }
 
 void AMurphyPlayer::Move(const FInputActionValue& Value)

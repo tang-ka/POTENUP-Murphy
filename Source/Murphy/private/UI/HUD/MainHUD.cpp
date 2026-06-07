@@ -3,3 +3,15 @@
 
 #include "UI/HUD/MainHUD.h"
 
+
+#include "UI/HUD/BagPopupWidget.h"
+
+void UMainHUD::RequestToggleBag()
+{
+	if (WBP_BagPopup)
+	{
+		WBP_BagPopup->ToggleBag();
+	}
+}
+
+

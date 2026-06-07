@@ -103,7 +103,9 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 {
 	if (!IsValid(TargetNPC)) return;
 	
-	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn());
+	
+	if (MurphyPlayer)
 	{
 		if (MurphyPlayer->GetRecordTime() < 0.5f)
 		{			
@@ -170,7 +172,11 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		PRINTLOGW_JW(TEXT("[Voice Test] NetSubsystem을 통해 서버로 오디오 전송 시작"));
 		NetSubsystem->SendToAI(RequestData, SavedFilePath, Callback);
 		
-		// todo: [현진] 마이크 UI 여기에서 비활성화
+		if (MurphyPlayer)
+		{
+			// 마이크 UI 비활성화
+			MurphyPlayer->SetMicUIState(false);
+		}
 	}
 }
 
@@ -208,7 +214,8 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		{
 			MurphyPlayer->EndChatWithNPC();
 			
-			// todo: [현진] 마이크 UI 여기에서 활성화
+			// 마이크 UI 활성화
+			MurphyPlayer->SetMicUIState(true);
 		}
 	}
 }

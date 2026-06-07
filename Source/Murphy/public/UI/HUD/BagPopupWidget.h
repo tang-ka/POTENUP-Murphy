@@ -17,9 +17,9 @@ class MURPHY_API UBagPopupWidget : public UUserWidget
 protected:
 	// 애니메이션 바인딩 시 Transient 키워드 필수
 	UPROPERTY(meta =(BindWidgetAnim), Transient)
-	TObjectPtr<UWidgetAnimation> Anim_SlideUp;
+	TObjectPtr<UWidgetAnimation> Anim_BagSlideUp;
 	
-	// 가방 열려있는지 여부
+	// 열려있는지 여부
 	bool bIsOpen = false;
 	
 public:

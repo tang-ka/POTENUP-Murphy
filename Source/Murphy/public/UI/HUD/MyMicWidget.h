@@ -14,4 +14,8 @@ class MURPHY_API UMyMicWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
+	
+public:
+	void SetRecordingState(bool bIsRecording);
+	
 };

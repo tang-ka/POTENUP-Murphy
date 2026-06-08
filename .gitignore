@@ -83,6 +83,9 @@ Plugins/Developer/RiderLink/
 
 # Meta Human
 Content/MetaHumans/Kristofer/SourceAssets/Kristofer.uasset
+Content/MetaHumans/Amelia/SourceAssets/Amelia.uasset
+Content/MetaHumans/Gavin/SourceAssets/Gavin.uasset
+Content/MetaHumans/Vincent/SourceAssets/Vincent.uasset
 
 # Large Assets
 Content/CitySampleCrowd/Character/Male/NormalWeight/Textures/blazer/T_m_nrw_blazer_BN.uasset

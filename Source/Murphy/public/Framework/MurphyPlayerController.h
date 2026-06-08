@@ -46,6 +46,10 @@ private:
 	UFUNCTION()
 	void OnAIResponseReceived(const FAIResponseData& ResponseData);
 	
+public:
+	// 1분 타임아웃 시 AgentNPCBase가 호출할 함수
+	void SendTimeoutAudioToAI();
+	
 #pragma region Level Enter Toast
 	void SubscribeLevelEnterEvents();
 

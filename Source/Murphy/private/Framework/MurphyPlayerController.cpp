@@ -97,24 +97,37 @@ void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJS
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 {
 	TargetNPC = NewNPC;
+	
+	// 오버랩에 따른 마이크 UI 상태(활성화/비활성화) 업데이트
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+	}
 }
 
 void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
 {
 	if (!IsValid(TargetNPC)) return;
 	
-	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn());
+	
+	if (MurphyPlayer)
 	{
 		if (MurphyPlayer->GetRecordTime() < 0.5f)
 		{			
 			PRINTLOGW_JW(TEXT("[Voice Test] 녹음 시간이 너무 짧습니다. AI 서버로 전송하지 않고 기본 응답을 처리합니다."));
+
+			TargetNPC->ForShortAnswer();
+			MurphyPlayer->EndChatWithNPC();
 			
-			// 최소 v0.1.0 응답 포맷으로 더미 JSON 생성
-			FString SimulatedJSONResponse = TEXT("{\"npc\":{\"speaker\":\"System\",\"text\":\"잘 못 들었어. 조금만 더 길게 말해줄래?\",\"tone\":\"neutral\",\"animation\":\"\",\"audio_url\":\"\"}}");
-			Test_SimulateAIResponse(SimulatedJSONResponse);
+			// 최소 v0.1.0 응답 포맷으로 더미 JSON 생성/
+			// FString SimulatedJSONResponse = TEXT("{\"npc\":{\"speaker\":\"System\",\"text\":\"잘 못 들었어. 조금만 더 길게 말해줄래?\",\"tone\":\"neutral\",\"animation\":\"\",\"audio_url\":\"\"}}");
+			// Test_SimulateAIResponse(SimulatedJSONResponse);
 			return;
 		}
 	}
+	
+	TargetNPC->NotifyPlayerSpoke();
 	
 	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
 	{
@@ -164,6 +177,12 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 
 		PRINTLOGW_JW(TEXT("[Voice Test] NetSubsystem을 통해 서버로 오디오 전송 시작"));
 		NetSubsystem->SendToAI(RequestData, SavedFilePath, Callback);
+		
+		if (MurphyPlayer)
+		{
+			// 마이크 UI 비활성화
+			MurphyPlayer->SetMicUIState(false);
+		}
 	}
 }
 
@@ -200,7 +219,66 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 		{
 			MurphyPlayer->EndChatWithNPC();
+			
+			// 마이크 UI 활성화
+			MurphyPlayer->SetMicUIState(true);
 		}
+	}
+}
+
+void AMurphyPlayerController::SendTimeoutAudioToAI()
+{
+	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
+	{
+		FOnAIResponseDataReceived Callback;
+		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
+		
+		// OnAudioRecordingFinished와 동일하게 RequestData 세팅
+		FAIRequestData RequestData;
+		RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
+		RequestData.request_id = FGuid::NewGuid().ToString();
+		
+		RequestData.session.session_id = CurrentSessionId;
+		RequestData.session.player_id = TEXT("player_001");
+		RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
+		RequestData.session.current_node_id = CurrentNodeId;
+		RequestData.session.turn_index = TurnIndex;
+		
+		RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
+		RequestData.npc.npc_role = TEXT("immigration_officer");
+		RequestData.npc.last_npc_message = LastNpcMessage;
+		
+		RequestData.audio.mime_type = TEXT("audio/wav");
+		RequestData.audio.sample_rate_hz = 48000;
+		RequestData.audio.channels = 2;
+		RequestData.audio.duration_ms = 2800;
+		RequestData.audio.language_hint = TEXT("en-US");
+		
+		RequestData.player_profile.nickname = TEXT("Sean");
+		RequestData.player_profile.english_confidence = TEXT("beginner");
+		RequestData.player_profile.tier = TEXT("Bronze");
+		RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
+		
+		RequestData.scenario_state = CurrentScenarioState;
+		
+		RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
+		RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
+		RequestData.game_state.completed_intents = { TEXT("submit_passport") };
+		RequestData.game_state.current_objective = TEXT("State the visit purpose");
+		
+		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Request Before ---"));
+		PRINTLOGW_JW(TEXT("request_id: %s"), *RequestData.request_id);
+		PRINTLOGW_JW(TEXT("turn_index: %d"), RequestData.session.turn_index);
+		PRINTLOGW_JW(TEXT("session.current_node_id: %s"), *RequestData.session.current_node_id);
+		PRINTLOGW_JW(TEXT("npc.last_npc_message: %s"), *RequestData.npc.last_npc_message);
+		PRINTLOGW_JW(TEXT("scenario_state - patience: %d, suspicion: %d, retry_count: %d, hint_count: %d"),
+			RequestData.scenario_state.patience, RequestData.scenario_state.suspicion, RequestData.scenario_state.retry_count, RequestData.scenario_state.hint_count);
+
+		PRINTLOGW_JW(TEXT("[Voice Test] 타임아웃으로 빈 오디오 데이터를 서버로 전송합니다."));
+		
+		// 파일 경로를 빈 문자열 TEXT("")로 전달 (NetSubsystem 내부에서 빈 문자열이면 더미 데이터로 처리되도록 구현되어 있다고 가정)
+		NetSubsystem->SendToAI(RequestData, TEXT(""), Callback);
 	}
 }
 
@@ -213,8 +291,8 @@ void AMurphyPlayerController::SubscribeLevelEnterEvents()
 		return;
 	}
 
-	// BeginPlay 시점에는 SubLevel_Immigration의 OnLevelShown만 구독.
-	// SubLevel_BaggageClaim 구독은 TransitionToBaggageClaim에서 처리.
+	// BeginPlay 시점에는 SubLevel_Immigration의 OnLevelShown만 구독
+	// SubLevel_BaggageClaim 구독은 TransitionToBaggageClaim에서 처리
 	ULevelStreaming* ImmigrationLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_Immigration"));
 	if (ImmigrationLevel)
 	{

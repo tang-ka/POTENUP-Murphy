@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Image.h"
 #include "Components/TextBlock.h"
+
 #include "QuestEntryWidget.generated.h"
 
 // 퀘스트 타입 Enum
@@ -24,10 +24,5 @@ class MURPHY_API UQuestEntryWidget : public UUserWidget
 	
 protected:
 	UPROPERTY(meta =(BindWidget))
-	UTextBlock* txt_QuestText;
-	
-	
-	
-	
-	
+	TObjectPtr<UTextBlock> txt_QuestText;
 };

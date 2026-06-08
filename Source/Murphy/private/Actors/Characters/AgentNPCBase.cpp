@@ -11,10 +11,12 @@
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
+#include "Manager/ScenarioSubsystem.h"
+#include "UI/AgentEmojiUI.h"
 
 AAgentNPCBase::AAgentNPCBase()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	
 	InteractionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionBox"));
 	InteractionBox->SetupAttachment(RootComponent);
@@ -29,21 +31,68 @@ AAgentNPCBase::AAgentNPCBase()
 	
 	EmojiComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComp"));
 	EmojiComp->SetupAttachment(GetMesh());
-	static ConstructorHelpers::FClassFinder<UUserWidget> EmojiUI(TEXT("/Game/UI/Blueprints/WBP_TestNPC.WBP_TestNPC_C"));
-	if (EmojiUI.Succeeded()) EmojiComp->SetWidgetClass(EmojiUI.Class);
+	static ConstructorHelpers::FClassFinder<UUserWidget> EmojiUIClass(TEXT("/Game/UI/Blueprints/WBP_TestNPC.WBP_TestNPC_C"));
+	if (EmojiUIClass.Succeeded()) EmojiComp->SetWidgetClass(EmojiUIClass.Class);
 	EmojiComp->SetWidgetSpace(EWidgetSpace::Screen);
 	EmojiComp->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
 	EmojiComp->SetVisibility(false);
+	
+	// 타이핑 오디오 컴포넌트 생성 및 설정
+	TypingAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("TypingAudioComp"));
+	TypingAudioComp->SetupAttachment(GetMesh());
+	TypingAudioComp->bAutoActivate = false;
+	// static ConstructorHelpers::FObjectFinder<USoundWave> Typing(TEXT("/Game/Assets/Audios/Character/keyboard.keyboard"));
+	// if (Typing.Succeeded()) TypingAudioComp->SetSound(Typing.Object);
 }
 
 void AAgentNPCBase::BeginPlay()
 {
 	Super::BeginPlay();
-	 
+	
+	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
+	EmojiUI->SetNPCName(TEXT("BBung"));
+	if (!NPCName.IsEmpty()) EmojiUI->SetNPCName(NPCName);
+
+	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
+	
 	if (IsValid(InteractionBox))
 	{
 		InteractionBox->OnComponentBeginOverlap.AddDynamic(this, &AAgentNPCBase::OnInteractionBoxBeginOverlap);
 		InteractionBox->OnComponentEndOverlap.AddDynamic(this, &AAgentNPCBase::OnInteractionBoxEndOverlap);
+	}
+}
+
+void AAgentNPCBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (bIsWaitingForPlayer)
+	{
+		CurWaitTime += DeltaSeconds;
+		
+		// 지연 캐싱 (BeginPlay에서 실패했을 경우를 대비한 안전 장치)
+		// if (!IsValid(EmojiUI))
+		// {
+		// 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
+		// }
+		
+		// 캐싱된 포인터를 사용해 빠르고 가볍게 접근 (Cast 없음!)
+		if (IsValid(EmojiUI))
+		{
+			EmojiUI->SetProgress(CurWaitTime / MaxWaitTime);
+		}
+		
+		if (CurWaitTime >= MaxWaitTime)
+		{
+			bIsWaitingForPlayer = false;
+			
+			PRINTLOGW_JW(TEXT("[AgentNPC] 1분 타임아웃! 플레이어가 대답하지 않았습니다."));
+			
+			if (AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetWorld()->GetFirstPlayerController()))
+			{
+				PC->SendTimeoutAudioToAI();
+			}
+		}
 	}
 }
 
@@ -53,8 +102,22 @@ void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(AAgentNPCBase, bIsTalkingWithPlayer);
 }
 
+void AAgentNPCBase::ForShortAnswer()
+{
+	if (IsValid(VoiceComp) && IsValid(ForShortAnswerSound))
+	{
+		VoiceComp->SetSound(ForShortAnswerSound);
+		VoiceComp->Play();
+		
+		float SoundDuration = ForShortAnswerSound->GetDuration();
+		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+	}
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] 너무 짧은 대답 - 정해져 있는 대사 출력"));
+}
+
 void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                                 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
@@ -65,9 +128,27 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		{
 			MyPC->SetActiveNPC(this);
 			
+			// 1 시나리오 매니저 호출 (입국 심사 시작)
+			if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+			{
+				ScenarioSubsystem->StartScenario(EScenarioType::Prologue_Immigration);
+			}
+			
+			// 2 블루프린트에서 할당한 '여권 보여달라' 음성 재생 (방어 코드 포함)
+			if (IsValid(VoiceComp) && IsValid(PassportSound))
+			{
+				VoiceComp->SetSound(PassportSound);
+				VoiceComp->Play();
+				
+				float SoundDuration = PassportSound->GetDuration();
+				GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+			}
+			
+			// 3 오버랩 직후에는 기본 이모지로 초기화
+			UpdateEmotion(EAgentEmotion::Normal);
 			EmojiComp->SetVisibility(true);
 			
-			PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active."));
+			PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active (입국심사 시작)."));
 		}
 	}
 }
@@ -86,9 +167,19 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	}
 }
 
-void AAgentNPCBase::UpdateEmotion(int32 EmotionLevel)
+void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 {
 	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리?
+	
+	// Enum에 맞는 Texture를 Map에서 찾아옴
+	if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(EmotionLevel))
+	{
+		// 이모지 UI 캐스팅 후 이미지 변경
+		if (IsValid(EmojiUI))
+		{
+			EmojiUI->SetEmoji(*FoundTexture);
+		}
+	}
 }
 
 bool AAgentNPCBase::TryStartConversation()
@@ -107,10 +198,67 @@ void AAgentNPCBase::EndConversation()
 	bIsTalkingWithPlayer = false;
 }
 
+void AAgentNPCBase::StartTypingWait()
+{
+	bIsWaitingForAIResponse = true;
+
+	if (IsValid(TypingAudioComp) && IsValid(TypingAudioComp->GetSound()))
+	{
+		TypingAudioComp->Play();
+	}
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] AI 응답 대기 시작 - 타이핑 연출 재생"));
+}
+
+void AAgentNPCBase::StopTypingWait()
+{
+	bIsWaitingForAIResponse = false;
+
+	if (IsValid(TypingAudioComp) && TypingAudioComp->IsPlaying())
+	{
+		TypingAudioComp->Stop();
+	}
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] AI 응답 대기 종료 - 타이핑 연출 중지"));
+}
+
+void AAgentNPCBase::OnVoiceFinished()
+{	
+	// 오디오 재생이 끝난 순간 1분 대기 타이머 시작
+	bIsWaitingForPlayer = true;
+	CurWaitTime = 0;
+	PRINTLOG_JW(TEXT("[AgentNPC] NPC 대사 종료. 1분 대기 타이머를 시작합니다."));
+}
+
+void AAgentNPCBase::NotifyPlayerSpoke()
+{	
+	// 플레이어가 녹음을 끝내고 전송했으므로 대기 타이머 종료 및 게이지 초기화
+	bIsWaitingForPlayer = false;
+	if (IsValid(EmojiUI))
+	{
+		EmojiUI->SetProgress(0.0f);
+	}
+
+	// 녹음이 끝났으므로 AI 서버 응답 대기 연출 시작
+	StartTypingWait();
+}
+
 void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 {
-	// 기획서 v0.1.0: patience_delta 등으로 감정을 파악하거나 npc.tone 을 활용 가능
-	UpdateEmotion(0); // TODO: ResponseData.npc.tone 등에 맞춰 구조 개선
+	// AI 서버 응답이 도착했으므로 대기 연출 먼저 종료
+	StopTypingWait();
+
+	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
+	// 현재는 프로토타입 테스트를 위해 0(Normal)부터 6(Furious) 사이의 값을 랜덤하게 추출합니다.
+	
+	// FMath::RandRange(Min, Max)는 Min과 Max를 포함한 난수를 반환합니다.
+	int32 RandomIndex = FMath::RandRange(0, 6);
+	EAgentEmotion RandomEmotion = static_cast<EAgentEmotion>(RandomIndex);
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] 프로토타입 랜덤 감정 출력 -> 인덱스: %d"), RandomIndex);
+	
+	// 랜덤으로 뽑힌 감정으로 이모지 업데이트
+	UpdateEmotion(RandomEmotion);
 	
 	// TTS 재생
 	if (IsValid(VoiceComp) && !ResponseData.npc.audio_url.IsEmpty())
@@ -198,5 +346,7 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 		VoiceComp->SetSound(SoundWave);
 		VoiceComp->Play();
 		PRINTLOG_JW(TEXT("[AgentNPC] NPC 음성 재생 시작 (%.1f초)"), SoundWave->Duration);
+		
+		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundWave->Duration, false);
 	}
 }

@@ -4,12 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "BagPopupWidget.generated.h"
+#include "PhonePopupWidget.generated.h"
 
-class UWidgetAnimation;
-
+/**
+ * 
+ */
 UCLASS()
-class MURPHY_API UBagPopupWidget : public UUserWidget
+class MURPHY_API UPhonePopupWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
@@ -17,13 +18,15 @@ class MURPHY_API UBagPopupWidget : public UUserWidget
 protected:
 	// 애니메이션 바인딩 시 Transient 키워드 필수
 	UPROPERTY(meta =(BindWidgetAnim), Transient)
-	TObjectPtr<UWidgetAnimation> Anim_BagSlideUp;
+	TObjectPtr<UWidgetAnimation> Anim_PhoneSlideUp;
 	
 	// 열려있는지 여부
 	bool bIsOpen = false;
 	
 public:
-	// Q 키 호출 함수
-	void ToggleBag();
+	// E 키 호출 함수
+	void TogglePhone();
+	
+	
 	
 };

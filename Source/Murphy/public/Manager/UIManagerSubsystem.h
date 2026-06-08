@@ -9,9 +9,12 @@
 #include "UI/Base/UITypes.h"         // EUILayer
 #include "UIManagerSubsystem.generated.h"
 
+class UQuestToastPopupWidget;
 class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
+class UScenarioSubsystem;
+enum class EScenarioType : uint8;
 
 UCLASS()
 class MURPHY_API UUIManagerSubsystem : public ULocalPlayerSubsystem
@@ -27,6 +30,8 @@ public:
 	// LifeTime = 0.f 이면 UIManagerSettings::DefaultToastLifeTime 을 사용
 	void ShowToast(const FText& Message, float LifeTime = 0.f);
 	void ShowLevelEnterToast(const FText& LevelName, float LifeTime = 0.f);
+	void ShowQuestToast(const FText& Title, const FText& Content, float LifeTime = 0.f);
+
 
 	// ── 레이어 배치 ──
 	void PushToLayer(EUILayer Layer, UUserWidget* Widget);
@@ -45,12 +50,16 @@ private:
 	TSubclassOf<UCommonPopupWidget> GetPopupClass();
 	TSubclassOf<UUserWidget> GetToastClass();
 	TSubclassOf<ULevelEnterToastPopupWidget> GetLevelEnterToastClass();
+	TSubclassOf<UQuestToastPopupWidget> GetQuestToastClass();
 
 	// EUILayer → ZOrder
 	static int32 LayerToZOrder(EUILayer Layer);
 
 	UFUNCTION()
 	void HandlePostLoadMapWithWorld(UWorld* LoadedWorld);
+
+	UFUNCTION()
+	void HandleScenarioStateChanged(EScenarioType NewScenario);
 	
 private:
 	UPROPERTY()
@@ -61,4 +70,7 @@ private:
 	
 	UPROPERTY()
 	TSubclassOf<ULevelEnterToastPopupWidget> CachedLevelEnterToastClass;
+	
+	UPROPERTY()
+	TSubclassOf<UQuestToastPopupWidget> CachedQuestToastClass;
 };

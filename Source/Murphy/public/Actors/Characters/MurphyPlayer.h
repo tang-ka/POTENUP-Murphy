@@ -12,6 +12,7 @@ class UInputAction;
 class UVoiceRecorderComponent;
 
 class AAgentNPCBase;
+class UMainHUD;
 
 UENUM(BlueprintType)
 enum class EPlayerChatState : uint8
@@ -35,7 +36,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
-	
 	
 protected:
 	// === VoiceRecorder ===
@@ -65,6 +65,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Chat")
 	void EndChatWithNPC();
 	
+	// 카메라 포커싱
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Chat")
+	FRotator CamTargetRot = FRotator(345.0f, 245.0f, 0.0f); // 고정 P=345.0f Y=245.0f R=0.0f
+	void FocusNPC(float DeltaSeconds);
+	
 	// 회전 완료 전 대화 종료 방지 및 회전 보장 플래그
 	bool bIsAligningWithNPC  = false;
 	bool bPendingEndChat = false;
@@ -85,6 +90,10 @@ public:
 	UInputAction* IA_Record;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_PlayAudio;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_ToggleBag;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_TogglePhone;
 	
 	// === Input Action === 
 	virtual void Move(const FInputActionValue& Value);
@@ -92,4 +101,19 @@ public:
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
+
+	// Toggle Bag, Phone Action
+	void ToggleBagPressed();
+	void TogglePhonePressed();
+	
+	// Update Mic UI
+	void SetMicUIState(bool bIsRecording);
+
+protected:
+	// === UI ===
+	UPROPERTY(EditAnywhere, Category = "Murphy|UI")
+	TSubclassOf<UMainHUD> MainHUDClass;
+	UPROPERTY()
+	TObjectPtr<UMainHUD> MainHUDInstance;
+	
 };

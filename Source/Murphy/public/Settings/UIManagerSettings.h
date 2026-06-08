@@ -6,6 +6,7 @@
 #include "Engine/DeveloperSettings.h"
 #include "UIManagerSettings.generated.h"
 
+class UQuestToastPopupWidget;
 class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
@@ -32,6 +33,10 @@ public:
 	/** Level Enter 토스트(알림) 위젯 클래스 */
 	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
 	TSoftClassPtr<ULevelEnterToastPopupWidget> LevelEnterToastClass;
+	
+	/** Quest 토스트(알림) 위젯 클래스 */
+	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
+	TSoftClassPtr<UQuestToastPopupWidget> QuestToastClass;
 	
 	// ====== 토스트 기본값 ======
 

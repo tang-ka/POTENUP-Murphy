@@ -42,12 +42,20 @@ void UAgentEmojiUI::SetProgressColor(FLinearColor Color)
 	}
 }
 
-void UAgentEmojiUI::SetEmoji(UTexture2D* Emoji)
+void UAgentEmojiUI::SetEmoji(UTexture2D* Emoji) const
 {
 	Image_Emoji->SetBrushFromTexture(Emoji);
 }
 
-void UAgentEmojiUI::SetDialog(FText Dialog)
+void UAgentEmojiUI::SetNPCName(FString NPCName) const
 {
-	Text_Dialog->SetText(Dialog);
+	Text_NPCName->SetVisibility(ESlateVisibility::HitTestInvisible); // 강제로 보이게 켬
+	Text_NPCName->SetText(FText::FromString(NPCName));
+	
+	// 화면에 정말 이 함수가 불렸는지 빨간 글씨로 띄워봅니다.
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SetNPCName Called: %s"), *NPCName));
+}
+
+void UAgentEmojiUI::UpdateProgress()
+{
 }

@@ -139,7 +139,7 @@ void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)
             break;
 
         case EScenarioType::Prologue_Immigration:
-            Title   = FText::FromString(TEXT("입국 심사 미션"));
+            Title   = FText::FromString(TEXT("입국 심사"));
             Content = FText::FromString(TEXT("입국 심사관과 대화하여 입국심사를 통과하세요."));
             break;
 

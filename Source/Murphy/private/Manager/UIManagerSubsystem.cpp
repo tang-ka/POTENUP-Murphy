@@ -2,12 +2,16 @@
 
 
 #include "Manager/UIManagerSubsystem.h"
+
+#include "Murphy.h"
 #include "Settings/UIManagerSettings.h"
 #include "UI/Base/CommonPopupWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "Manager/ScenarioSubsystem.h"
 #include "UI/LevelEnterToastPopupWidget.h"
+#include "UI/QuestToastPopupWidget.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -19,11 +23,35 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         this,
         &UUIManagerSubsystem::HandlePostLoadMapWithWorld
     );
+    
+    if (ULocalPlayer* LP = GetLocalPlayer())
+    {
+        if (UGameInstance* GI = LP->GetGameInstance())
+        {
+            UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>();
+            if (ScenarioSS)
+            {
+                ScenarioSS->OnScenarioStateChanged.AddDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+            }
+        }
+    }
 }
 
 void UUIManagerSubsystem::Deinitialize()
 {
     FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
+
+    if (ULocalPlayer* LP = GetLocalPlayer())
+    {
+        if (UGameInstance* GI = LP->GetGameInstance())
+        {
+            UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>();
+            if (ScenarioSS)
+            {
+                ScenarioSS->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+            }
+        }
+    }
 
     Super::Deinitialize();
 }
@@ -72,6 +100,17 @@ TSubclassOf<ULevelEnterToastPopupWidget> UUIManagerSubsystem::GetLevelEnterToast
     return CachedLevelEnterToastClass;
 }
 
+TSubclassOf<UQuestToastPopupWidget> UUIManagerSubsystem::GetQuestToastClass()
+{
+    if (!CachedQuestToastClass)
+    {
+        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+        CachedQuestToastClass = Settings->QuestToastClass.LoadSynchronous();
+    }
+    
+    return CachedQuestToastClass;
+}
+
 int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
 {
     // 레이어 간 간격을 넉넉히 둬서 같은 레이어 내 미세 조정 여지를 남긴다.
@@ -84,6 +123,41 @@ int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
         case EUILayer::Notification: return 400;
         case EUILayer::System:       return 500;
         default:                     return 0;
+    }
+}
+
+void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)
+{
+    FText Title = FText::GetEmpty();
+    FText Content = FText::GetEmpty();
+    bool bShowToast = true;
+    switch (NewScenario)
+    {
+        case EScenarioType::Tutorial_Airplane:
+            Title   = FText::FromString(TEXT("기내 친구 사귀기"));
+            Content = FText::FromString(TEXT("옆자리 승객과 대화하여 친해지세요."));
+            break;
+
+        case EScenarioType::Prologue_Immigration:
+            Title   = FText::FromString(TEXT("입국 심사 미션"));
+            Content = FText::FromString(TEXT("입국 심사관과 대화하여 입국심사를 통과하세요."));
+            break;
+
+        case EScenarioType::Prologue_Baggage:
+            Title   = FText::FromString(TEXT("수하물 찾기"));
+            Content = FText::FromString(TEXT("수하물을 잃어버렸습니다. 직원에게 문의하여 수하물을 찾아보세요."));
+            break;
+
+        case EScenarioType::None:
+            bShowToast = false;
+            break;
+        default:
+            return;
+    }
+
+    if (bShowToast)
+    {
+        ShowQuestToast(Title, Content);
     }
 }
 
@@ -219,6 +293,39 @@ void UUIManagerSubsystem::ShowLevelEnterToast(const FText& LevelName, float Life
     }
     
     Toast->SetUp(LevelName, LifeTime);
+    PushToLayer(EUILayer::Notification, Toast);
+    Toast->StartLifeTimeCountdown();
+}
+
+void UUIManagerSubsystem::ShowQuestToast(const FText& Title, const FText& Content, float LifeTime)
+{
+    if (LifeTime <= 0.f)
+    {
+        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+        LifeTime = Settings->DefaultToastLifeTime;
+    }
+
+    APlayerController* PC = GetOwningController();
+    if (!PC)
+    {
+        return;
+    }
+
+    TSubclassOf<UQuestToastPopupWidget> QuestToastClass = GetQuestToastClass();
+    if (!QuestToastClass)
+    {
+        PRINTLOG_SH(TEXT("QuestToastClass is nullptr. Check UIManagerSettings."));
+        return;
+    }
+
+    UQuestToastPopupWidget* Toast = CreateWidget<UQuestToastPopupWidget>(PC, QuestToastClass);
+    if (!Toast)
+    {
+        PRINTLOG_SH(TEXT("Failed to create QuestToastPopupWidget."));
+        return;
+    }
+
+    Toast->SetUp(Title, Content, LifeTime);
     PushToLayer(EUILayer::Notification, Toast);
     Toast->StartLifeTimeCountdown();
 }

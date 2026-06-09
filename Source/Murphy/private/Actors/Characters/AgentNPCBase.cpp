@@ -32,18 +32,15 @@ AAgentNPCBase::AAgentNPCBase()
 	
 	EmojiComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComp"));
 	EmojiComp->SetupAttachment(GetMesh());
-	static ConstructorHelpers::FClassFinder<UUserWidget> EmojiUIClass(TEXT("/Game/UI/Blueprints/WBP_TestNPC.WBP_TestNPC_C"));
+	static ConstructorHelpers::FClassFinder<UUserWidget> EmojiUIClass(TEXT("/Game/UI/Blueprints/WBP_NPCEmoji.WBP_NPCEmoji_C"));
 	if (EmojiUIClass.Succeeded()) EmojiComp->SetWidgetClass(EmojiUIClass.Class);
 	EmojiComp->SetWidgetSpace(EWidgetSpace::Screen);
 	EmojiComp->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
-	EmojiComp->SetVisibility(true);
 	
 	// 타이핑 오디오 컴포넌트 생성 및 설정
 	TypingAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("TypingAudioComp"));
 	TypingAudioComp->SetupAttachment(GetMesh());
 	TypingAudioComp->bAutoActivate = false;
-	// static ConstructorHelpers::FObjectFinder<USoundWave> Typing(TEXT("/Game/Assets/Audios/Character/keyboard.keyboard"));
-	// if (Typing.Succeeded()) TypingAudioComp->SetSound(Typing.Object);
 }
 
 void AAgentNPCBase::BeginPlay()
@@ -80,7 +77,6 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 			{
 				// [Screen 모드] 거리에 따라 위젯 스케일을 작아지게 만듭니다.
 				float Distance = FVector::Dist(CameraLoc, WidgetLoc);
-				// 300.0f를 기준 거리로 설정. 멀어질수록 작아지게 만듭니다. (필요에 따라 수치 조정)
 				float Scale = FMath::Clamp(300.0f / FMath::Max(Distance, 1.0f), 0.1f, 1.0f);
 				
 				if (IsValid(EmojiUI))
@@ -88,13 +84,12 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 					EmojiUI->SetRenderScale(FVector2D(Scale, Scale));
 				}
 			}
-			else if (EmojiComp->GetWidgetSpace() == EWidgetSpace::World)
-			{
-				// [World 모드] 위젯이 항상 로컬 플레이어의 카메라를 바라보도록 회전시킵니다. (빌보딩)
-				// 이 코드는 클라이언트 로컬에서 각각 실행되므로, 멀티플레이에서도 각자의 정면을 바라보게 됩니다.
-				FRotator LookAtRot = (CameraLoc - WidgetLoc).Rotation();
-				EmojiComp->SetWorldRotation(LookAtRot);
-			}
+			// else if (EmojiComp->GetWidgetSpace() == EWidgetSpace::World)
+			// {
+			 	// [World 모드] 위젯이 항상 로컬 플레이어의 카메라를 바라보도록 회전시킵니다. (빌보딩)
+			// 	FRotator LookAtRot = (CameraLoc - WidgetLoc).Rotation();
+			// 	EmojiComp->SetWorldRotation(LookAtRot);
+			// }
 		}
 	}
 	
@@ -108,7 +103,6 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 		// 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
 		// }
 		
-		// 캐싱된 포인터를 사용해 빠르고 가볍게 접근 (Cast 없음!)
 		if (IsValid(EmojiUI))
 		{
 			EmojiUI->SetProgress(CurWaitTime / MaxWaitTime);
@@ -131,6 +125,7 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
 	DOREPLIFETIME(AAgentNPCBase, bIsTalkingWithPlayer);
 }
 
@@ -289,14 +284,13 @@ void AAgentNPCBase::OnVoiceFinished()
 
 void AAgentNPCBase::NotifyPlayerSpoke()
 {	
-	// 플레이어가 녹음을 끝내고 전송했으므로 대기 타이머 종료 및 게이지 초기화
+	// 대기 타이머 종료 및 게이지 초기화
 	bIsWaitingForPlayer = false;
 	if (IsValid(EmojiUI))
 	{
 		EmojiUI->SetProgress(0.0f);
 	}
 
-	// 녹음이 끝났으므로 AI 서버 응답 대기 연출 시작
 	StartTypingWait();
 }
 

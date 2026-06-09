@@ -21,7 +21,7 @@ public:
 	
 	void SetProgress(float ProgressValue);
 	void SetProgressColor(FLinearColor Color);
-	void SetEmoji(UTexture2D* Emoji) const; // todo: struct를 넘겨야 하나 
+	void SetEmoji(UTexture2D* Emoji) const; 
 	void SetNPCName(FString NPCName) const;
 	
 	void SetEmojiVisible(bool bIsVisible);
@@ -33,6 +33,9 @@ public:
 	TObjectPtr<UImage> Image_Emoji;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> Text_NPCName;
+	
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> AppearEmoji;
 	
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynMat;

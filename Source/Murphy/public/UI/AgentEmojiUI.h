@@ -24,7 +24,7 @@ public:
 	void SetEmoji(UTexture2D* Emoji) const; // todo: struct를 넘겨야 하나 
 	void SetNPCName(FString NPCName) const;
 	
-	void UpdateProgress();
+	void SetEmojiVisible(bool bIsVisible);
 	
 public:
 	UPROPERTY(meta=(BindWidget))

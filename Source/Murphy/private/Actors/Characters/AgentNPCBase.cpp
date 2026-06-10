@@ -13,6 +13,7 @@
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
 #include "Manager/ScenarioSubsystem.h"
 #include "UI/AgentEmojiUI.h"
+#include "Kismet/GameplayStatics.h"
 
 AAgentNPCBase::AAgentNPCBase()
 {
@@ -35,7 +36,7 @@ AAgentNPCBase::AAgentNPCBase()
 	if (EmojiUIClass.Succeeded()) EmojiComp->SetWidgetClass(EmojiUIClass.Class);
 	EmojiComp->SetWidgetSpace(EWidgetSpace::Screen);
 	EmojiComp->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
-	EmojiComp->SetVisibility(false);
+	EmojiComp->SetVisibility(true);
 	
 	// 타이핑 오디오 컴포넌트 생성 및 설정
 	TypingAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("TypingAudioComp"));
@@ -50,6 +51,7 @@ void AAgentNPCBase::BeginPlay()
 	Super::BeginPlay();
 	
 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
+	EmojiUI->SetEmojiVisible(false);
 	EmojiUI->SetNPCName(TEXT("BBung"));
 	if (!NPCName.IsEmpty()) EmojiUI->SetNPCName(NPCName);
 
@@ -65,6 +67,36 @@ void AAgentNPCBase::BeginPlay()
 void AAgentNPCBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	
+	// --- 위젯 컴포넌트 업데이트 (Screen 스케일 / World 빌보딩) ---
+	if (IsValid(EmojiComp) && GetNetMode() != NM_DedicatedServer)
+	{
+		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0))
+		{
+			FVector CameraLoc = CameraManager->GetCameraLocation();
+			FVector WidgetLoc = EmojiComp->GetComponentLocation();
+
+			if (EmojiComp->GetWidgetSpace() == EWidgetSpace::Screen)
+			{
+				// [Screen 모드] 거리에 따라 위젯 스케일을 작아지게 만듭니다.
+				float Distance = FVector::Dist(CameraLoc, WidgetLoc);
+				// 300.0f를 기준 거리로 설정. 멀어질수록 작아지게 만듭니다. (필요에 따라 수치 조정)
+				float Scale = FMath::Clamp(300.0f / FMath::Max(Distance, 1.0f), 0.1f, 1.0f);
+				
+				if (IsValid(EmojiUI))
+				{
+					EmojiUI->SetRenderScale(FVector2D(Scale, Scale));
+				}
+			}
+			else if (EmojiComp->GetWidgetSpace() == EWidgetSpace::World)
+			{
+				// [World 모드] 위젯이 항상 로컬 플레이어의 카메라를 바라보도록 회전시킵니다. (빌보딩)
+				// 이 코드는 클라이언트 로컬에서 각각 실행되므로, 멀티플레이에서도 각자의 정면을 바라보게 됩니다.
+				FRotator LookAtRot = (CameraLoc - WidgetLoc).Rotation();
+				EmojiComp->SetWorldRotation(LookAtRot);
+			}
+		}
+	}
 	
 	if (bIsWaitingForPlayer)
 	{
@@ -116,8 +148,7 @@ void AAgentNPCBase::ForShortAnswer()
 	PRINTLOG_JW(TEXT("[AgentNPC] 너무 짧은 대답 - 정해져 있는 대사 출력"));
 }
 
-void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                                 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
@@ -128,14 +159,14 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		{
 			MyPC->SetActiveNPC(this);
 			
-			// 1 시나리오 매니저 호출 (입국 심사 시작)
+			// 1 시나리오 매니저 호출 
 			if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
 			{
-				ScenarioSubsystem->StartScenario(EScenarioType::Prologue_Immigration);
+				ScenarioSubsystem->StartScenario(NPCScenarioType);
 			}
 			
-			// 2 블루프린트에서 할당한 '여권 보여달라' 음성 재생 (방어 코드 포함)
-			if (IsValid(VoiceComp) && IsValid(PassportSound))
+			// 2 먼저 말을 거는 NPC
+			if (bIsTalkingFirst && IsValid(VoiceComp) && IsValid(PassportSound))
 			{
 				VoiceComp->SetSound(PassportSound);
 				VoiceComp->Play();
@@ -146,15 +177,15 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 			
 			// 3 오버랩 직후에는 기본 이모지로 초기화
 			UpdateEmotion(EAgentEmotion::Normal);
-			EmojiComp->SetVisibility(true);
+			EmojiUI->SetEmojiVisible(true);
+			bIsScenarioCompleted = false; // 시나리오 시작 
 			
 			PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active (입국심사 시작)."));
 		}
 	}
 }
 
-void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
@@ -163,7 +194,7 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	{
 		MyPC->SetActiveNPC(nullptr);
 		
-		EmojiComp->SetVisibility(false);
+		EmojiUI->SetEmojiVisible(false);
 	}
 }
 
@@ -224,7 +255,33 @@ void AAgentNPCBase::StopTypingWait()
 
 void AAgentNPCBase::OnVoiceFinished()
 {	
-	// 오디오 재생이 끝난 순간 1분 대기 타이머 시작
+	if (bIsScenarioCompleted)
+	{
+		PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료. 1분 대기 타이머를 끄고 상호작용을 종료합니다."));
+		
+		bIsWaitingForPlayer = false;
+		CurWaitTime = 0.0f;
+		if (IsValid(EmojiUI))
+		{
+			EmojiUI->SetProgress(0.0f);
+			EmojiUI->SetEmojiVisible(false);
+		}
+		
+		if (IsValid(InteractionBox))
+		{
+			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+		
+		if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+		{
+			ScenarioSubsystem->EndScenario(true);
+		}
+		
+		EndConversation();
+		return;
+	}
+	
+	// 1분 대기 타이머 시작
 	bIsWaitingForPlayer = true;
 	CurWaitTime = 0;
 	PRINTLOG_JW(TEXT("[AgentNPC] NPC 대사 종료. 1분 대기 타이머를 시작합니다."));
@@ -248,6 +305,14 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// AI 서버 응답이 도착했으므로 대기 연출 먼저 종료
 	StopTypingWait();
 
+	// 시나리오 종료 판단
+	if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
+		ResponseData.next_action == TEXT("FAIL_END") || 
+		ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK"))
+	{
+		bIsScenarioCompleted = true;
+	}
+	
 	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
 	// 현재는 프로토타입 테스트를 위해 0(Normal)부터 6(Furious) 사이의 값을 랜덤하게 추출합니다.
 	

@@ -6,6 +6,9 @@
 #include "Blueprint/UserWidget.h"
 #include "PhonePopupWidget.generated.h"
 
+class UTextBlock;
+class UButton;
+
 /**
  * 
  */
@@ -27,6 +30,23 @@ public:
 	// E 키 호출 함수
 	void TogglePhone();
 	
-	
+public:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> Txt_Time;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Search;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Call;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Safari;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Message;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Camera;
 	
 };

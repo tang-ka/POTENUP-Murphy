@@ -246,6 +246,9 @@ struct FAI_NPCResponse
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="NPC 음성 wav 접근 경로"))
 	FString audio_url;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="NPC 음성 wav 접근 경로"))
+	FString emotion;
 };
 
 USTRUCT(BlueprintType)

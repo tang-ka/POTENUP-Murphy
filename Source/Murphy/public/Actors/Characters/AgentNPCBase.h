@@ -89,10 +89,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Emoji")
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
 	
-private:
+protected:
+	// ABP와 Emogi에서 사용할 현재 감정 상태 변수
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
+	EAgentEmotion CurrentEmotion = EAgentEmotion::Normal;
+	
 	// todo: Enum 처리
 	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
 	void UpdateEmotion(EAgentEmotion EmotionLevel);
+	
+	// 서버에서 온 감정 문자열("Smile" 등)을 EAgentEmotion Enum으로 변환하는 헬퍼 함수
+	EAgentEmotion ConvertStringToEmotion(const FString& EmotionString);
 	
 private:
 	// === InteractionBox Overlap Event ===

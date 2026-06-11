@@ -198,8 +198,25 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	}
 }
 
+// 서버 문자열을 엔진 Enum으로 변환
+EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString)
+{
+	if (EmotionString.Equals(TEXT("Normal"), ESearchCase::IgnoreCase))      return EAgentEmotion::Normal;
+	if (EmotionString.Equals(TEXT("Smile"), ESearchCase::IgnoreCase))       return EAgentEmotion::Smile;
+	if (EmotionString.Equals(TEXT("Suspect"), ESearchCase::IgnoreCase))     return EAgentEmotion::Suspect;
+	if (EmotionString.Equals(TEXT("Embarrassed"), ESearchCase::IgnoreCase)) return EAgentEmotion::Embarrassed;
+	if (EmotionString.Equals(TEXT("Annoyed"), ESearchCase::IgnoreCase))     return EAgentEmotion::Annoyed;
+	if (EmotionString.Equals(TEXT("Angry"), ESearchCase::IgnoreCase))       return EAgentEmotion::Angry;
+	if (EmotionString.Equals(TEXT("Furious"), ESearchCase::IgnoreCase))     return EAgentEmotion::Furious;
+
+	PRINTLOGE_JW(TEXT("[AgentNPC] 알 수 없는 감정 키워드 수신: %s"), *EmotionString);
+	return EAgentEmotion::Normal;
+}
+
 void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 {
+	CurrentEmotion = EmotionLevel;
+	
 	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리?
 	
 	// Enum에 맞는 Texture를 Map에서 찾아옴
@@ -313,24 +330,60 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 		bIsScenarioCompleted = true;
 	}
 	
+	// ==========================================================
+	// 🔴 [임시 테스트 코드] 서버 데이터 대신 감정 순서대로 무한 순환하기
+	// ==========================================================
+	static int32 TestEmotionIndex = 0; // 함수가 끝나도 숫자가 리셋되지 않고 유지됩니다.
+
+	// 현재 인덱스를 Enum 타입으로 강제 변환
+	EAgentEmotion DummyEmotion = static_cast<EAgentEmotion>(TestEmotionIndex);
+    
+	// 우리가 만든 소화 기관에 쏙 넣어주기 (이모지 변경 + ABP 변수 최신화)
+	UpdateEmotion(DummyEmotion);
+    
+	PRINTLOGW_JW(TEXT("[AgentNPC][TEST] 임시 감정 순환 가동 중 -> Index: %d"), TestEmotionIndex);
+
+	// 대답이 끝날 때마다 다음 감정 인덱스로 1씩 증가 (총 7개 감정이므로 0~6까지만 돌고 다시 0으로)
+	TestEmotionIndex = (TestEmotionIndex + 1) % 7;
+	// ==========================================================
+	
+	
+	
+	
+	
+	//=========================================================================
+	// 🔴 랜덤 로직 삭제 & 서버 감정 연동 (서버가 정보 보내주면 복구할 곳)
+	//FString ServerEmotion = ResponseData.npc.emotion; 
+	//EAgentEmotion ParsedEmotion = ConvertStringToEmotion(ServerEmotion);
+	
+	// 파싱된 진짜 감정으로 변수와 이모지 동시 업데이트
+	//UpdateEmotion(ParsedEmotion);
+	//PRINTLOG_JW(TEXT("[AgentNPC] 감정 동기화 완료 -> %s (Enum Index: %d)"), *ServerEmotion, (int32)ParsedEmotion);
+	//========================================================================
+	
+	
 	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
 	// 현재는 프로토타입 테스트를 위해 0(Normal)부터 6(Furious) 사이의 값을 랜덤하게 추출합니다.
 	
 	// FMath::RandRange(Min, Max)는 Min과 Max를 포함한 난수를 반환합니다.
-	int32 RandomIndex = FMath::RandRange(0, 6);
-	EAgentEmotion RandomEmotion = static_cast<EAgentEmotion>(RandomIndex);
+	//int32 RandomIndex = FMath::RandRange(0, 6);
+	//EAgentEmotion RandomEmotion = static_cast<EAgentEmotion>(RandomIndex);
 	
-	PRINTLOG_JW(TEXT("[AgentNPC] 프로토타입 랜덤 감정 출력 -> 인덱스: %d"), RandomIndex);
+	//PRINTLOG_JW(TEXT("[AgentNPC] 프로토타입 랜덤 감정 출력 -> 인덱스: %d"), RandomIndex);
 	
 	// 랜덤으로 뽑힌 감정으로 이모지 업데이트
-	UpdateEmotion(RandomEmotion);
+	//UpdateEmotion(RandomEmotion);
+	
+	
+	// ==========================================
+	
 	
 	// TTS 재생
 	if (IsValid(VoiceComp) && !ResponseData.npc.audio_url.IsEmpty())
 	{
 		DownloadAndPlayAudio(ResponseData.npc.audio_url);
 	}
-	PRINTLOGW_JW(TEXT("[AgentNPC] AI 응답 대사: %s / Tone: %s"), *ResponseData.npc.text, *ResponseData.npc.tone);
+	PRINTLOGW_JW(TEXT("[AgentNPC] 응답 대사: %s / 목소리 톤: %s"), *ResponseData.npc.text, *ResponseData.npc.tone);
 }
 
 void AAgentNPCBase::DownloadAndPlayAudio(const FString& AudioURL)

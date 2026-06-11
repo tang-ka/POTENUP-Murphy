@@ -302,6 +302,7 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// 시나리오 종료 판단
 	if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
 		ResponseData.next_action == TEXT("FAIL_END") || 
+		ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK")) // 이거는 입국심사때의 마지막 노드 
 	{
 		bIsScenarioCompleted = true;
 	}

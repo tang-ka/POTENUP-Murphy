@@ -18,12 +18,18 @@ UENUM(BlueprintType)
 enum class EAgentEmotion : uint8
 {
 	Normal,
-	Smile,
-	Suspect,
-	Embarrassed,
-	Annoyed,
-	Angry,
-	Furious
+	Joy,
+	Anger,
+	Sadness,
+	Panic,
+	Suspicion,
+	Disgust,
+	Fear,
+	Smirk,
+	Surprise,
+	Pain,
+	Confusion,
+	Boredom
 };
 
 UCLASS()
@@ -89,6 +95,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Emoji")
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
 	
+	// 감정별로 재생할 일회성 행동(몽타주)을 매핑해두는 딕셔너리
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Animation")
+	TMap<EAgentEmotion, TObjectPtr<UAnimMontage>> EmotionMontages;
+	
+	// 감정에따른 표정 변화
+	UFUNCTION(BlueprintImplementableEvent, Category="AI|Emotion")
+	void OnFaceEmotionChanged(FName EmotionKeyword);
+	
+	
 protected:
 	// ABP와 Emogi에서 사용할 현재 감정 상태 변수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
@@ -100,6 +115,8 @@ protected:
 	
 	// 서버에서 온 감정 문자열("Smile" 등)을 EAgentEmotion Enum으로 변환하는 헬퍼 함수
 	EAgentEmotion ConvertStringToEmotion(const FString& EmotionString);
+	
+	
 	
 private:
 	// === InteractionBox Overlap Event ===

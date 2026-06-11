@@ -74,6 +74,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "AI|State")
 	bool IsWaitingForAIResponse() const { return bIsWaitingForAIResponse; }
 	
+	void ForShortAnswer();
+	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
 	TObjectPtr<USoundBase> PassportSound;
@@ -81,8 +83,6 @@ public:
 	TObjectPtr<USoundBase> TypingSound;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
 	TObjectPtr<USoundBase> ForShortAnswerSound;
-
-	void ForShortAnswer();
 	
 	// todo: DataAsset이나 DataTable로 만들어야함. 아니면 Struct에 Enum을 추가? 
 	// 감정별 이모지 텍스처를 매핑해두는 딕셔너리 (블루프린트에서 할당)
@@ -109,6 +109,7 @@ private:
 	void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 protected:
+	// === NPC Info ==
 	// NPC 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
 	FString NPCName;

@@ -15,6 +15,7 @@ void UAgentEmojiUI::NativeConstruct()
 	DynMat = UWidgetBlueprintLibrary::GetDynamicMaterial(Brush);
 	DynMat->SetScalarParameterValue(TEXT("Progress"), Progress);
 	Image_EmotionGuage->SetBrush(Brush);
+	
 }
 
 void UAgentEmojiUI::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -58,9 +59,20 @@ void UAgentEmojiUI::SetNPCName(FString NPCName) const
 
 void UAgentEmojiUI::SetEmojiVisible(bool bIsVisible)
 {
-	ESlateVisibility V = ESlateVisibility::Visible;
-	if (bIsVisible == false) V = ESlateVisibility::Hidden; 
+	// ESlateVisibility V = ESlateVisibility::Visible;
+	// if (bIsVisible == false) V = ESlateVisibility::Hidden; 
+	//
+	// Image_Emoji->SetVisibility(V);
+	// Image_EmotionGuage->SetVisibility(V);
 	
-	Image_Emoji->SetVisibility(V);
-	Image_EmotionGuage->SetVisibility(V);
+	if (AppearEmoji == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AppearEmoji 애니메이션이 바인딩되지 않았습니다!"));
+		return;
+	}
+
+	if (bIsVisible)
+		PlayAnimation(AppearEmoji);
+	else
+		PlayAnimation(AppearEmoji, 0, 1, EUMGSequencePlayMode::Reverse);
 }

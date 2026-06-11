@@ -1,39 +1,10 @@
-﻿
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Data/GameDataTypes.h"
 #include "ScenarioSubsystem.generated.h"
-
-UENUM(BlueprintType)
-enum class EScenarioType : uint8
-{
-	None, 
-	Tutorial_Airplane			UMETA(DisplayName = "Tutorial_Airplane"),
-	Prologue_Immigration		UMETA(DisplayName = "Prologue_Immigration"),
-	Prologue_Baggage			UMETA(DisplayName = "Prologue_Baggage")
-};
-
-UENUM(BlueprintType)
-enum class EScenarioState : uint8
-{
-	None, 
-	Enter						UMETA(DisplayName = "Enter"),
-	InProgress					UMETA(DisplayName = "InProgress"),
-	Completed					UMETA(DisplayName = "Completed")
-};
-
-USTRUCT(BlueprintType)
-struct FScenarioInfo
-{
-	GENERATED_BODY()
-	
-	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
-	EScenarioType ScenarioType = EScenarioType::None;
-	
-	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
-	EScenarioState ScenarioState = EScenarioState::None;
-};
 
 // 새로운 시나리오로 넘어간 경우
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScenarioStateChanged, EScenarioType, NewScenario);
@@ -59,6 +30,10 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category="Murphy|Scenario")
 	EScenarioType GetCurScenario() const { return CurScenario; }
+
+	/** 현재 시나리오에서 진행해야 할 퀘스트 ID 목록 (CSV Row Name 기준) */
+	UFUNCTION(BlueprintPure, Category="Murphy|Scenario")
+	const TArray<FName>& GetActiveQuestIDs() const { return ActiveQuestIDs; }
 	
 public:
 	UPROPERTY(BlueprintAssignable, Category="Murphy|Scenario|Delegates")
@@ -69,4 +44,8 @@ public:
 private:
 	UPROPERTY()
 	EScenarioType CurScenario = EScenarioType::None;
+
+	/** 현재 활성 시나리오의 퀘스트 ID 목록 (StartScenario 시 DataManager에서 로드) */
+	UPROPERTY()
+	TArray<FName> ActiveQuestIDs;
 };

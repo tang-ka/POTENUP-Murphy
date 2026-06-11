@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
+#include "Manager/ScenarioSubsystem.h"
 #include "AgentNPCBase.generated.h"
 
 class UBoxComponent;
@@ -64,9 +65,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Components")
 	TObjectPtr<UAudioComponent> TypingAudioComp;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
-	FString NPCName;
-	
 	// AI 서버 응답을 대기하며 타이핑 애니메이션을 재생해야 하는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
 	bool bIsWaitingForAIResponse = false;
@@ -104,9 +102,24 @@ private:
 	void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 protected:
+	// NPC 이름
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
+	FString NPCName;
+	
+	// NPC의 역할 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
+	EScenarioType NPCScenarioType = EScenarioType::None;
+	
+	// NPC가 말을 먼저 거는 사람인지 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
+	bool bIsTalkingFirst = true;	
+	
 	// 누군가 이미 대화 중인지 상태를 저장 (서버 -> 클라 동기화)
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category="AI|Chat")
 	bool bIsTalkingWithPlayer = false;
+	
+	// 시나리오 완료 여부 추적 플래그
+	bool bIsScenarioCompleted = false;
 	
 public:
 	// === Conversation ===

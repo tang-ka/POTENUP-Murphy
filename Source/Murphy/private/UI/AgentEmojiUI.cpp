@@ -56,6 +56,11 @@ void UAgentEmojiUI::SetNPCName(FString NPCName) const
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SetNPCName Called: %s"), *NPCName));
 }
 
-void UAgentEmojiUI::UpdateProgress()
+void UAgentEmojiUI::SetEmojiVisible(bool bIsVisible)
 {
+	ESlateVisibility V = ESlateVisibility::Visible;
+	if (bIsVisible == false) V = ESlateVisibility::Hidden; 
+	
+	Image_Emoji->SetVisibility(V);
+	Image_EmotionGuage->SetVisibility(V);
 }

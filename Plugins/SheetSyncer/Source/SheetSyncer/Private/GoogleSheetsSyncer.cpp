@@ -134,8 +134,7 @@ void UGoogleSheetsSyncer::OnCSVReceived(int32 CategoryIndex, int32 EntryIndex, c
         return;
     }
 
-    UE_LOG(LogTemp, Log,
-        TEXT("[SheetSyncer] [%s] 동기화 완료 Entry: %d"), *Category.CategoryName, EntryIndex);
+    UE_LOG(LogTemp, Log,TEXT("[SheetSyncer] [%s] 동기화 완료 Entry: %d"), *Category.CategoryName, EntryIndex);
 
     if (DataTable->MarkPackageDirty())
     {

@@ -50,7 +50,9 @@ void AAgentNPCBase::BeginPlay()
 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
 	EmojiUI->SetEmojiVisible(false);
 	EmojiUI->SetNPCName(TEXT("BBung"));
-	if (!NPCName.IsEmpty()) EmojiUI->SetNPCName(NPCName);
+	if (!NPCName.IsNone()) EmojiUI->SetNPCName(NPCName.ToString());
+	
+	if (!QuestTargetID.IsNone()) PRINTLOGE_JW(TEXT("!!!!Quest ID 를 지정해주세요!!!!")); 
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
 	
@@ -75,33 +77,22 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 
 			if (EmojiComp->GetWidgetSpace() == EWidgetSpace::Screen)
 			{
-				// [Screen 모드] 거리에 따라 위젯 스케일을 작아지게 만듭니다.
+				// [Screen 모드] 거리에 따라 위젯 스케일 작아지게
 				float Distance = FVector::Dist(CameraLoc, WidgetLoc);
 				float Scale = FMath::Clamp(300.0f / FMath::Max(Distance, 1.0f), 0.1f, 1.0f);
 				
+				if (Distance >= 300.f) 
 				if (IsValid(EmojiUI))
 				{
 					EmojiUI->SetRenderScale(FVector2D(Scale, Scale));
 				}
 			}
-			// else if (EmojiComp->GetWidgetSpace() == EWidgetSpace::World)
-			// {
-			 	// [World 모드] 위젯이 항상 로컬 플레이어의 카메라를 바라보도록 회전시킵니다. (빌보딩)
-			// 	FRotator LookAtRot = (CameraLoc - WidgetLoc).Rotation();
-			// 	EmojiComp->SetWorldRotation(LookAtRot);
-			// }
 		}
 	}
 	
 	if (bIsWaitingForPlayer)
 	{
 		CurWaitTime += DeltaSeconds;
-		
-		// 지연 캐싱 (BeginPlay에서 실패했을 경우를 대비한 안전 장치)
-		// if (!IsValid(EmojiUI))
-		// {
-		// 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
-		// }
 		
 		if (IsValid(EmojiUI))
 		{
@@ -154,11 +145,12 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		{
 			MyPC->SetActiveNPC(this);
 			
+			//! 이거 대신에서 Overlap되면 퀘스트가 깨지는 걸 넣어야 할 듯
 			// 1 시나리오 매니저 호출 
-			if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
-			{
-				ScenarioSubsystem->StartScenario(NPCScenarioType);
-			}
+			// if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+			// {
+			// 	ScenarioSubsystem->StartScenario(NPCScenarioType);
+			// }
 			
 			// 2 먼저 말을 거는 NPC
 			if (bIsTalkingFirst && IsValid(VoiceComp) && IsValid(PassportSound))
@@ -196,20 +188,19 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 // 서버 문자열을 엔진 Enum으로 변환
 EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString)
 {
-	if (EmotionString.Equals(TEXT("Normal"), ESearchCase::IgnoreCase))      return EAgentEmotion::Normal;
-	if (EmotionString.Equals(TEXT("Joy"), ESearchCase::IgnoreCase))       return EAgentEmotion::Joy;
-	if (EmotionString.Equals(TEXT("Anger"), ESearchCase::IgnoreCase))     return EAgentEmotion::Anger;
-	if (EmotionString.Equals(TEXT("Sadness"), ESearchCase::IgnoreCase)) return EAgentEmotion::Sadness;
-	if (EmotionString.Equals(TEXT("Panic"), ESearchCase::IgnoreCase))     return EAgentEmotion::Panic;
-	if (EmotionString.Equals(TEXT("Suspicion"), ESearchCase::IgnoreCase))       return EAgentEmotion::Suspicion;
-	if (EmotionString.Equals(TEXT("Disgust"), ESearchCase::IgnoreCase))     return EAgentEmotion::Disgust;
-	if (EmotionString.Equals(TEXT("Fear"), ESearchCase::IgnoreCase))     return EAgentEmotion::Fear;
-	if (EmotionString.Equals(TEXT("Smirk"), ESearchCase::IgnoreCase))     return EAgentEmotion::Smirk;
-	if (EmotionString.Equals(TEXT("Surprise"), ESearchCase::IgnoreCase))     return EAgentEmotion::Surprise;
-	if (EmotionString.Equals(TEXT("Pain"), ESearchCase::IgnoreCase))     return EAgentEmotion::Pain;
-	if (EmotionString.Equals(TEXT("Confusion"), ESearchCase::IgnoreCase))     return EAgentEmotion::Confusion;
-	if (EmotionString.Equals(TEXT("Boredom"), ESearchCase::IgnoreCase))     return EAgentEmotion::Boredom;
-	
+	if (EmotionString.Equals(TEXT("Normal"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Normal;
+	if (EmotionString.Equals(TEXT("Joy"),		 ESearchCase::IgnoreCase))	return EAgentEmotion::Joy;
+	if (EmotionString.Equals(TEXT("Anger"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Anger;
+	if (EmotionString.Equals(TEXT("Sadness"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Sadness;
+	if (EmotionString.Equals(TEXT("Panic"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Panic;
+	if (EmotionString.Equals(TEXT("Suspicion"), ESearchCase::IgnoreCase))	return EAgentEmotion::Suspicion;
+	if (EmotionString.Equals(TEXT("Disgust"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Disgust;
+	if (EmotionString.Equals(TEXT("Fear"),		 ESearchCase::IgnoreCase))	return EAgentEmotion::Fear;
+	if (EmotionString.Equals(TEXT("Smirk"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Smirk;
+	if (EmotionString.Equals(TEXT("Surprise"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Surprise;
+	if (EmotionString.Equals(TEXT("Pain"),		 ESearchCase::IgnoreCase))	return EAgentEmotion::Pain;
+	if (EmotionString.Equals(TEXT("Confusion"), ESearchCase::IgnoreCase))	return EAgentEmotion::Confusion;
+	if (EmotionString.Equals(TEXT("Boredom"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Boredom;
 
 	PRINTLOGE_JW(TEXT("[AgentNPC] 알 수 없는 감정 키워드 수신: %s"), *EmotionString);
 	return EAgentEmotion::Normal;
@@ -319,7 +310,8 @@ void AAgentNPCBase::OnVoiceFinished()
 		
 		if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
 		{
-			ScenarioSubsystem->EndScenario(true);
+			// ScenarioSubsystem->EndScenario(true);
+			ScenarioSubsystem->NotifyQuestConditionMet(QuestTargetID, EQuestClearCondition::TalkToNPC);
 		}
 		
 		EndConversation();
@@ -374,36 +366,17 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	TestEmotionIndex = (TestEmotionIndex + 1) % 7;
 	// ==========================================================
 	
-	
-	
-	
-	
-	//=========================================================================
+	//===========================================================
+	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
 	// 🔴 랜덤 로직 삭제 & 서버 감정 연동 (서버가 정보 보내주면 복구할 곳)
+	//===========================================================
 	//FString ServerEmotion = ResponseData.npc.emotion; 
 	//EAgentEmotion ParsedEmotion = ConvertStringToEmotion(ServerEmotion);
 	
 	// 파싱된 진짜 감정으로 변수와 이모지 동시 업데이트
 	//UpdateEmotion(ParsedEmotion);
 	//PRINTLOG_JW(TEXT("[AgentNPC] 감정 동기화 완료 -> %s (Enum Index: %d)"), *ServerEmotion, (int32)ParsedEmotion);
-	//========================================================================
-	
-	
-	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
-	// 현재는 프로토타입 테스트를 위해 0(Normal)부터 6(Furious) 사이의 값을 랜덤하게 추출합니다.
-	
-	// FMath::RandRange(Min, Max)는 Min과 Max를 포함한 난수를 반환합니다.
-	//int32 RandomIndex = FMath::RandRange(0, 6);
-	//EAgentEmotion RandomEmotion = static_cast<EAgentEmotion>(RandomIndex);
-	
-	//PRINTLOG_JW(TEXT("[AgentNPC] 프로토타입 랜덤 감정 출력 -> 인덱스: %d"), RandomIndex);
-	
-	// 랜덤으로 뽑힌 감정으로 이모지 업데이트
-	//UpdateEmotion(RandomEmotion);
-	
-	
-	// ==========================================
-	
+	//===========================================================
 	
 	// TTS 재생
 	if (IsValid(VoiceComp) && !ResponseData.npc.audio_url.IsEmpty())

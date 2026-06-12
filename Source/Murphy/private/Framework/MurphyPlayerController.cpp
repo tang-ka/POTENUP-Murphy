@@ -43,57 +43,6 @@ void AMurphyPlayerController::BeginPlay()
 	}
 }
 
-// ==============================================================================
-// === 테스트 커맨드 ===
-// ==============================================================================
-
-void AMurphyPlayerController::Test_StartScenario(int32 ScenarioIndex)
-{
-	if (UScenarioSubsystem* ScenarioSubsys = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
-	{
-		ScenarioSubsys->StartScenario(static_cast<EScenarioType>(ScenarioIndex));
-		PRINTLOGW_JW(TEXT("[Test] 시나리오 강제 시작: 인덱스 %d"), ScenarioIndex);
-	}
-}
-
-void AMurphyPlayerController::Test_EndScenarioAndTravel(FName NextLevelKey)
-{
-	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
-	{
-		ScenarioSubsystem->EndScenario(true);
-		PRINTLOGW_JW(TEXT("[Test] 시나리오 성공 처리 완료"));
-	}
-	
-	if (ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>())
-	{
-		PRINTLOGW_JW(TEXT("[Test] 다음 맵으로 서버 트래블 시도: %s"), *NextLevelKey.ToString());
-		LevelSubsystem->TravelAllPlayers(NextLevelKey);
-	}
-}
-
-void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJSONResponse)
-{
-	// 실제 파이썬 서버가 켜져있지 않을 때 NPC의 대화 처리 로직을 강제로 테스트하기 위함
-	FAIResponseData ResponseData;
-	if (FJsonObjectConverter::JsonObjectStringToUStruct(SimulatedJSONResponse, &ResponseData, 0, 0))
-	{
-		if (IsValid(TargetNPC))
-		{
-			TargetNPC->ProcessDialogueResponse(ResponseData);
-			
-			if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
-			{
-				MurphyPlayer->EndChatWithNPC();
-			}
-			PRINTLOGW_JW(TEXT("[Test] 가짜 응답 시뮬레이션 및 NPC 점유 해제 완료!"));
-		}
-	}
-	else
-	{
-		PRINTLOGE_JW(TEXT("[Test] 시뮬레이션 실패! JSON 문법이 틀렸거나 파싱에 실패했습니다."));
-	}
-}
-
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 {
 	TargetNPC = NewNPC;
@@ -145,7 +94,7 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		RequestData.session.current_node_id = CurrentNodeId;
 		RequestData.session.turn_index = TurnIndex;
 		
-		RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
+		RequestData.npc.npc_id = TargetNPC->GetNPCName(); // RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
 		RequestData.npc.npc_role = TEXT("immigration_officer");
 		RequestData.npc.last_npc_message = LastNpcMessage;
 		
@@ -374,7 +323,6 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 
 	// 플레이어를 PlayerStart[0] 위치로 이동
 
-
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)
 	{
@@ -432,3 +380,53 @@ void AMurphyPlayerController::Server_RequestReposition_Implementation(const FNam
 		(*FoundStart)->GetActorRotation());
 }
 
+// ==============================================================================
+// === 테스트 커맨드 ===
+// ==============================================================================
+
+void AMurphyPlayerController::Test_StartScenario(int32 ScenarioIndex)
+{
+	if (UScenarioSubsystem* ScenarioSubsys = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+	{
+		ScenarioSubsys->StartScenario(static_cast<EScenarioType>(ScenarioIndex));
+		PRINTLOGW_JW(TEXT("[Test] 시나리오 강제 시작: 인덱스 %d"), ScenarioIndex);
+	}
+}
+
+void AMurphyPlayerController::Test_EndScenarioAndTravel(FName NextLevelKey)
+{
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+	{
+		ScenarioSubsystem->EndScenario(true);
+		PRINTLOGW_JW(TEXT("[Test] 시나리오 성공 처리 완료"));
+	}
+	
+	if (ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>())
+	{
+		PRINTLOGW_JW(TEXT("[Test] 다음 맵으로 서버 트래블 시도: %s"), *NextLevelKey.ToString());
+		LevelSubsystem->TravelAllPlayers(NextLevelKey);
+	}
+}
+
+void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJSONResponse)
+{
+	// 실제 파이썬 서버가 켜져있지 않을 때 NPC의 대화 처리 로직을 강제로 테스트하기 위함
+	FAIResponseData ResponseData;
+	if (FJsonObjectConverter::JsonObjectStringToUStruct(SimulatedJSONResponse, &ResponseData, 0, 0))
+	{
+		if (IsValid(TargetNPC))
+		{
+			TargetNPC->ProcessDialogueResponse(ResponseData);
+			
+			if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+			{
+				MurphyPlayer->EndChatWithNPC();
+			}
+			PRINTLOGW_JW(TEXT("[Test] 가짜 응답 시뮬레이션 및 NPC 점유 해제 완료!"));
+		}
+	}
+	else
+	{
+		PRINTLOGE_JW(TEXT("[Test] 시뮬레이션 실패! JSON 문법이 틀렸거나 파싱에 실패했습니다."));
+	}
+}

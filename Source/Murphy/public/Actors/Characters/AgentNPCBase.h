@@ -90,7 +90,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
 	TObjectPtr<USoundBase> ForShortAnswerSound;
 	
-	// todo: DataAsset이나 DataTable로 만들어야함. 아니면 Struct에 Enum을 추가? 
 	// 감정별 이모지 텍스처를 매핑해두는 딕셔너리 (블루프린트에서 할당)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Emoji")
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
@@ -105,31 +104,28 @@ public:
 	
 	
 protected:
-	// ABP와 Emogi에서 사용할 현재 감정 상태 변수
+	// ABP와 Emoji에서 사용할 현재 감정 상태 변수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
 	EAgentEmotion CurrentEmotion = EAgentEmotion::Normal;
 	
-	// todo: Enum 처리
 	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
 	void UpdateEmotion(EAgentEmotion EmotionLevel);
 	
 	// 서버에서 온 감정 문자열("Smile" 등)을 EAgentEmotion Enum으로 변환하는 헬퍼 함수
 	EAgentEmotion ConvertStringToEmotion(const FString& EmotionString);
 	
-	
-	
 private:
 	// === InteractionBox Overlap Event ===
 	UFUNCTION()
-	void OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	UFUNCTION()
-	void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	virtual void OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION() 
+	virtual void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 protected:
 	// === NPC Info ==
 	// NPC 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
-	FString NPCName;
+	FName NPCName;
 	
 	// NPC의 역할 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
@@ -142,12 +138,12 @@ protected:
 	// 누군가 이미 대화 중인지 상태를 저장 (서버 -> 클라 동기화)
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category="AI|Chat")
 	bool bIsTalkingWithPlayer = false;
-	
-	// 시나리오 완료 여부 추적 플래그
-	bool bIsScenarioCompleted = false;
-	
+
 public:
 	// === Conversation ===
+	UFUNCTION(BlueprintPure, Category="AI|Chat")
+	FString GetNPCName() const { return NPCName.ToString(); }
+	
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	bool CanTalkWithPlayer() const { return !bIsTalkingWithPlayer; }
 	
@@ -157,6 +153,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	void EndConversation();
 
+protected:
+	// === Quest === 
+	// Quest ID (NPC_ImmigrationOfficer, NPC_ServiceDesk, NPC_CustomsOfficer ... 상속받아 만들어진 액터에게 부여)
+	FName QuestTargetID;
+	
+	// 시나리오 완료 여부 추적 플래그
+	bool bIsScenarioCompleted = false;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category="AI|Info")
+	FName GetQuestTargetID() { return QuestTargetID; }
+	
 protected:
 	// === Timer ===
 	bool bIsWaitingForPlayer = false;
@@ -170,13 +178,13 @@ protected:
 	void StopTypingWait();
 	
 public:
-	UFUNCTION() // NPC음성 재생 끝났을 때 호출 될 함수
+	// NPC음성 재생 끝났을 때 호출 될 함수
+	UFUNCTION() 
 	void OnVoiceFinished();
 	
 	// 플레이어가 녹음을 완료해 전송했을 때 타이머를 끄기 위해 컨트롤러가 호출할 함수
 	void NotifyPlayerSpoke();
 	
-public:
 	// PlayerController가 서버 응답 수신 후 NPC에게 결과를 전달하는 함수 
 	void ProcessDialogueResponse(const FAIResponseData& ResponseData);
 	

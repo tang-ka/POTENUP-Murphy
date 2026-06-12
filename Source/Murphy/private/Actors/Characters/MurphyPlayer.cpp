@@ -42,8 +42,8 @@ void AMurphyPlayer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	// NPC와 대화하는 중일 경우 
-	if (bIsAligningWithNPC  && TargetNPC) FocusNPC(DeltaSeconds);
+	// NPC와 대화하는 중일 경우 NPC한테 카메라 포커싱
+	if (bIsAligningWithNPC && TargetNPC) FocusNPC(DeltaSeconds);
 }
 
 void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -53,11 +53,12 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (PC && PC->IsLocalPlayerController())
 	{
-		auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer());
-		if (Subsystem) Subsystem->AddMappingContext(IMC_Murphy, 0);
-		
-		auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-		if (PlayerInput)
+		if (auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(IMC_Murphy, 0);
+		}
+
+		if (auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 		{
 			PlayerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMurphyPlayer::Move);
 			PlayerInput->BindAction(IA_MouseLook, ETriggerEvent::Triggered, this, &AMurphyPlayer::Look);
@@ -152,8 +153,7 @@ float AMurphyPlayer::GetRecordTime() const
 
 void AMurphyPlayer::Move(const FInputActionValue& Value)
 {
-	uint8 b = CurChatState == EPlayerChatState::WaitingForAI || CurChatState == EPlayerChatState::Recording ||  CurChatState == EPlayerChatState::Talking;
-	if (b)
+	if (CurChatState == EPlayerChatState::WaitingForAI || CurChatState == EPlayerChatState::Recording ||  CurChatState == EPlayerChatState::Talking)
 	{
 		return;
 	}

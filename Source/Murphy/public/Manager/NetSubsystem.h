@@ -20,8 +20,6 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
-
-	
 	// [New] AI 서버로 RequestData 구조체와 음성파일 전송 (Multipart)
 	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
 	void SendToAI(const FAIRequestData& RequestData, const FString& WAVFilePath, FOnAIResponseDataReceived OnResponseDelegate);

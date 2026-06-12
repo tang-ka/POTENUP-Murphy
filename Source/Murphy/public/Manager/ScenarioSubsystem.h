@@ -10,6 +10,8 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScenarioStateChanged, EScenarioType, NewScenario);
 // 시나리오 끝난 경우 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScenarioEnded, EScenarioType, EndedScenario, bool, bSuccess); 
+// 완료한 퀘스트 Delgate
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuestCompleted, FName, CompletedQuestID);
 
 UCLASS()
 class MURPHY_API UScenarioSubsystem : public UGameInstanceSubsystem
@@ -31,21 +33,36 @@ public:
 	UFUNCTION(BlueprintPure, Category="Murphy|Scenario")
 	EScenarioType GetCurScenario() const { return CurScenario; }
 
-	/** 현재 시나리오에서 진행해야 할 퀘스트 ID 목록 (CSV Row Name 기준) */
+	// 퀘스트 완료 처리 함수
+	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
+	void CompleteQuest(FName QuestID);
+	
+	// 특정 조건과 대상 ID를 가진 이벤트를 수신하여 퀘스트를 달성 처리합니다.
+	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
+	void NotifyQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+	
+	/** 현재 진행 중인 퀘스트의 전체 데이터(상태 포함) 반환 */
 	UFUNCTION(BlueprintPure, Category="Murphy|Scenario")
-	const TArray<FName>& GetActiveQuestIDs() const { return ActiveQuestIDs; }
+	const TMap<FName, FQuestRuntimeData>& GetActiveQuests() const { return ActiveQuests; }
 	
 public:
 	UPROPERTY(BlueprintAssignable, Category="Murphy|Scenario|Delegates")
 	FOnScenarioStateChanged OnScenarioStateChanged;
+	
 	UPROPERTY(BlueprintAssignable, Category="Murphy|Scenario|Delegates")
 	FOnScenarioEnded OnScenarioEnded;
 	
+	UPROPERTY(BlueprintAssignable, Category="Murphy|Quest|Delegates")
+	FOnQuestCompleted OnQuestCompleted;
+	
 private:
+	// 모든 활성 퀘스트가 완료되었는지 검사합니다.
+	void CheckAllQuestsCompleted();
+
 	UPROPERTY()
 	EScenarioType CurScenario = EScenarioType::None;
 
-	/** 현재 활성 시나리오의 퀘스트 ID 목록 (StartScenario 시 DataManager에서 로드) */
+	// 퀘스트 ID를 Key로, 진행 상태가 담긴 구조체를 Value로 가집니다.
 	UPROPERTY()
-	TArray<FName> ActiveQuestIDs;
+	TMap<FName, FQuestRuntimeData> ActiveQuests;
 };

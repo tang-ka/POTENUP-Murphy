@@ -1,7 +1,6 @@
 
 #include "Manager/DataManager.h"
 
-#include "Settings/DataManagerSettings.h"
 #include "Engine/DataTable.h"
 #include "Murphy.h"
 
@@ -22,40 +21,8 @@ void UDataManager::Deinitialize()
 
 void UDataManager::LoadDataTables()
 {
-	const UDataManagerSettings* Settings = GetDefault<UDataManagerSettings>();
-	if (!ensure(Settings))
-	{
-		PRINTLOGE_JW(TEXT("DataManagerSettings를 찾을 수 없습니다."));
-		return;
-	}
-
-	// 시나리오 DataTable 동기 로드
-	if (!Settings->ScenarioDataTable.IsNull())
-	{
-		ScenarioDataTable = Settings->ScenarioDataTable.LoadSynchronous();
-		if (!ScenarioDataTable)
-		{
-			PRINTLOGE_JW(TEXT("ScenarioDataTable 로드 실패: %s"), *Settings->ScenarioDataTable.ToString());
-		}
-	}
-	else
-	{
-		PRINTLOGW_JW(TEXT("ScenarioDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
-	}
-
-	// 퀘스트 DataTable 동기 로드
-	if (!Settings->QuestDataTable.IsNull())
-	{
-		QuestDataTable = Settings->QuestDataTable.LoadSynchronous();
-		if (!QuestDataTable)
-		{
-			PRINTLOGE_JW(TEXT("QuestDataTable 로드 실패: %s"), *Settings->QuestDataTable.ToString());
-		}
-	}
-	else
-	{
-		PRINTLOGW_JW(TEXT("QuestDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
-	}
+	// 다른 팀원이 더 나은 방식으로 데이터 로드 기능을 구현함
+	PRINTLOGW_JW(TEXT("DataManagerSettings를 대체하는 새로운 방식으로 DataTable이 로드됩니다."));
 }
 
 FScenarioTableRow* UDataManager::GetScenarioData(const FName& RowName) const

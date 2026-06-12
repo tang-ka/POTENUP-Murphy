@@ -7,39 +7,49 @@
 
 // ========================
 // 시나리오 타입 Enum
-// (기존 UScenarioSubsystem.h에서 이곳으로 이동)
 // ========================
 UENUM(BlueprintType)
 enum class EScenarioType : uint8
 {
-	None, 
-	Tutorial_Airplane			UMETA(DisplayName = "Tutorial_Airplane"),
-	Prologue_Immigration		UMETA(DisplayName = "Prologue_Immigration"),
-	Prologue_Baggage			UMETA(DisplayName = "Prologue_Baggage")
+	None					UMETA(DisplayName = "None"),
+	Tutorial_Airplane		UMETA(DisplayName = "Tutorial_Airplane"),
+	Prologue_Immigration	UMETA(DisplayName = "Prologue_Immigration"),
+	Prologue_Baggage		UMETA(DisplayName = "Prologue_Baggage")
 };
 
 // ========================
 // 시나리오 스탯 Enum
-// (기존 UScenarioSubsystem.h에서 이곳으로 이동)
 // ========================
 UENUM(BlueprintType)
 enum class EScenarioState : uint8
 {
-	None, 
-	Enter						UMETA(DisplayName = "Enter"),
-	InProgress					UMETA(DisplayName = "InProgress"),
-	Completed					UMETA(DisplayName = "Completed")
+	NotStarted				UMETA(DisplayName = "NotStarted"),
+	InProgress				UMETA(DisplayName = "InProgress"),
+	Completed				UMETA(DisplayName = "Completed")
 };
 
 // ========================
 // 퀘스트 타입 Enum
-// (기존 QuestEntryWidget.h에서 이곳으로 이동)
 // ========================
 UENUM(BlueprintType)
 enum class EQuestType : uint8
 {
-	MainQuest	UMETA(DisplayName = "MainQuest"),
-	SubQuest	UMETA(DisplayName = "SubQuest")
+	MainQuest				UMETA(DisplayName = "MainQuest"),
+	SubQuest				UMETA(DisplayName = "SubQuest"),
+	ToastQuest				UMETA(DisplayName = "ToastQuest")
+};
+
+// ========================
+// 퀘스트 완료 조건
+// ========================
+UENUM(BlueprintType)
+enum class EQuestClearCondition : uint8
+{
+	None					UMETA(DisplayName = "None"),
+	CheckItem				UMETA(DisplayName = "Check Item"),
+	ReachLocation			UMETA(DisplayName = "ReachLocation"),
+	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
+	GetItem					UMETA(DisplayName = "Get Item")
 };
 
 // FScenarioInfo ========================
@@ -59,7 +69,7 @@ enum class EQuestType : uint8
 
 // ========================
 // 시나리오 DataTable 행 구조체
-// CSV Row Name이 시나리오 ID 역할을 합니다 (예: S_Airplane)
+// CSV Row Name이 시나리오 ID 역할을 합니다 (예: Tutorial_Airplane)
 // ========================
 USTRUCT(BlueprintType)
 struct FScenarioTableRow : public FTableRowBase
@@ -88,15 +98,40 @@ struct FQuestTableRow : public FTableRowBase
 {
 	GENERATED_BODY()
 
+	// 현재 진행 중인 퀘스트의 ID
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Runtime")
+	FName QuestID;
+	
 	/** 메인/서브 퀘스트 여부 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
 	EQuestType QuestType = EQuestType::MainQuest;
 
 	/** 퀘스트 목표 텍스트 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
-	FText ObjectiveText;
+	FText QuestDescription;
 
-	/** 상호작용할 대상 NPC ID */
+	/** 퀘스트 완료 조건 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
-	FName TargetNPC_ID;
+	EQuestClearCondition ClearCondition;
+
+	/** 목표 대상 ID (예: 대화할 NPC ID, 획득할 아이템 ID, 도달할 위치 ID 등) */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	FName QuestTargetID;
+};
+
+// ========================
+// 퀘스트 런타임 진행 데이터 (동적 데이터)
+// ========================
+USTRUCT(BlueprintType)
+struct FQuestRuntimeData
+{
+	GENERATED_BODY()
+
+	// 현재 진행 중인 퀘스트의 ID
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Runtime")
+	FName QuestID;
+
+	// 현재 퀘스트의 진행 상태 (대장님이 만드신 Enum 활용!)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Murphy|Runtime")
+	EScenarioState QuestState = EScenarioState::NotStarted;
 };

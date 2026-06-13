@@ -1,9 +1,9 @@
 
 #include "Manager/DataManager.h"
 
-#include "Settings/DataManagerSettings.h"
 #include "Engine/DataTable.h"
 #include "Murphy.h"
+#include "Settings/DataManagerSettings.h"
 
 void UDataManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -56,20 +56,6 @@ void UDataManager::LoadDataTables()
 	else
 	{
 		PRINTLOGW_JW(TEXT("QuestDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
-	}
-
-	// 핸드폰 앱 DataTable 동기 로드
-	if (!Settings->PhoneAppDataTable.IsNull())
-	{
-		PhoneAppDataTable = Settings->PhoneAppDataTable.LoadSynchronous();
-		if (!PhoneAppDataTable)
-		{
-			PRINTLOGE_JW(TEXT("PhoneAppDataTable 로드 실패: %s"), *Settings->PhoneAppDataTable.ToString());
-		}
-	}
-	else
-	{
-		PRINTLOGW_JW(TEXT("PhoneAppDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
 	}
 }
 

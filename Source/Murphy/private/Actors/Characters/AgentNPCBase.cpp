@@ -197,12 +197,19 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString)
 {
 	if (EmotionString.Equals(TEXT("Normal"), ESearchCase::IgnoreCase))      return EAgentEmotion::Normal;
-	if (EmotionString.Equals(TEXT("Smile"), ESearchCase::IgnoreCase))       return EAgentEmotion::Smile;
-	if (EmotionString.Equals(TEXT("Suspect"), ESearchCase::IgnoreCase))     return EAgentEmotion::Suspect;
-	if (EmotionString.Equals(TEXT("Embarrassed"), ESearchCase::IgnoreCase)) return EAgentEmotion::Embarrassed;
-	if (EmotionString.Equals(TEXT("Annoyed"), ESearchCase::IgnoreCase))     return EAgentEmotion::Annoyed;
-	if (EmotionString.Equals(TEXT("Angry"), ESearchCase::IgnoreCase))       return EAgentEmotion::Angry;
-	if (EmotionString.Equals(TEXT("Furious"), ESearchCase::IgnoreCase))     return EAgentEmotion::Furious;
+	if (EmotionString.Equals(TEXT("Joy"), ESearchCase::IgnoreCase))       return EAgentEmotion::Joy;
+	if (EmotionString.Equals(TEXT("Anger"), ESearchCase::IgnoreCase))     return EAgentEmotion::Anger;
+	if (EmotionString.Equals(TEXT("Sadness"), ESearchCase::IgnoreCase)) return EAgentEmotion::Sadness;
+	if (EmotionString.Equals(TEXT("Panic"), ESearchCase::IgnoreCase))     return EAgentEmotion::Panic;
+	if (EmotionString.Equals(TEXT("Suspicion"), ESearchCase::IgnoreCase))       return EAgentEmotion::Suspicion;
+	if (EmotionString.Equals(TEXT("Disgust"), ESearchCase::IgnoreCase))     return EAgentEmotion::Disgust;
+	if (EmotionString.Equals(TEXT("Fear"), ESearchCase::IgnoreCase))     return EAgentEmotion::Fear;
+	if (EmotionString.Equals(TEXT("Smirk"), ESearchCase::IgnoreCase))     return EAgentEmotion::Smirk;
+	if (EmotionString.Equals(TEXT("Surprise"), ESearchCase::IgnoreCase))     return EAgentEmotion::Surprise;
+	if (EmotionString.Equals(TEXT("Pain"), ESearchCase::IgnoreCase))     return EAgentEmotion::Pain;
+	if (EmotionString.Equals(TEXT("Confusion"), ESearchCase::IgnoreCase))     return EAgentEmotion::Confusion;
+	if (EmotionString.Equals(TEXT("Boredom"), ESearchCase::IgnoreCase))     return EAgentEmotion::Boredom;
+	
 
 	PRINTLOGE_JW(TEXT("[AgentNPC] 알 수 없는 감정 키워드 수신: %s"), *EmotionString);
 	return EAgentEmotion::Normal;
@@ -210,18 +217,44 @@ EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString
 
 void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 {
+	// 1. 상태 변수 최신화 (애니메이션 블루프린트에서 매 프레임 읽어갈 데이터)
 	CurrentEmotion = EmotionLevel;
-	
-	// todo: AnimInstance로 EmotionLevel을 Enum으로 만들어서 분기 처리?
-	
-	// Enum에 맞는 Texture를 Map에서 찾아옴
+    
+	// 2. 이모지 UI 업데이트 로직
 	if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(EmotionLevel))
 	{
-		// 이모지 UI 캐스팅 후 이미지 변경
 		if (IsValid(EmojiUI))
 		{
 			EmojiUI->SetEmoji(*FoundTexture);
 		}
+	}
+    
+	// 3. 일회성 감정 표현(애니메이션 몽타주) 재생 로직
+	if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(EmotionLevel))
+	{
+		// 메타휴먼은 얼굴(Face), 몸통(Body) 등 부위가 나뉘어 있으므로 모든 컴포넌트를 순회하며 재생합니다.
+		TArray<USkeletalMeshComponent*> SkeletalMeshes;
+		GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+
+		for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+		{
+			if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
+			{
+				AnimInst->Montage_Play(*FoundMontage);
+			}
+		}
+       
+		// 4. [핵심 추가] 페이셜 애니메이션 연동을 위해 블루프린트로 신호 보내기
+    
+		// 우리가 쓰는 Enum(예: EAgentEmotion::Smile)을 팀원의 데이터 테이블에 맞게 문자열("Smile")로 변환합니다.
+		FString EmotionString = StaticEnum<EAgentEmotion>()->GetNameStringByValue(static_cast<int64>(EmotionLevel));
+		// C++에서 이 함수를 호출하면, 블루프린트의 빨간색 이벤트 노드가 실행됩니다!
+		OnFaceEmotionChanged(FName(*EmotionString));
+		
+		PRINTLOG_CW(TEXT("[AgentNPC] 얼굴 표정 블루프린트 이벤트 호출 -> %s"), *EmotionString);
+		
+		// 성공 로그는 콘솔창이 지저분해지지 않게 딱 한 줄만 깔끔하게 남깁니다.
+		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 재생 -> %s"), *(*FoundMontage)->GetName());
 	}
 }
 
@@ -462,3 +495,4 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundWave->Duration, false);
 	}
 }
+

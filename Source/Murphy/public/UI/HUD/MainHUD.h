@@ -32,10 +32,17 @@ protected:
 	
 
 public:
+	virtual void NativeConstruct() override;
+
 	// 토글 요청을 MainHUD로 전달할 때 사용할 인터페이스 함수
 	void RequestToggleBag();
 	void RequestTogglePhone();
 	
 	void UpdateMicState(bool bIsRecording);
+
+private:
+	// 폰 토글 델리게이트 콜백 — 마우스 커서 활성화/비활성화
+	UFUNCTION()
+	void HandlePhoneToggled(bool bIsPhoneOpen);
 	
 };

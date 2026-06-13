@@ -22,4 +22,8 @@ public:
 	/** 퀘스트 DataTable (FQuestTableRow 기반 CSV) */
 	UPROPERTY(Config, EditAnywhere, Category = "DataTable")
 	TSoftObjectPtr<UDataTable> QuestDataTable;
+
+	/** 핸드폰 앱 DataTable (FPhoneAppRow 기반 CSV) */
+	UPROPERTY(Config, EditAnywhere, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> PhoneAppDataTable;
 };

@@ -18,6 +18,7 @@ void UDataManager::Deinitialize()
 
 	ScenarioDataTable = nullptr;
 	QuestDataTable = nullptr;
+	PhoneAppDataTable = nullptr;
 }
 
 void UDataManager::LoadDataTables()
@@ -55,6 +56,20 @@ void UDataManager::LoadDataTables()
 	else
 	{
 		PRINTLOGW_JW(TEXT("QuestDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
+
+	// 핸드폰 앱 DataTable 동기 로드
+	if (!Settings->PhoneAppDataTable.IsNull())
+	{
+		PhoneAppDataTable = Settings->PhoneAppDataTable.LoadSynchronous();
+		if (!PhoneAppDataTable)
+		{
+			PRINTLOGE_JW(TEXT("PhoneAppDataTable 로드 실패: %s"), *Settings->PhoneAppDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("PhoneAppDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
 	}
 }
 
@@ -113,3 +128,51 @@ TArray<FName> UDataManager::GetAllQuestRowNames() const
 
 	return QuestDataTable->GetRowNames();
 }
+
+FPhoneAppRow* UDataManager::GetPhoneAppData(const FName& RowName) const
+{
+	if (!PhoneAppDataTable)
+	{
+		PRINTLOG_SH(TEXT("PhoneAppDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+
+	FPhoneAppRow* Row = PhoneAppDataTable->FindRow<FPhoneAppRow>(RowName, TEXT("GetPhoneAppData"));
+	if (!Row)
+	{
+		PRINTLOG_SH(TEXT("PhoneApp Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row;
+}
+
+TArray<FName> UDataManager::GetAllPhoneAppRowNames() const
+{
+	if (!PhoneAppDataTable)
+	{
+		PRINTLOG_SH(TEXT("PhoneAppDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+
+	return PhoneAppDataTable->GetRowNames();
+}
+
+TArray<FPhoneAppRow*> UDataManager::GetAllPhoneAppRows() const
+{
+	if (!PhoneAppDataTable)
+	{
+		PRINTLOG_SH(TEXT("PhoneAppDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+
+	TArray<FPhoneAppRow*> Rows;
+	for (const FName& RowName : PhoneAppDataTable->GetRowNames())
+	{
+		if (FPhoneAppRow* Row = PhoneAppDataTable->FindRow<FPhoneAppRow>(RowName, TEXT("GetAllPhoneAppRows")))
+		{
+			Rows.Add(Row);
+		}
+	}
+	return Rows;
+}
+

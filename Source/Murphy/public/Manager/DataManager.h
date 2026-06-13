@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Data/GameDataTypes.h"
+#include "Data/PhoneDataTypes.h"
 #include "DataManager.generated.h"
 
 class UDataTable;
@@ -55,6 +56,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Quest")
 	TArray<FName> GetAllQuestRowNames() const;
 
+
+	// === 핸드폰 앱 데이터 조회 ===
+
+	/**
+	 * Row Name으로 핸드폰 앱 데이터를 반환합니다.
+	 * @param RowName DataTable의 행 이름 (예: App_Search)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	FPhoneAppRow* GetPhoneAppData(const FName& RowName) const;
+
+	/**
+	 * 로드된 핸드폰 앱 DataTable의 모든 Row Name 목록을 반환합니다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Phone")
+	TArray<FName> GetAllPhoneAppRowNames() const;
+
+	/**
+	 * 로드된 핸드폰 앱 DataTable의 모든 Row 데이터를 배열로 반환합니다.
+	 */
+	TArray<FPhoneAppRow*> GetAllPhoneAppRows() const;
+
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */
 	void LoadDataTables();
@@ -64,4 +86,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> QuestDataTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> PhoneAppDataTable;
 };

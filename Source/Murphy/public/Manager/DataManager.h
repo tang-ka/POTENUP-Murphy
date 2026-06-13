@@ -24,7 +24,7 @@ public:
 
 	
 	// === 시나리오 데이터 조회 ===
-	
+#pragma region ScenarioData
 	/**
 	 * Row Name으로 시나리오 데이터를 반환합니다.
 	 * @param RowName CSV의 행 이름 (예: S_Airplane)
@@ -38,10 +38,10 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Scenario")
 	TArray<FName> GetAllScenarioRowNames() const;
-
+#pragma endregion
 
 	// === 퀘스트 데이터 조회 ===
-	
+#pragma region QuestData
 	/**
 	 * Row Name으로 퀘스트 데이터를 반환합니다.
 	 * @param RowName CSV의 행 이름 (예: Q_FindPassport)
@@ -55,10 +55,10 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Quest")
 	TArray<FName> GetAllQuestRowNames() const;
-
+#pragma endregion
 
 	// === 핸드폰 앱 데이터 조회 ===
-
+#pragma region PhoneAppData
 	/**
 	 * Row Name으로 핸드폰 앱 데이터를 반환합니다.
 	 * @param RowName DataTable의 행 이름 (예: App_Search)
@@ -76,6 +76,7 @@ public:
 	 * 로드된 핸드폰 앱 DataTable의 모든 Row 데이터를 배열로 반환합니다.
 	 */
 	TArray<FPhoneAppRow*> GetAllPhoneAppRows() const;
+#pragma endregion
 
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */

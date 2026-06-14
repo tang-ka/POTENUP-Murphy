@@ -52,21 +52,6 @@ enum class EQuestClearCondition : uint8
 	GetItem					UMETA(DisplayName = "Get Item")
 };
 
-// FScenarioInfo ========================
-// (기존 UScenarioSubsystem.h에서 이곳으로 이동)
-// ========================
-// USTRUCT(BlueprintType)
-// struct FScenarioInfo
-// {
-// 	GENERATED_BODY()
-// 	
-// 	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
-// 	EScenarioType ScenarioType = EScenarioType::None;
-// 	
-// 	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
-// 	EScenarioState ScenarioState = EScenarioState::None;
-// };
-
 // ========================
 // 시나리오 DataTable 행 구조체
 // CSV Row Name이 시나리오 ID 역할을 합니다 (예: Tutorial_Airplane)
@@ -87,6 +72,9 @@ struct FScenarioTableRow : public FTableRowBase
 	/** 이 시나리오에서 클리어해야 할 퀘스트 ID 목록 (CSV Row Name 기준) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
 	TArray<FName> RequiredQuestIDs;
+	
+	// 	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
+	// 	EScenarioState ScenarioState = EScenarioState::None;
 };
 
 // ========================
@@ -134,4 +122,38 @@ struct FQuestRuntimeData
 	// 현재 퀘스트의 진행 상태 (대장님이 만드신 Enum 활용!)
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Murphy|Runtime")
 	EScenarioState QuestState = EScenarioState::NotStarted;
+};
+
+// ========================
+// 아이템 정보 구조체
+// DataTable 없이 ItemBaseActor 에디터에서 직접 설정
+// ========================
+USTRUCT(BlueprintType)
+struct FItemTableRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	/** 아이템 고유 ID (퀘스트 CSV의 QuestTargetID 컬럼값과 일치시킬 것) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	FName ItemID;
+
+	/** UI에 표시할 아이템 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	FText ItemName;
+
+	/** ItemDetailWidget에 표시할 아이템 설명 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	FText ItemDescription;
+
+	/** true → 클릭 시 즉시 사용 처리 / false → 상세 팝업만 표시 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	bool bIsUsable = false;
+
+	/** 아이템 아이콘 텍스처 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	TSoftObjectPtr<UTexture2D> ItemIcon;
+	
+	/** 아이템 Description 텍스처 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	TSoftObjectPtr<UTexture2D> ItemDetailIcon;
 };

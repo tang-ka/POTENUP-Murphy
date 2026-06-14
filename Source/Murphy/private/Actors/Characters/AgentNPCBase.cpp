@@ -93,6 +93,44 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 		}
 	}
 	
+	bool bShouldLookAtPlayer = bIsLookingAtPlayer; 
+
+	// NPC가 몽타주(문서 보기 등)를 재생 중인지 검사
+	if (bIsLookingAtPlayer)
+	{
+		TArray<USkeletalMeshComponent*> SkeletalMeshes;
+		GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+		for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+		{
+			if (SkelMesh->GetName().Equals(TEXT("Body"), ESearchCase::IgnoreCase))
+			{
+				if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
+				{
+					// 몽타주 재생 중이라면 ➔ "지금 바쁘니까 시선 꺼!"
+					if (AnimInst->IsAnyMontagePlaying())
+					{
+						bShouldLookAtPlayer = false; 
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	// 계산된 결과를 ABP가 읽어갈 수 있도록 멤버 변수에 저장
+	bEnableIK = bShouldLookAtPlayer;
+    
+	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 카메라 좌표 갱신
+	if (bEnableIK && IsValid(CurrentInteractPlayer))
+	{
+		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0))
+		{
+			TargetLookAtLocation = CameraManager->GetCameraLocation();
+		}
+	}
+	
+	
+	
 	if (bIsWaitingForPlayer)
 	{
 		CurWaitTime += DeltaSeconds;
@@ -120,6 +158,7 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 			}
 		}
 	}
+	
 }
 
 void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -153,6 +192,12 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		if (MyPC->IsLocalController())
 		{
 			MyPC->SetActiveNPC(this);
+			
+			// 대화 시작 시 시선 IK 스위치를 켭니다.
+			bIsLookingAtPlayer = true;
+    
+			// 플레이어 액터를 저장해둡니다. (매개변수로 넘어온 OtherActor가 플레이어라고 가정)
+			CurrentInteractPlayer = OtherActor;
 			
 			// 1 시나리오 매니저 호출 
 			if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
@@ -321,7 +366,9 @@ void AAgentNPCBase::OnVoiceFinished()
 		{
 			ScenarioSubsystem->EndScenario(true);
 		}
-		
+		 bIsLookingAtPlayer = false; 
+		 CurrentInteractPlayer = nullptr;
+				
 		EndConversation();
 		return;
 	}
@@ -330,6 +377,7 @@ void AAgentNPCBase::OnVoiceFinished()
 	bIsWaitingForPlayer = true;
 	CurWaitTime = 0;
 	PRINTLOG_JW(TEXT("[AgentNPC] NPC 대사 종료. 1분 대기 타이머를 시작합니다."));
+
 }
 
 void AAgentNPCBase::NotifyPlayerSpoke()

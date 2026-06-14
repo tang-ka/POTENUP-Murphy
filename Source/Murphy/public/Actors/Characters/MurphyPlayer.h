@@ -78,6 +78,23 @@ public:
 	float GetRecordTime() const;
 	
 public:
+	// === Movement Lock ===
+	// 비행기 좌석 등에서 이동 입력을 잠그기 위한 플래그
+	// 서버에서 호출: 권위 값 세팅 + 소유 클라로 RPC 동기화
+	UFUNCTION(BlueprintCallable)
+	void SetMovementLocked(bool bLocked);
+
+	UFUNCTION(BlueprintPure)
+	bool IsMovementLocked() const
+	{
+		return bMovementLocked;
+	}
+
+	// 소유 클라이언트에 이동 잠금 상태를 동기화하는 RPC
+	UFUNCTION(Client, Reliable)
+	void Client_SetMovementLocked(bool bLocked);
+
+public:
 	// === Input ===
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Input")
 	UInputMappingContext* IMC_Murphy;
@@ -115,5 +132,8 @@ protected:
 	TSubclassOf<UMainHUD> MainHUDClass;
 	UPROPERTY()
 	TObjectPtr<UMainHUD> MainHUDInstance;
-	
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|flag", meta=(AllowPrivateAccess="true"))
+	bool bMovementLocked = false;
 };

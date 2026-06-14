@@ -36,7 +36,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Level Streaming")
 	void TransitionToBaggageClaim();
 
-	
 private:
 	// 녹음 완료 델리게이트 바인딩 함수
 	UFUNCTION()

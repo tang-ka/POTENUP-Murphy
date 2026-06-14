@@ -42,8 +42,25 @@ void AMurphyPlayer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	// NPC와 대화하는 중일 경우 
+	// NPC와 대화하는 중일 경우
 	if (bIsAligningWithNPC  && TargetNPC) FocusNPC(DeltaSeconds);
+}
+
+void AMurphyPlayer::SetMovementLocked(bool bLocked)
+{
+	// 서버 권위 값 세팅
+	bMovementLocked = bLocked;
+
+	// 소유 클라이언트로 RPC 전송 (서버에서만 유효)
+	if (HasAuthority())
+	{
+		Client_SetMovementLocked(bLocked);
+	}
+}
+
+void AMurphyPlayer::Client_SetMovementLocked_Implementation(bool bLocked)
+{
+	bMovementLocked = bLocked;
 }
 
 void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -152,6 +169,11 @@ float AMurphyPlayer::GetRecordTime() const
 
 void AMurphyPlayer::Move(const FInputActionValue& Value)
 {
+	if (bMovementLocked)
+	{
+		return;
+	}
+
 	uint8 b = CurChatState == EPlayerChatState::WaitingForAI || CurChatState == EPlayerChatState::Recording ||  CurChatState == EPlayerChatState::Talking;
 	if (b)
 	{

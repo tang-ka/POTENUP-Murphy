@@ -1,6 +1,7 @@
 
 #include "Manager/DataManager.h"
 
+#include "Settings/DataManagerSettings.h"
 #include "Engine/DataTable.h"
 #include "Murphy.h"
 #include "Settings/DataManagerSettings.h"

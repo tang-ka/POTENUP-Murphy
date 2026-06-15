@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "MurphyPlayer.generated.h"
 
+class USystemMenuUI;
 struct FInputActionValue;
 
 class UInputMappingContext;
@@ -111,6 +112,9 @@ public:
 	UInputAction* IA_ToggleBag;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_TogglePhone;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_SystemMenu;
+	
 	
 	// === Input Action === 
 	virtual void Move(const FInputActionValue& Value);
@@ -118,12 +122,10 @@ public:
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
-
-	// Toggle Bag, Phone Action
+	
 	void ToggleBagPressed();
 	void TogglePhonePressed();
-	
-	// Update Mic UI
+	void SystemMenuPressed();
 	void SetMicUIState(bool bIsRecording);
 
 protected:
@@ -132,6 +134,11 @@ protected:
 	TSubclassOf<UMainHUD> MainHUDClass;
 	UPROPERTY()
 	TObjectPtr<UMainHUD> MainHUDInstance;
+	
+	UPROPERTY(EditAnywhere, Category = "Murphy|UI")
+	TSubclassOf<USystemMenuUI> SystemMenuClass;
+	UPROPERTY()
+	TObjectPtr<USystemMenuUI> SystemMenuInstance;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|flag", meta=(AllowPrivateAccess="true"))

@@ -185,4 +185,28 @@ public:
 	
 	// HTTP GET 응답 콜백 - WAV 바이너리를 받아 재생
 	void OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	
+	
+public:
+	// ==========================================
+	// [추가] 시선 처리(Look-At IK)를 위한 변수들
+	// ==========================================
+    
+	// 지금 플레이어를 쳐다봐야 하는 상태인지 여부 (스위치 역할)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
+	bool bIsLookingAtPlayer = false;
+
+	// 플레이어의 위치 (주로 얼굴/카메라 좌표)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
+	FVector TargetLookAtLocation = FVector::ZeroVector;
+    
+	// 플레이어 캐릭터 포인터 캐싱용 (Tick에서 위치를 계속 업데이트하기 위함)
+	UPROPERTY()
+	TObjectPtr<AActor> CurrentInteractPlayer = nullptr;
+
+
+	// 애니메이션 블루프린트(ABP)가 실제로 읽어갈 최종 스위치
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
+	bool bEnableIK = false;
+	
 };

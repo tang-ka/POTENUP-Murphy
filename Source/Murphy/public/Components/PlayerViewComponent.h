@@ -16,6 +16,15 @@ enum class EPlayerViewState : uint8
 	FirstPersonTalk		// 1인칭 대화
 };
 
+// 대화 시작 시 어떤 시점으로 전환할지 결정하는 모드 - 씬/BP별로 에디터에서 바로 전환 테스트 가능
+UENUM(BlueprintType)
+enum class EChatViewMode : uint8
+{
+	ThirdPersonFocus,	// 대화 시작 시 3인칭 Focus로 전환
+	FirstPersonTalk,	// 대화 시작 시 1인칭으로 전환
+	FirstPersonLocked	// 항시 1인칭 자유시점 고정 (기내 씬 등)
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewTransitionComplete, EPlayerViewState, ReachedState);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))

@@ -3,16 +3,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
+#include "Framework/MurphyGameModeBase.h"
 #include "AirplaneGameMode.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class MURPHY_API AAirplaneGameMode : public AGameModeBase
+class MURPHY_API AAirplaneGameMode : public AMurphyGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+	AAirplaneGameMode();
 
 protected:
 	virtual void BeginPlay() override;

@@ -9,6 +9,8 @@
 
 APrologueGameMode::APrologueGameMode()
 {
+	// 이후 씬: 3인칭 Focus 기본
+	ChatViewMode = EChatViewMode::ThirdPersonFocus;
 }
 
 void APrologueGameMode::BeginPlay()

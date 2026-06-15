@@ -9,6 +9,12 @@
 #include "Data/CinematicTypes.h"
 #include "MediaSource.h"
 
+AAirplaneGameMode::AAirplaneGameMode()
+{
+	// 기내 씬: 항상 1인칭 자유시점 고정
+	ChatViewMode = EChatViewMode::FirstPersonLocked;
+}
+
 void AAirplaneGameMode::BeginPlay()
 {
 	Super::BeginPlay();

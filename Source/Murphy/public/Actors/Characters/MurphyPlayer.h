@@ -3,10 +3,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Components/PlayerViewComponent.h" // EPlayerViewState, EChatViewMode 사용
+#include "Framework/MurphyGameModeBase.h"
 #include "MurphyPlayer.generated.h"
 
 class UCameraComponent;
-class UPlayerViewComponent;
+// class UPlayerViewComponent; // PlayerViewComponent.h include로 대체 (enum 전체 정의 필요)
 class USpringArmComponent;
 struct FInputActionValue;
 
@@ -39,8 +41,8 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaSeconds) override;
-	
+	// virtual void Tick(float DeltaSeconds) override; // PlayerViewComponent::TickComponent으로 이전
+
 protected:
 #pragma region Components
 	// === VoiceRecorder ===
@@ -84,16 +86,24 @@ public:
 	void StartChatWithNPC(AAgentNPCBase* NPC);
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Chat")
 	void EndChatWithNPC();
-	
+
+	// 대화 시 시점 전환 방식 - 씬/BP 인스턴스별로 에디터에서 바로 전환 테스트 가능
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|View")
+	EChatViewMode ChatViewMode = EChatViewMode::ThirdPersonFocus;
+
+	// PlayerViewComp의 시점 전환 완료 콜백 (기존 bPendingEndChat 처리 대체)
+	UFUNCTION()
+	void HandleViewTransitionComplete(EPlayerViewState ReachedState);
+
 	// 카메라 포커싱
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Chat")
-	FRotator CamTargetRot = FRotator(345.0f, 245.0f, 0.0f); // 고정 P=345.0f Y=245.0f R=0.0f
-	void FocusNPC(float DeltaSeconds);
-	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Chat")
+	// FRotator CamTargetRot = FRotator(345.0f, 245.0f, 0.0f); // 고정 P=345.0f Y=245.0f R=0.0f -> PlayerViewComp::ThirdPersonFocusCamRot으로 이전
+	// void FocusNPC(float DeltaSeconds); // PlayerViewComp::TickThirdPersonFocusAlign으로 이전
+
 	// 회전 완료 전 대화 종료 방지 및 회전 보장 플래그
-	bool bIsAligningWithNPC  = false;
-	bool bPendingEndChat = false;
-	
+	// bool bIsAligningWithNPC  = false; // PlayerViewComp::bIsTransitioning으로 이전
+	// bool bPendingEndChat = false; // PlayerViewComp::PendingViewState로 이전
+
 	float RecordTime = 0.0f;
 	float GetRecordTime() const;
 	

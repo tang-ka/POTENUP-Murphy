@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
+#include "Framework/MurphyGameModeBase.h"
 #include "PrologueGameMode.generated.h"
 
 UCLASS()
-class MURPHY_API APrologueGameMode : public AGameModeBase
+class MURPHY_API APrologueGameMode : public AMurphyGameModeBase
 {
 	GENERATED_BODY()
 	

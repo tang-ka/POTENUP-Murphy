@@ -23,8 +23,8 @@
 
 AMurphyPlayer::AMurphyPlayer()
 {
-	PrimaryActorTick.bCanEverTick = true; // 채팅 중 카메라 보간을 위해 
-	
+	// PrimaryActorTick.bCanEverTick = true; // 채팅 중 카메라 보간을 위해 -> PlayerViewComponent::TickComponent로 이전, Actor Tick 불필요
+
 	VoiceRecorderComp = CreateDefaultSubobject<UVoiceRecorderComponent>(TEXT("VoiceRecorderComp"));
 
 	PlayerViewComp = CreateDefaultSubobject<UPlayerViewComponent>(TEXT("PlayerViewComp"));
@@ -44,7 +44,25 @@ AMurphyPlayer::AMurphyPlayer()
 void AMurphyPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// GameMode 단위 ChatViewMode 설정을 읽어와 덮어씀 (GameMode 없으면 기존 EditAnywhere 기본값 사용)
+	if (AMurphyGameModeBase* MurphyGameMode = GetWorld()->GetAuthGameMode<AMurphyGameModeBase>())
+	{
+		ChatViewMode = MurphyGameMode->ChatViewMode;
+		PRINTLOG_SH(TEXT("BeginPlay: GameMode ChatViewMode(%d) 적용"), static_cast<int32>(ChatViewMode));
+	}
+
+	if (PlayerViewComp)
+	{
+		PlayerViewComp->OnViewTransitionComplete.AddDynamic(this, &AMurphyPlayer::HandleViewTransitionComplete);
+
+		// 기내 씬 등: 시작부터 1인칭 자유시점 고정
+		if (ChatViewMode == EChatViewMode::FirstPersonLocked)
+		{
+			PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
+		}
+	}
+
 	// MainHUDClassInstance 생성
 	if (IsLocallyControlled() && MainHUDClass != nullptr)
 	{
@@ -54,15 +72,16 @@ void AMurphyPlayer::BeginPlay()
 			MainHUDInstance->AddToViewport();
 		}
 	}
-	
+
 }
 
-void AMurphyPlayer::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-	
-	if (bIsAligningWithNPC && TargetNPC) FocusNPC(DeltaSeconds);
-}
+// void AMurphyPlayer::Tick(float DeltaSeconds)
+// {
+// 	Super::Tick(DeltaSeconds);
+//
+// 	if (bIsAligningWithNPC && TargetNPC) FocusNPC(DeltaSeconds);
+// }
+// -> PlayerViewComponent::TickComponent + TickThirdPersonFocusAlign으로 이전됨
 
 void AMurphyPlayer::SetMovementLocked(bool bLocked)
 {
@@ -116,66 +135,109 @@ void AMurphyPlayer::StartChatWithNPC(AAgentNPCBase* NPC)
 			PRINTLOGW_JW(TEXT("[Chat] 해당 NPC는 다른 플레이어와 대화중임"));
 			return;
 		}
-		
+
 		if (NPC->TryStartConversation())
 		{
 			TargetNPC = NPC;
 			SetChatState(EPlayerChatState::Talking);
-			bIsAligningWithNPC = true;
-			bPendingEndChat = false;
+			// bIsAligningWithNPC = true; // PlayerViewComp::RequestViewState로 이전
+			// bPendingEndChat = false; // PlayerViewComp::PendingViewState로 이전
+
+			if (PlayerViewComp)
+			{
+				switch (ChatViewMode)
+				{
+				case EChatViewMode::ThirdPersonFocus:
+					{
+						PlayerViewComp->RequestViewState(EPlayerViewState::ThirdPersonFocus, NPC);
+						break;
+					}
+				case EChatViewMode::FirstPersonTalk:
+					{
+						PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
+						break;
+					}
+				case EChatViewMode::FirstPersonLocked:
+					{
+						// 이미 1인칭 고정 상태 - 시점 변경 없음
+						break;
+					}
+				}
+			}
 		}
 	}
 }
 
 void AMurphyPlayer::EndChatWithNPC()
 {
-	if (bIsAligningWithNPC)
+	// if (bIsAligningWithNPC) // PlayerViewComp::IsTransitioning()으로 이전
+	// {
+	// 	bPendingEndChat = true;
+	// 	return;
+	// }
+
+	// ThirdPersonFocus 모드에서 정렬 중이면 종료 처리를 보류 (정렬 완료 시 HandleViewTransitionComplete에서 재호출)
+	if (ChatViewMode == EChatViewMode::ThirdPersonFocus && PlayerViewComp && PlayerViewComp->IsTransitioning())
 	{
-		bPendingEndChat = true;
+		PlayerViewComp->RequestViewState(EPlayerViewState::Idle);
 		return;
 	}
-	
+
 	if (TargetNPC)
 	{
 		TargetNPC->EndConversation();
 		TargetNPC = nullptr;
 	}
-	
-	bPendingEndChat = false;
+
+	// bPendingEndChat = false; // 더 이상 사용 안 함
 	SetChatState(EPlayerChatState::Idle);
+
+	if (PlayerViewComp && ChatViewMode != EChatViewMode::FirstPersonLocked)
+	{
+		PlayerViewComp->RequestViewState(EPlayerViewState::Idle);
+	}
 }
 
-void AMurphyPlayer::FocusNPC(float DeltaSeconds)
+void AMurphyPlayer::HandleViewTransitionComplete(EPlayerViewState ReachedState)
 {
-	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetNPC->GetActorLocation());
-	TargetRot.Pitch = 0.0f;
-	TargetRot.Roll = 0.0f;
-		
-	FRotator Rot = FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaSeconds,  5.0f);
-	SetActorRotation(Rot);
-		
-	bool bActorAligned = GetActorRotation().Equals(TargetRot, 2.0f);
-	bool bCamAligned = true;
-		
-	// 카메라는 특정 시점으로 고정 시킬 수 있도륙
-	if (Controller)
-	{	
-		FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), CamTargetRot, DeltaSeconds,  5.0f);
-		Controller->SetControlRotation(CamRot);
-			
-		bCamAligned = Controller->GetControlRotation().Equals(CamTargetRot, 2.0f);
-	}
-		
-	if (bActorAligned && bCamAligned)
+	if (ReachedState == EPlayerViewState::Idle && CurChatState != EPlayerChatState::Idle)
 	{
-		bIsAligningWithNPC  = false;
-			
-		if (bPendingEndChat)
-		{
-			EndChatWithNPC();
-		}
+		EndChatWithNPC();
 	}
 }
+
+// void AMurphyPlayer::FocusNPC(float DeltaSeconds)
+// {
+// 	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetNPC->GetActorLocation());
+// 	TargetRot.Pitch = 0.0f;
+// 	TargetRot.Roll = 0.0f;
+//
+// 	FRotator Rot = FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaSeconds,  5.0f);
+// 	SetActorRotation(Rot);
+//
+// 	bool bActorAligned = GetActorRotation().Equals(TargetRot, 2.0f);
+// 	bool bCamAligned = true;
+//
+// 	// 카메라는 특정 시점으로 고정 시킬 수 있도륙
+// 	if (Controller)
+// 	{
+// 		FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), CamTargetRot, DeltaSeconds,  5.0f);
+// 		Controller->SetControlRotation(CamRot);
+//
+// 		bCamAligned = Controller->GetControlRotation().Equals(CamTargetRot, 2.0f);
+// 	}
+//
+// 	if (bActorAligned && bCamAligned)
+// 	{
+// 		bIsAligningWithNPC  = false;
+//
+// 		if (bPendingEndChat)
+// 		{
+// 			EndChatWithNPC();
+// 		}
+// 	}
+// }
+// -> PlayerViewComponent::TickThirdPersonFocusAlign으로 이전됨
 
 float AMurphyPlayer::GetRecordTime() const
 {
@@ -282,8 +344,6 @@ void AMurphyPlayer::ToggleBagPressed()
 	{
 		MainHUDInstance->RequestToggleBag();
 	}
-	
-	PlayerViewComp->RequestViewState(EPlayerViewState::Idle);
 }
 
 void AMurphyPlayer::TogglePhonePressed()
@@ -292,8 +352,6 @@ void AMurphyPlayer::TogglePhonePressed()
 	{
 		MainHUDInstance->RequestTogglePhone();
 	}
-	
-	PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
 }
 
 void AMurphyPlayer::InteractPressed()

@@ -4,6 +4,7 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Murphy.h"
 
 void UApplicationWidget::NativeConstruct()
 {
@@ -12,6 +13,8 @@ void UApplicationWidget::NativeConstruct()
 	if (Btn_AppIcon)
 	{
 		Btn_AppIcon->OnClicked.AddDynamic(this, &UApplicationWidget::OnIconButtonClicked);
+		Btn_AppIcon->OnHovered.AddDynamic(this, &UApplicationWidget::OnIconButtonHovered);
+		Btn_AppIcon->OnUnhovered.AddDynamic(this, &UApplicationWidget::OnIconButtonUnhovered);
 	}
 }
 
@@ -47,12 +50,12 @@ void UApplicationWidget::SetAppData(const FPhoneAppRow& Row, UUserWidget* InAppS
 			HoveredBrush.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
 
 			// Pressed: Hovered와 동일 + Tint (1, 1, 1, 0.7)
-			FSlateBrush PressedBrush = HoveredBrush;
+			FSlateBrush PressedBrush = NormalBrush;
 			PressedBrush.TintColor   = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 0.7f));
 
 			FButtonStyle Style = Btn_AppIcon->GetStyle();
 			Style.Normal  = NormalBrush;
-			Style.Hovered = HoveredBrush;
+			Style.Hovered = NormalBrush;
 			Style.Pressed = PressedBrush;
 			Btn_AppIcon->SetStyle(Style);
 		}
@@ -65,4 +68,36 @@ void UApplicationWidget::SetAppData(const FPhoneAppRow& Row, UUserWidget* InAppS
 void UApplicationWidget::OnIconButtonClicked()
 {
 	OnAppIconClicked.Broadcast(this);
+	
+	if (Btn_AppIcon)
+	{
+		FWidgetTransform Transform = Btn_AppIcon->GetRenderTransform();
+		Transform.Scale = FVector2D(0.95f, 0.95f);
+		Btn_AppIcon->SetRenderTransform(Transform);
+	}
 }
+
+void UApplicationWidget::OnIconButtonHovered()
+{
+	PRINTLOG_SH(TEXT("AppIcon Hovered"));
+
+	if (Btn_AppIcon)
+	{
+		FWidgetTransform Transform = Btn_AppIcon->GetRenderTransform();
+		Transform.Scale = FVector2D(1.05f, 1.05f);
+		Btn_AppIcon->SetRenderTransform(Transform);
+	}
+}
+
+void UApplicationWidget::OnIconButtonUnhovered()
+{
+	PRINTLOG_SH(TEXT("AppIcon Unhovered"));
+
+	if (Btn_AppIcon)
+	{
+		FWidgetTransform Transform = Btn_AppIcon->GetRenderTransform();
+		Transform.Scale = FVector2D(1.0f, 1.0f);
+		Btn_AppIcon->SetRenderTransform(Transform);
+	}
+}
+

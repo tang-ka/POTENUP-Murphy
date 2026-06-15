@@ -4,6 +4,8 @@
 #include "Actors/Items/ItemBaseActor.h"
 
 #include "VoiceChat/VoiceRecorderComponent.h"
+#include "Components/PlayerViewComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -15,6 +17,7 @@
 #include "Framework/MurphyPlayerController.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Murphy.h"
+#include "Camera/CameraComponent.h"
 #include "UI/HUD/MainHUD.h"
 
 
@@ -23,6 +26,19 @@ AMurphyPlayer::AMurphyPlayer()
 	PrimaryActorTick.bCanEverTick = true; // 채팅 중 카메라 보간을 위해 
 	
 	VoiceRecorderComp = CreateDefaultSubobject<UVoiceRecorderComponent>(TEXT("VoiceRecorderComp"));
+
+	PlayerViewComp = CreateDefaultSubobject<UPlayerViewComponent>(TEXT("PlayerViewComp"));
+
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(GetRootComponent());
+	CameraBoom->TargetArmLength = 100.0f;
+	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->SetRelativeLocation(FVector(0.0f, 0.0f, 70.0f));
+	
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom);
+	FollowCamera->bUsePawnControlRotation = false;
+	FollowCamera->SetRelativeLocation(FVector(0.0f, 30.0f, 0.0f));
 }
 
 void AMurphyPlayer::BeginPlay()
@@ -266,6 +282,8 @@ void AMurphyPlayer::ToggleBagPressed()
 	{
 		MainHUDInstance->RequestToggleBag();
 	}
+	
+	PlayerViewComp->RequestViewState(EPlayerViewState::Idle);
 }
 
 void AMurphyPlayer::TogglePhonePressed()
@@ -274,6 +292,8 @@ void AMurphyPlayer::TogglePhonePressed()
 	{
 		MainHUDInstance->RequestTogglePhone();
 	}
+	
+	PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
 }
 
 void AMurphyPlayer::InteractPressed()

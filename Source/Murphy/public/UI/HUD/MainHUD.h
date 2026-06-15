@@ -43,6 +43,7 @@ private:
 	UFUNCTION()
 	void HandlePhoneToggled(bool bIsPhoneOpen);
 
+public:
 	/** ItemBaseActor에서 가방에 아이템 추가 시 사용 */
 	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
 	

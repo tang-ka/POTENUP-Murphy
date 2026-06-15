@@ -5,6 +5,9 @@
 #include "GameFramework/Character.h"
 #include "MurphyPlayer.generated.h"
 
+class UCameraComponent;
+class UPlayerViewComponent;
+class USpringArmComponent;
 struct FInputActionValue;
 
 class UInputMappingContext;
@@ -39,12 +42,28 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	
 protected:
+#pragma region Components
 	// === VoiceRecorder ===
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="VoiceChat")
 	TObjectPtr<UVoiceRecorderComponent> VoiceRecorderComp;
 
+	// === Camera ===
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Camera")
+	TObjectPtr<USpringArmComponent> CameraBoom;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Camera")
+	TObjectPtr<UCameraComponent> FollowCamera;
+	
+	// === Util ====
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="View")
+	TObjectPtr<UPlayerViewComponent> PlayerViewComp;
+
 public:		
 	UVoiceRecorderComponent* GetVoiceRecorderComp() const { return VoiceRecorderComp; }
+	USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	UPlayerViewComponent* GetPlayerViewComp() const { return PlayerViewComp; }
+#pragma endregion
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Chat")
@@ -97,6 +116,7 @@ public:
 
 public:
 	// === Input ===
+#pragma region InputAction 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Murphy|Input")
 	UInputMappingContext* IMC_Murphy;
 	
@@ -114,13 +134,16 @@ public:
 	UInputAction* IA_TogglePhone;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_Interact;	// F키 - 아이템 상호작용
+#pragma endregion 
 	
 	// === Input Action === 
+#pragma region Input Action Function
 	virtual void Move(const FInputActionValue& Value);
 	virtual void Look(const FInputActionValue& Value);
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
+#pragma endregion 
 
 	// Toggle Bag, Phone Action
 	void ToggleBagPressed();

@@ -43,4 +43,10 @@ public:
 private:
 	UFUNCTION()
 	void OnIconButtonClicked();
+
+	UFUNCTION()
+	void OnIconButtonHovered();
+
+	UFUNCTION()
+	void OnIconButtonUnhovered();
 };

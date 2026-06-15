@@ -24,6 +24,7 @@ public class Murphy : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"UMG",
+			"MediaAssets",
 		});
 
 		// Uncomment if you are using Slate UI

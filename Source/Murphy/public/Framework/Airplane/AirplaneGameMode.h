@@ -15,6 +15,7 @@ class MURPHY_API AAirplaneGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 protected:
+	virtual void BeginPlay() override;
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 };
 

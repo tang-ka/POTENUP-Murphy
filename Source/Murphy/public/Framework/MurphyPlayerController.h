@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
+#include "Data/CinematicTypes.h"
 #include "MurphyPlayerController.generated.h"
 
 class AAgentNPCBase;
@@ -64,6 +65,10 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_RequestReposition(const FName& SubLevelName);
+
+	// Airplane 등 진입 시 서버가 발급한 PlayId로 로컬에서 시네마틱 재생.
+	UFUNCTION(Client, Reliable)
+	void Client_PlayCinematic(const FCinematicPlayRequest& Request, int32 PlayId);
 	
 private:
 	UPROPERTY()

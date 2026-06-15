@@ -4,7 +4,15 @@
 #include "Framework/Airplane/AirplaneGameMode.h"
 
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Framework/MurphyPlayerController.h"
 #include "Murphy.h"
+#include "Data/CinematicTypes.h"
+#include "MediaSource.h"
+
+void AAirplaneGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+}
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
@@ -16,6 +24,7 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 		return;
 	}
 
+	// 이동 잠금 (기내 씬에서는 이동 불가)
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(NewPlayer->GetPawn()))
 	{
 		MurphyPlayer->SetMovementLocked(true);
@@ -25,4 +34,22 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	{
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayer 캐스팅 실패 (Pawn 없음)"));
 	}
+
+	// 시네마틱 재생 요청
+	if (AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(NewPlayer))
+	{
+		FCinematicPlayRequest Request;
+		Request.CinematicId = TEXT("Airplane_Takeoff");
+		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
+		Request.bSkippable  = true;
+		Request.Fade.FadeToBlackDuration = 0.f;
+
+		MurphyPC->Client_PlayCinematic(Request, 1);
+	}
+	else
+	{
+		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayerController 캐스팅 실패"));
+	}
 }
+
+

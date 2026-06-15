@@ -6,7 +6,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "UI/Base/CommonPopupWidget.h"   // FUIPopupDesc
-#include "UI/Base/UITypes.h"         // EUILayer
+#include "Data/UILayerTypes.h"             // EUILayer
 #include "UIManagerSubsystem.generated.h"
 
 class UQuestToastPopupWidget;

@@ -113,17 +113,7 @@ TSubclassOf<UQuestToastPopupWidget> UUIManagerSubsystem::GetQuestToastClass()
 
 int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
 {
-    // 레이어 간 간격을 넉넉히 둬서 같은 레이어 내 미세 조정 여지를 남긴다.
-    switch (Layer)
-    {
-        case EUILayer::Game:         return 0;
-        case EUILayer::Persistent:   return 100;
-        case EUILayer::Menu:         return 200;
-        case EUILayer::Modal:        return 300;
-        case EUILayer::Notification: return 400;
-        case EUILayer::System:       return 500;
-        default:                     return 0;
-    }
+	return GetUILayerZOrder(Layer);
 }
 
 void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)

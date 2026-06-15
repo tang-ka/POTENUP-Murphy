@@ -17,6 +17,7 @@
 #include "Misc/Guid.h"
 
 #include "Murphy.h"
+#include "Manager/CinematicManagerSubsystem.h"
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/NetSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
@@ -388,6 +389,18 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 	}
 
 	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
+}
+
+void AMurphyPlayerController::Client_PlayCinematic_Implementation(const FCinematicPlayRequest& Request, int32 PlayId)
+{
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+	if (!CinematicManager)
+	{
+		PRINTLOG_SH(TEXT("Client_PlayCinematic: CinematicManagerSubsystem is null"));
+		return;
+	}
+
+	CinematicManager->PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ true);
 }
 
 void AMurphyPlayerController::Server_RequestReposition_Implementation(const FName& SubLevelName)

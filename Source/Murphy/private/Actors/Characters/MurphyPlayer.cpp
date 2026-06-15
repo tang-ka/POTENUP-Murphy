@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "Blueprint/UserWidget.h"
 
 #include "Actors/Characters/AgentNPCBase.h"
 #include "Framework/InteractableInterface.h"
@@ -18,6 +19,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Murphy.h"
 #include "Camera/CameraComponent.h"
+#include "UI/SystemMenuUI.h"
 #include "UI/HUD/MainHUD.h"
 
 
@@ -73,6 +75,16 @@ void AMurphyPlayer::BeginPlay()
 		}
 	}
 
+	// SystemMenuInstance 생성
+	if (IsLocallyControlled() && SystemMenuClass != nullptr)
+	{
+		SystemMenuInstance = CreateWidget<USystemMenuUI>(GetWorld(), SystemMenuClass);
+		if (SystemMenuInstance != nullptr)
+		{
+			SystemMenuInstance->AddToViewport(100);
+			SystemMenuInstance->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
 }
 
 // void AMurphyPlayer::Tick(float DeltaSeconds)
@@ -122,6 +134,7 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 			PlayerInput->BindAction(IA_ToggleBag, ETriggerEvent::Started, this, &AMurphyPlayer::ToggleBagPressed);
 			PlayerInput->BindAction(IA_TogglePhone, ETriggerEvent::Started, this, &AMurphyPlayer::TogglePhonePressed);
 			PlayerInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &AMurphyPlayer::InteractPressed);	// F키
+			PlayerInput->BindAction(IA_SystemMenu, ETriggerEvent::Started, this, &AMurphyPlayer::SystemMenuPressed);
 		}
 	}
 }
@@ -399,6 +412,34 @@ void AMurphyPlayer::InteractPressed()
 		{
 			Interactable->Interact(this);
 		}
+	}
+}
+
+void AMurphyPlayer::SystemMenuPressed()
+{
+	if (SystemMenuClass == nullptr) return;
+	
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || SystemMenuInstance == nullptr) return;
+	
+	if (SystemMenuInstance->GetVisibility() == ESlateVisibility::Visible)
+	{
+		// 닫기
+		SystemMenuInstance->SetVisibility(ESlateVisibility::Hidden);
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameOnly());
+	}
+	else
+	{
+		// 열기
+		SystemMenuInstance->SetVisibility(ESlateVisibility::Visible);
+		PC->bShowMouseCursor = true;
+		
+		// 캐릭터의 입력 막고 UI만 포커싱
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(SystemMenuInstance->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(InputMode);
 	}
 }
 

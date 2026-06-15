@@ -7,9 +7,11 @@
 #include "Framework/MurphyGameModeBase.h"
 #include "MurphyPlayer.generated.h"
 
+
 class UCameraComponent;
 // class UPlayerViewComponent; // PlayerViewComponent.h include로 대체 (enum 전체 정의 필요)
 class USpringArmComponent;
+class USystemMenuUI;
 struct FInputActionValue;
 
 class UInputMappingContext;
@@ -144,8 +146,11 @@ public:
 	UInputAction* IA_TogglePhone;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_Interact;	// F키 - 아이템 상호작용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_SystemMenu;
 #pragma endregion 
-	
+
+
 	// === Input Action === 
 #pragma region Input Action Function
 	virtual void Move(const FInputActionValue& Value);
@@ -153,6 +158,7 @@ public:
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
+
 #pragma endregion 
 
 	// Toggle Bag, Phone Action
@@ -164,6 +170,8 @@ public:
 
 	// Update Mic UI
 	void SetMicUIState(bool bIsRecording);
+	
+	void SystemMenuPressed();
 
 	/** 상호작용 가능한 객체 탐색용 반경 (Capsule Overlap) 및 시야각 */
 	UPROPERTY(EditAnywhere, Category = "Murphy|Item")
@@ -178,6 +186,11 @@ protected:
 	TSubclassOf<UMainHUD> MainHUDClass;
 	UPROPERTY()
 	TObjectPtr<UMainHUD> MainHUDInstance;
+	
+	UPROPERTY(EditAnywhere, Category = "Murphy|UI")
+	TSubclassOf<USystemMenuUI> SystemMenuClass;
+	UPROPERTY()
+	TObjectPtr<USystemMenuUI> SystemMenuInstance;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|flag", meta=(AllowPrivateAccess="true"))

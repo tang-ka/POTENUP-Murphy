@@ -23,6 +23,17 @@ public:
 	// [New] AI 서버로 RequestData 구조체와 음성파일 전송 (Multipart)
 	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
 	void SendToAI(const FAIRequestData& RequestData, const FString& WAVFilePath, FOnAIResponseDataReceived OnResponseDelegate);
+
+	/**
+	 * [New] Realtime STT WebSocket 방식 전용:
+	 * WAV 파일 없이 final transcript 텍스트만으로 /respond 호출.
+	 * JSON body 형식: { "turn": <FAIRequestData>, "audio": { "transcript": "<Transcript>" } }
+	 * @param RequestData       WS 세션 중 사전 준비해 둔 turn 데이터
+	 * @param Transcript        STT WebSocket에서 확정된 final transcript 텍스트
+	 * @param OnResponseDelegate 응답 수신 시 콜백
+	 */
+	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
+	void SendToAIWithTranscript(const FAIRequestData& RequestData, const FString& Transcript, FOnAIResponseDataReceived OnResponseDelegate);
 	
 	// 진행중인 요청(구독) 강제 취소
 	UFUNCTION(BlueprintCallable, Category="Murphy|Net")

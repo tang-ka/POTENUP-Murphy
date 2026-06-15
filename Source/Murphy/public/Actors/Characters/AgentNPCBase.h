@@ -121,7 +121,7 @@ private:
 	UFUNCTION() 
 	virtual void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
-protected:
+public:
 	// === NPC Info ==
 	// NPC 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")

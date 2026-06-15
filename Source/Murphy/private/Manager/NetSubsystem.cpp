@@ -97,6 +97,51 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	Request->ProcessRequest();
 }
 
+void UNetSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, const FString& Transcript, FOnAIResponseDataReceived OnResponseDelegate)
+{
+	PendingStructResponseDelegate = OnResponseDelegate;
+
+	// -----------------------------------------------------------
+	// 1) FAIRequestData → JSON Object 변환
+	// -----------------------------------------------------------
+	TSharedPtr<FJsonObject> TurnJsonObj = MakeShared<FJsonObject>();
+	if (!FJsonObjectConverter::UStructToJsonObject(FAIRequestData::StaticStruct(), &RequestData, TurnJsonObj.ToSharedRef(), 0, 0))
+	{
+		PRINTLOGE_JW(TEXT("[NetSub|STT] RequestData JSON 직렬화 실패"));
+		HandleServerResponseStruct(TEXT(""));
+		return;
+	}
+
+	// -----------------------------------------------------------
+	// 2) 최상위 래퍼 조립: { "turn": <TurnJson>, "audio": { "transcript": "<Transcript>" } }
+	//    Codex Prompt 참고: audio.transcript 필드로 STT 결과를 전달
+	// -----------------------------------------------------------
+	const TSharedRef<FJsonObject> AudioObj = MakeShared<FJsonObject>();
+	AudioObj->SetStringField(TEXT("transcript"), Transcript);
+
+	const TSharedRef<FJsonObject> RootObj = MakeShared<FJsonObject>();
+	RootObj->SetObjectField(TEXT("turn"),  TurnJsonObj);
+	RootObj->SetObjectField(TEXT("audio"), AudioObj);
+
+	FString JsonBody;
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
+	FJsonSerializer::Serialize(RootObj, Writer);
+
+	// -----------------------------------------------------------
+	// 3) HTTP POST 요청 (Content-Type: application/json)
+	// -----------------------------------------------------------
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(TEXT("http://127.0.0.1:8000/api/game/ai/respond"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetContentAsString(JsonBody);
+	Request->SetTimeout(300.f);
+	Request->OnProcessRequestComplete().BindUObject(this, &UNetSubsystem::OnHttpResponseReceived);
+	Request->ProcessRequest();
+
+	PRINTLOGW_JW(TEXT("[NetSub|STT] SendToAIWithTranscript 전송: transcript=\"%s\""), *Transcript);
+}
+
 void UNetSubsystem::CancelPendingRequests()
 {
 	if (PendingStructResponseDelegate.IsBound())

@@ -1,4 +1,4 @@
-﻿
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -139,6 +139,31 @@ struct FAI_PreviousNodeResult
 };
 
 USTRUCT(BlueprintType)
+struct FAI_InteractionContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="상호작용 시작 주체: 'player' 또는 'npc'"))
+	FString initiator = TEXT("player");
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="상호작용 타입: 'quest', 'ambient', 'tutorial', 'system'"))
+	FString interaction_type = TEXT("quest");
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="제한 시간 (초), 1 이상이어야 함"))
+	int32 time_limit_s = 15;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="첫 만남 여부"))
+	bool first_contact = false;
+
+	// --- [안전한 선행 작업] Agent의 Pydantic이 업데이트되지 않아도 무시되어 에러가 나지 않는 새 변수들 ---
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="타임아웃 발생 여부"))
+	bool is_timeout = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="시스템 알림 이벤트 (예: scenario_start, scenario_end)"))
+	FString system_event;
+};
+
+USTRUCT(BlueprintType)
 struct FAI_ClientContext
 {
 	GENERATED_BODY()
@@ -175,6 +200,9 @@ struct FAIRequestData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="업로드 wav의 metadata"))
 	FAI_AudioMeta audio;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="상호작용 관련 설정 및 시스템 이벤트 알림"))
+	FAI_InteractionContext interaction;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="난이도, 힌트, 피드백 조절"))
 	FAI_PlayerProfile player_profile;

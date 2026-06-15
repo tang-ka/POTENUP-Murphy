@@ -29,13 +29,14 @@ protected:
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UPhonePopupWidget> WBP_PhonePopup;	// 핸드폰 (기본 닫힘)
 	
-	
-
 public:
 	// 토글 요청을 MainHUD로 전달할 때 사용할 인터페이스 함수
 	void RequestToggleBag();
 	void RequestTogglePhone();
 	
 	void UpdateMicState(bool bIsRecording);
+
+	/** ItemBaseActor에서 가방에 아이템 추가 시 사용 */
+	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
 	
 };

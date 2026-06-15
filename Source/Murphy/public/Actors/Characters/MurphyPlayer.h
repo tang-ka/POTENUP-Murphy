@@ -1,4 +1,4 @@
-﻿
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,6 +13,7 @@ class UVoiceRecorderComponent;
 
 class AAgentNPCBase;
 class UMainHUD;
+class AItemBaseActor;
 
 UENUM(BlueprintType)
 enum class EPlayerChatState : uint8
@@ -94,6 +95,8 @@ public:
 	UInputAction* IA_ToggleBag;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_TogglePhone;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
+	UInputAction* IA_Interact;	// F키 - 아이템 상호작용
 	
 	// === Input Action === 
 	virtual void Move(const FInputActionValue& Value);
@@ -105,9 +108,19 @@ public:
 	// Toggle Bag, Phone Action
 	void ToggleBagPressed();
 	void TogglePhonePressed();
-	
+
+	// F키 - 아이템 상호작용
+	void InteractPressed();
+
 	// Update Mic UI
 	void SetMicUIState(bool bIsRecording);
+
+	/** 상호작용 가능한 객체 탐색용 반경 (Capsule Overlap) 및 시야각 */
+	UPROPERTY(EditAnywhere, Category = "Murphy|Item")
+	float InteractAngleDeg = 60.0f;
+
+	/** ItemBaseActor에서 가방 위젯에 접근하기 위한 Getter */
+	UMainHUD* GetMainHUD() const { return MainHUDInstance; }
 
 protected:
 	// === UI ===
@@ -115,5 +128,4 @@ protected:
 	TSubclassOf<UMainHUD> MainHUDClass;
 	UPROPERTY()
 	TObjectPtr<UMainHUD> MainHUDInstance;
-	
 };

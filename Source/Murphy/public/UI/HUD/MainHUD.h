@@ -29,8 +29,6 @@ protected:
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UPhonePopupWidget> WBP_PhonePopup;	// 핸드폰 (기본 닫힘)
 	
-	
-
 public:
 	virtual void NativeConstruct() override;
 
@@ -44,5 +42,8 @@ private:
 	// 폰 토글 델리게이트 콜백 — 마우스 커서 활성화/비활성화
 	UFUNCTION()
 	void HandlePhoneToggled(bool bIsPhoneOpen);
+
+	/** ItemBaseActor에서 가방에 아이템 추가 시 사용 */
+	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
 	
 };

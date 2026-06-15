@@ -1,6 +1,7 @@
-﻿
+
 
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Actors/Items/ItemBaseActor.h"
 
 #include "VoiceChat/VoiceRecorderComponent.h"
 
@@ -9,6 +10,8 @@
 #include "InputMappingContext.h"
 
 #include "Actors/Characters/AgentNPCBase.h"
+#include "Framework/InteractableInterface.h"
+#include "Components/CapsuleComponent.h"
 #include "Framework/MurphyPlayerController.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Murphy.h"
@@ -42,8 +45,7 @@ void AMurphyPlayer::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	// NPC와 대화하는 중일 경우
-	if (bIsAligningWithNPC  && TargetNPC) FocusNPC(DeltaSeconds);
+	if (bIsAligningWithNPC && TargetNPC) FocusNPC(DeltaSeconds);
 }
 
 void AMurphyPlayer::SetMovementLocked(bool bLocked)
@@ -70,11 +72,12 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (PC && PC->IsLocalPlayerController())
 	{
-		auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer());
-		if (Subsystem) Subsystem->AddMappingContext(IMC_Murphy, 0);
-		
-		auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-		if (PlayerInput)
+		if (auto Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(IMC_Murphy, 0);
+		}
+
+		if (auto PlayerInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 		{
 			PlayerInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMurphyPlayer::Move);
 			PlayerInput->BindAction(IA_MouseLook, ETriggerEvent::Triggered, this, &AMurphyPlayer::Look);
@@ -83,6 +86,7 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 			PlayerInput->BindAction(IA_PlayAudio, ETriggerEvent::Started, this, &AMurphyPlayer::RecordAudioPlay);
 			PlayerInput->BindAction(IA_ToggleBag, ETriggerEvent::Started, this, &AMurphyPlayer::ToggleBagPressed);
 			PlayerInput->BindAction(IA_TogglePhone, ETriggerEvent::Started, this, &AMurphyPlayer::TogglePhonePressed);
+			PlayerInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &AMurphyPlayer::InteractPressed);	// F키
 		}
 	}
 }
@@ -174,8 +178,7 @@ void AMurphyPlayer::Move(const FInputActionValue& Value)
 		return;
 	}
 
-	uint8 b = CurChatState == EPlayerChatState::WaitingForAI || CurChatState == EPlayerChatState::Recording ||  CurChatState == EPlayerChatState::Talking;
-	if (b)
+	if (CurChatState == EPlayerChatState::WaitingForAI || CurChatState == EPlayerChatState::Recording ||  CurChatState == EPlayerChatState::Talking)
 	{
 		return;
 	}
@@ -270,6 +273,54 @@ void AMurphyPlayer::TogglePhonePressed()
 	if (MainHUDInstance != nullptr)
 	{
 		MainHUDInstance->RequestTogglePhone();
+	}
+}
+
+void AMurphyPlayer::InteractPressed()
+{
+	TArray<AActor*> OverlappingActors;
+	GetCapsuleComponent()->GetOverlappingActors(OverlappingActors);
+
+	AActor* ClosestActor = nullptr;
+	float ClosestDistSq = MAX_flt;
+
+	FVector ViewLoc = GetActorLocation();
+	FRotator ViewRot = GetActorRotation();
+	if (Controller)
+	{
+		Controller->GetPlayerViewPoint(ViewLoc, ViewRot);
+	}
+
+	const FVector ViewForward = ViewRot.Vector();
+	const FVector PlayerLoc = GetActorLocation(); // 거리는 캐릭터 중심 기준 유지
+	const float ThresholdCos = FMath::Cos(FMath::DegreesToRadians(InteractAngleDeg));
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		if (Actor && Actor->Implements<UInteractableInterface>())
+		{
+			// 카메라 위치에서 아이템 방향으로의 시야각 체크
+			FVector ToActor = (Actor->GetActorLocation() - ViewLoc).GetSafeNormal();
+			float DotResult = FVector::DotProduct(ViewForward, ToActor);
+
+			if (DotResult >= ThresholdCos)
+			{
+				float DistSq = FVector::DistSquared(PlayerLoc, Actor->GetActorLocation());
+				if (DistSq < ClosestDistSq)
+				{
+					ClosestDistSq = DistSq;
+					ClosestActor = Actor;
+				}
+			}
+		}
+	}
+
+	if (ClosestActor)
+	{
+		if (IInteractableInterface* Interactable = Cast<IInteractableInterface>(ClosestActor))
+		{
+			Interactable->Interact(this);
+		}
 	}
 }
 

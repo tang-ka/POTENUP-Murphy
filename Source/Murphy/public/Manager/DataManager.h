@@ -22,7 +22,6 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	
 	// === 시나리오 데이터 조회 ===
 #pragma region ScenarioData
 	/**
@@ -78,6 +77,23 @@ public:
 	TArray<FPhoneAppRow*> GetAllPhoneAppRows() const;
 #pragma endregion
 
+	// === 아이템 데이터 조회 ===
+#pragma region ItemData
+	/**
+	 * Row Name으로 아이템 데이터를 반환합니다.
+	 * @param RowName CSV의 행 이름 (예: I_Passport)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	// UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Item")
+	FItemTableRow* GetItemData(const FName& RowName) const;
+
+	/**
+	 * 로드된 아이템 DataTable의 모든 Row Name 목록을 반환합니다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Item")
+	TArray<FName> GetAllItemRowNames() const;
+#pragma endregion
+
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */
 	void LoadDataTables();
@@ -90,4 +106,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> PhoneAppDataTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> ItemDataTable;
 };

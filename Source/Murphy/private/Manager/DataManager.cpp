@@ -1,6 +1,7 @@
 
 #include "Manager/DataManager.h"
 
+#include "Settings/DataManagerSettings.h"
 #include "Engine/DataTable.h"
 #include "Murphy.h"
 #include "Settings/DataManagerSettings.h"
@@ -19,6 +20,7 @@ void UDataManager::Deinitialize()
 	ScenarioDataTable = nullptr;
 	QuestDataTable = nullptr;
 	PhoneAppDataTable = nullptr;
+	ItemDataTable = nullptr;
 }
 
 void UDataManager::LoadDataTables()
@@ -70,6 +72,20 @@ void UDataManager::LoadDataTables()
 	else
 	{
 		PRINTLOGW_JW(TEXT("PhoneAppDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
+
+	// 아이템 DataTable 동기 로드
+	if (!Settings->ItemDataTable.IsNull())
+	{
+		ItemDataTable = Settings->ItemDataTable.LoadSynchronous();
+		if (!ItemDataTable)
+		{
+			PRINTLOGE_JW(TEXT("ItemDataTable 로드 실패: %s"), *Settings->ItemDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("ItemDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
 	}
 }
 
@@ -146,6 +162,23 @@ FPhoneAppRow* UDataManager::GetPhoneAppData(const FName& RowName) const
 	return Row;
 }
 
+FItemTableRow* UDataManager::GetItemData(const FName& RowName) const
+{
+	if (!ItemDataTable)
+	{
+		PRINTLOGE_JW(TEXT("ItemDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+
+	FItemTableRow* Row = ItemDataTable->FindRow<FItemTableRow>(RowName, TEXT("GetItemData"));
+	if (!Row)
+	{
+		PRINTLOGW_JW(TEXT("아이템 Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row;
+}
+
 TArray<FName> UDataManager::GetAllPhoneAppRowNames() const
 {
 	if (!PhoneAppDataTable)
@@ -174,5 +207,16 @@ TArray<FPhoneAppRow*> UDataManager::GetAllPhoneAppRows() const
 		}
 	}
 	return Rows;
+}
+
+TArray<FName> UDataManager::GetAllItemRowNames() const
+{
+	if (!ItemDataTable)
+	{
+		PRINTLOGE_JW(TEXT("ItemDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+
+	return ItemDataTable->GetRowNames();
 }
 

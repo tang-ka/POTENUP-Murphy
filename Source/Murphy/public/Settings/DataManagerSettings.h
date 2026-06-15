@@ -16,14 +16,18 @@ class MURPHY_API UDataManagerSettings : public UDeveloperSettings
 
 public:
 	/** 시나리오 DataTable (FScenarioTableRow 기반 CSV) */
-	UPROPERTY(Config, EditAnywhere, Category = "DataTable")
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> ScenarioDataTable;
 
 	/** 퀘스트 DataTable (FQuestTableRow 기반 CSV) */
-	UPROPERTY(Config, EditAnywhere, Category = "DataTable")
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> QuestDataTable;
 
 	/** 핸드폰 앱 DataTable (FPhoneAppRow 기반 CSV) */
-	UPROPERTY(Config, EditAnywhere, Category = "DataTable")
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> PhoneAppDataTable;
+	
+	/** 아이템 DataTable (FItemTableRow 기반 CSV) */
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
+	TSoftObjectPtr<UDataTable> ItemDataTable;
 };

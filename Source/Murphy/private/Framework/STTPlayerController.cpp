@@ -208,11 +208,8 @@ void ASTTPlayerController::PrepareTestTurnData()
 	CachedTurnData.audio.channels                        = 1;
 	CachedTurnData.audio.duration_ms                     = 3200;
 	CachedTurnData.audio.language_hint                   = TEXT("en");
-	CachedTurnData.interaction.contract_version          = TEXT("dev_c_interaction_context.v1");
 	CachedTurnData.interaction.initiator                 = TEXT("npc");
 	CachedTurnData.interaction.interaction_type          = TEXT("quest");
-	CachedTurnData.interaction.quest_id                  = TEXT("immigration_check");
-	CachedTurnData.interaction.interaction_id            = TEXT("imm_duration_turn");
 	CachedTurnData.interaction.time_limit_s              = 30;
 	CachedTurnData.interaction.first_contact             = false;
 	CachedTurnData.player_profile.nickname               = TEXT("Player");

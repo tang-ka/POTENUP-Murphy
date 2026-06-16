@@ -153,6 +153,16 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		
 		TurnIndex += 1;
 		
+		// if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
+		// {
+		// 	CurrentNodeId = ResponseData.next_node_id;
+		// }
+		
+		if (!ResponseData.current_node_id.IsEmpty())
+		{
+			CurrentNodeId = ResponseData.current_node_id;
+		}
+
 		if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
 		{
 			CurrentNodeId = ResponseData.next_node_id;

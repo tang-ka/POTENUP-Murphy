@@ -480,11 +480,40 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 	const int16 NumChannels   = *reinterpret_cast<const int16*>(Raw + 22);
 	const int32 SampleRate    = *reinterpret_cast<const int32*>(Raw + 24);
 	const int16 BitsPerSample = *reinterpret_cast<const int16*>(Raw + 34);
-	const int32 PCMDataSize   = *reinterpret_cast<const int32*>(Raw + 40);
-	const uint8* PCMStart     = Raw + 44;
+	// const int32 PCMDataSize   = *reinterpret_cast<const int32*>(Raw + 40);
+	// const uint8* PCMStart     = Raw + 44;
+	
+	uint32 PCMDataSize = 0;
+	uint32 PCMOffset   = 0;
+	uint32 Offset      = 12;
+
+	while (Offset + 8 <= static_cast<uint32>(WavData.Num()))
+	{
+		const uint8* ChunkId   = Raw + Offset;
+		const uint32 ChunkSize = *reinterpret_cast<const uint32*>(Raw + Offset + 4);
+
+		if (ChunkId[0] == 'd' && ChunkId[1] == 'a' && ChunkId[2] == 't' && ChunkId[3] == 'a')
+		{
+			PCMDataSize = ChunkSize;
+			PCMOffset   = Offset + 8;
+			break;
+		}
+
+		Offset += 8 + ChunkSize;
+		if (ChunkSize % 2 != 0) Offset += 1;
+	}
+
+	if (PCMOffset == 0)
+	{
+		PRINTLOGE_JW(TEXT("[AgentNPC] WAV data 청크를 찾을 수 없음"));
+		return;
+	}
+
+	const uint8* PCMStart = Raw + PCMOffset;
 	
 	// 방어 코드: 실제 데이터 크기와 헤더 명시 크기 비교
-	if (WavData.Num() < 44 + PCMDataSize)
+	// if (WavData.Num() < 44 + PCMDataSize)
+	if (static_cast<uint32>(WavData.Num()) < PCMOffset + PCMDataSize)
 	{
 		PRINTLOGE_JW(TEXT("[AgentNPC] WAV 데이터 크기 불일치"));
 		return;

@@ -8,9 +8,10 @@
 #include "JsonObjectConverter.h"
 #include "WebSocketsModule.h"
 #include "IWebSocket.h"
+#include "Settings/MurphyNetSettings.h"
 
-// WebSocket 서버 URL. 추후 DeveloperSettings로 이관 예정
-static const FString STT_WS_URL = TEXT("ws://127.0.0.1:8000/api/game/ai/stt/stream");
+// WebSocket 엔드포인트 경로. 호스트는 UMurphyNetSettings에서 가져온다.
+static const FString STT_WS_PATH = TEXT("/api/game/ai/stt/stream");
 static const FString STT_WS_PROTOCOL = TEXT("");
 
 // ----------------------------------------------------------------
@@ -41,10 +42,11 @@ void USTTWebSocketComponent::Connect(const FSTT_SessionStart& SessionPayload)
 		FModuleManager::Get().LoadModule(TEXT("WebSockets"));
 	}
 
-	WebSocket = FWebSocketsModule::Get().CreateWebSocket(STT_WS_URL, STT_WS_PROTOCOL);
+	const FString WsUrl = GetDefault<UMurphyNetSettings>()->GetWebSocketBase() + STT_WS_PATH;
+	WebSocket = FWebSocketsModule::Get().CreateWebSocket(WsUrl, STT_WS_PROTOCOL);
 	if (!WebSocket.IsValid())
 	{
-		PRINTLOGE_JW(TEXT("[STTWebSocket] WebSocket 생성 실패: %s"), *STT_WS_URL);
+		PRINTLOGE_JW(TEXT("[STTWebSocket] WebSocket 생성 실패: %s"), *WsUrl);
 		OnSTTError.Broadcast(TEXT("connection_error"), TEXT("WebSocket 생성 실패"));
 		return;
 	}
@@ -56,7 +58,7 @@ void USTTWebSocketComponent::Connect(const FSTT_SessionStart& SessionPayload)
 	WebSocket->OnMessage().AddUObject(this, &USTTWebSocketComponent::OnMessage);
 
 	WebSocket->Connect();
-	PRINTLOGW_JW(TEXT("[STTWebSocket] 연결 시도: %s"), *STT_WS_URL);
+	PRINTLOGW_JW(TEXT("[STTWebSocket] 연결 시도: %s"), *WsUrl);
 }
 
 void USTTWebSocketComponent::SendAudioChunk(const TArray<uint8>& PCM16Data, bool bCommit)

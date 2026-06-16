@@ -90,7 +90,8 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		
 		RequestData.session.session_id = CurrentSessionId;
 		RequestData.session.player_id = TEXT("player_001");
-		RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		// RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
 		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
 		RequestData.session.current_node_id = CurrentNodeId;
 		RequestData.session.turn_index = TurnIndex;
@@ -190,7 +191,8 @@ void AMurphyPlayerController::SendTimeoutAudioToAI()
 		
 		RequestData.session.session_id = CurrentSessionId;
 		RequestData.session.player_id = TEXT("player_001");
-		RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		// RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
+		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
 		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
 		RequestData.session.current_node_id = CurrentNodeId;
 		RequestData.session.turn_index = TurnIndex;

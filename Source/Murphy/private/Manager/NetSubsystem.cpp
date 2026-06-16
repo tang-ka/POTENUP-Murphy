@@ -11,6 +11,7 @@
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
 #include "JsonObjectConverter.h"
+#include "Settings/MurphyNetSettings.h"
 
 void UNetSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -85,10 +86,9 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	Payload.Append(RawAudioData);
 	AppendStr(FString::Printf(TEXT("\r\n--%s--\r\n"), *Boundary));
 	
+	const UMurphyNetSettings* NetSettings = GetDefault<UMurphyNetSettings>();
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	// Request->SetURL(TEXT("http://127.0.0.1:8001/api/chat"));
-	// Request->SetURL(TEXT("http://172.16.15.36:8000/api/game/ai/respond")); // 승헌님 하드코딩
-	Request->SetURL(TEXT("http://127.0.0.1:8000/api/game/ai/respond"));
+	Request->SetURL(NetSettings->GetHttpBase() + TEXT("/api/game/ai/respond"));
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
 	Request->SetContent(Payload);
@@ -130,8 +130,9 @@ void UNetSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, co
 	// -----------------------------------------------------------
 	// 3) HTTP POST 요청 (Content-Type: application/json)
 	// -----------------------------------------------------------
+	const UMurphyNetSettings* NetSettings = GetDefault<UMurphyNetSettings>();
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	Request->SetURL(TEXT("http://127.0.0.1:8000/api/game/ai/respond"));
+	Request->SetURL(NetSettings->GetHttpBase() + TEXT("/api/game/ai/respond"));
 	Request->SetVerb(TEXT("POST"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	Request->SetContentAsString(JsonBody);

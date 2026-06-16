@@ -14,6 +14,7 @@
 #include "Manager/ScenarioSubsystem.h"
 #include "UI/AgentEmojiUI.h"
 #include "Kismet/GameplayStatics.h"
+#include "Settings/MurphyNetSettings.h"
 
 AAgentNPCBase::AAgentNPCBase()
 {
@@ -438,13 +439,10 @@ void AAgentNPCBase::DownloadAndPlayAudio(const FString& AudioURL)
 {
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 	
-	FString FinalURL = AudioURL;
-	if (!FinalURL.StartsWith(TEXT("http")))
-	{
-		// FinalURL = TEXT("http://172.16.15.36:8000") + FinalURL;
-		FinalURL = TEXT("http://127.0.0.1:8000") + FinalURL;
-	}
-	
+	// 서버가 자기 기준 localhost(127.0.0.1)로 내려준 절대 URL을 실제 도달 가능한 호스트로 치환.
+	// 상대경로면 호스트를 앞에 붙인다. (UMurphyNetSettings 참조)
+	const FString FinalURL = GetDefault<UMurphyNetSettings>()->ResolveAudioURL(AudioURL);
+
 	Request->SetURL(FinalURL);
 	Request->SetVerb(TEXT("GET"));
 	Request->OnProcessRequestComplete().BindUObject(this, &AAgentNPCBase::OnAudioDownloaded);

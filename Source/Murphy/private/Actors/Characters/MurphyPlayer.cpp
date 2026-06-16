@@ -339,7 +339,7 @@ void AMurphyPlayer::RecordEnd(const FInputActionValue& Value)
 	{
 		PRINTLOGW_JW(TEXT("[VoiceTest] - Stop & Save"));
 		VoiceRecorderComp->StopRecording(TEXT("TestRecording"), true);
-		
+
 		// 녹음 종료 후 AI 응답 대기 상태로 변경
 		SetChatState(EPlayerChatState::WaitingForAI);
 	}

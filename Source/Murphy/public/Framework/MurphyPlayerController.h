@@ -42,11 +42,11 @@ private:
 	UFUNCTION()
 	void OnAudioRecordingFinished(const FString& SavedFilePath);
 	
+public:
 	// NetSubsystem에서 전달해주는 AI 응답 구조체를 받아 처리할 콜백
 	UFUNCTION()
 	void OnAIResponseReceived(const FAIResponseData& ResponseData);
 	
-public:
 	// 1분 타임아웃 시 AgentNPCBase가 호출할 함수
 	void SendTimeoutAudioToAI();
 	

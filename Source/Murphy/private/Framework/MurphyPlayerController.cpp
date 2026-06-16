@@ -58,13 +58,20 @@ void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
 {
 	if (!IsValid(TargetNPC)) return;
-	
+
 	AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn());
-	
+
 	if (MurphyPlayer)
 	{
+		// realtime STT 세션 활성 중이면 WAV 길이 기반 판정 전체 스킵
+		if (MurphyPlayer->IsSTTSessionActive())
+		{
+			PRINTLOG_SH(TEXT("[MurphyController] STT 세션 활성 중 - WAV 길이 판정 및 ForShortAnswer 스킵"));
+			return;
+		}
+
 		if (MurphyPlayer->GetRecordTime() < 0.5f)
-		{			
+		{
 			PRINTLOGW_JW(TEXT("[Voice Test] 녹음 시간이 너무 짧습니다. AI 서버로 전송하지 않고 기본 응답을 처리합니다."));
 
 			TargetNPC->ForShortAnswer();

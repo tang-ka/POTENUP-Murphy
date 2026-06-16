@@ -70,6 +70,9 @@ void ASTTPlayerController::OnSTTStartPressed(const FInputActionValue& Value)
 
 	PRINTLOGW_JW(TEXT("[STTPlayerController] STT 세션 시작"));
 
+	// STT 세션 활성 플래그 세팅 - WAV 경로의 ForShortAnswer 방어
+	MurphyPlayer->SetSTTSessionActive(true);
+
 	// BeginPlay 시점에는 GetPawn()이 null일 수 있어 바인딩이 누락되므로 여기서 확실히 바인딩
 	VoiceComp->OnAudioChunkReady.RemoveDynamic(this, &ASTTPlayerController::OnAudioChunkReady);
 	VoiceComp->OnAudioChunkReady.AddDynamic(this, &ASTTPlayerController::OnAudioChunkReady);
@@ -156,6 +159,9 @@ void ASTTPlayerController::OnAIRespondReceived(const FAIResponseData& ResponseDa
 
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
+		// STT 세션 종료
+		MurphyPlayer->SetSTTSessionActive(false);
+
 		MurphyPlayer->SetChatState(EPlayerChatState::Idle);
 		MurphyPlayer->EndChatWithNPC();
 		MurphyPlayer->SetMicUIState(true);
@@ -173,6 +179,9 @@ void ASTTPlayerController::OnSTTError(const FString& ErrorType, const FString& M
 
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
+		// STT 세션 종료
+		MurphyPlayer->SetSTTSessionActive(false);
+
 		MurphyPlayer->SetChatState(EPlayerChatState::Idle);
 		if (UVoiceRecorderComponent* VoiceComp = MurphyPlayer->GetVoiceRecorderComp())
 		{

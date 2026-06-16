@@ -4,6 +4,7 @@
 
 #include "Murphy.h"
 #include "EnhancedInputComponent.h"
+#include "Framework/MurphyPlayerController.h"
 #include "VoiceChat/VoiceRecorderComponent.h"
 #include "VoiceChat/STTWebSocketComponent.h"
 #include "Manager/NetSubsystem.h"
@@ -92,6 +93,9 @@ void ASTTTestPlayer::OnSTTStartPressed(const FInputActionValue& Value)
 
 	PRINTLOGW_JW(TEXT("[STTTestPlayer] STT 세션 시작"));
 
+	// STT 세션 활성 플래그 세팅 - WAV 경로의 ForShortAnswer 방어
+	SetSTTSessionActive(true);
+
 	// 1) 테스트용 TurnData 준비 (실제 게임에서는 ScenarioSubsystem에서 받아올 것)
 	PrepareTestTurnData();
 
@@ -170,18 +174,39 @@ void ASTTTestPlayer::OnFinalTranscriptReady(const FString& FinalText)
 		SetChatState(EPlayerChatState::Idle);
 		return;
 	}
+	
+	AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetController());
+	if (!PC)
+	{
+		PRINTLOGE_JW(TEXT("[STTTestPlayer] MurphyPlayerController를 찾을 수 없습니다."));
+		SetChatState(EPlayerChatState::Idle);
+		return;
+	}
 
 	// final transcript를 CachedTurnData와 합쳐서 /respond 호출
 	// DYNAMIC_DELEGATE는 CreateLambda 미지원 → BindDynamic + UFUNCTION 사용
 	FOnAIResponseDataReceived ResponseDelegate;
-	ResponseDelegate.BindDynamic(this, &ASTTTestPlayer::OnAIRespondReceived);
+	// ResponseDelegate.BindDynamic(this, &ASTTTestPlayer::OnAIRespondReceived);
+	ResponseDelegate.BindDynamic(PC, &AMurphyPlayerController::OnAIResponseReceived);
 	NetSub->SendToAIWithTranscript(CachedTurnData, FinalText, ResponseDelegate);
+	
+	// final_transcript 수신 완료 → WebSocket 및 STT 세션 즉시 정리
+	// (AI 응답 대기 중에는 WebSocket 불필요)
+	if (STTWebSocketComp)
+	{
+		STTWebSocketComp->Disconnect();
+	}
+	SetSTTSessionActive(false);
+	SetChatState(EPlayerChatState::WaitingForAI);
 }
 
 void ASTTTestPlayer::OnSTTError(const FString& ErrorType, const FString& Message)
 {
 	PRINTLOGE_JW(TEXT("[STTTestPlayer] STT 에러 [%s]: %s"), *ErrorType, *Message);
 	PRINTLOGW_JW(TEXT("[STTTestPlayer] 필요 시 기존 WAV 방식(IA_Record)으로 fallback 가능합니다."));
+
+	// STT 세션 종료
+	SetSTTSessionActive(false);
 
 	// 상태 복구
 	SetChatState(EPlayerChatState::Idle);
@@ -203,6 +228,9 @@ void ASTTTestPlayer::OnAIRespondReceived(const FAIResponseData& ResponseData)
 {
 	PRINTLOGW_JW(TEXT("[STTTestPlayer] /respond 응답 수신 - next_action: %s, next_node: %s"),
 		*ResponseData.next_action, *ResponseData.next_node_id);
+
+	// STT 세션 종료
+	SetSTTSessionActive(false);
 
 	// 상태 복구 + WebSocket 세션 종료
 	SetChatState(EPlayerChatState::Idle);

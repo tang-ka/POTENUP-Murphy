@@ -192,7 +192,15 @@ protected:
 	UPROPERTY()
 	TObjectPtr<USystemMenuUI> SystemMenuInstance;
 
+public:
+	// === STT Session Flag ===
+	// realtime STT 세션 활성 여부 - OnAudioRecordingFinished의 ForShortAnswer 방어용
+	void SetSTTSessionActive(bool bActive) { bSTTSessionActive = bActive; }
+	bool IsSTTSessionActive() const { return bSTTSessionActive; }
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|flag", meta=(AllowPrivateAccess="true"))
 	bool bMovementLocked = false;
+
+	bool bSTTSessionActive = false;
 };

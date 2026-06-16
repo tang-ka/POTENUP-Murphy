@@ -118,6 +118,7 @@ void UNetSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, co
 	// -----------------------------------------------------------
 	const TSharedRef<FJsonObject> AudioObj = MakeShared<FJsonObject>();
 	AudioObj->SetStringField(TEXT("transcript"), Transcript);
+	AudioObj->SetStringField(TEXT("transcript_provider"), TEXT("elevenlabs_relay"));
 
 	const TSharedRef<FJsonObject> RootObj = MakeShared<FJsonObject>();
 	RootObj->SetObjectField(TEXT("turn"),  TurnJsonObj);

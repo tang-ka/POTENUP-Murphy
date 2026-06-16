@@ -32,6 +32,7 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
             if (ScenarioSS)
             {
                 ScenarioSS->OnScenarioStateChanged.AddDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+                ScenarioSS->OnQuestStarted.AddDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
             }
         }
     }
@@ -49,6 +50,7 @@ void UUIManagerSubsystem::Deinitialize()
             if (ScenarioSS)
             {
                 ScenarioSS->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+                ScenarioSS->OnQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
             }
         }
     }
@@ -149,6 +151,16 @@ void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)
     {
         ShowQuestToast(Title, Content);
     }
+}
+
+void UUIManagerSubsystem::HandleQuestStarted(FName QuestID, FText QuestTitle, FText QuestDescription)
+{
+    // QuestTitle이 비어있으면 "돌발 미션" 폴백 텍스트 사용
+    const FText DisplayTitle = QuestTitle.IsEmpty()
+        ? FText::FromString(TEXT("돌발 미션"))
+        : QuestTitle;
+
+    ShowQuestToast(DisplayTitle, QuestDescription, 5);
 }
 
 void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)

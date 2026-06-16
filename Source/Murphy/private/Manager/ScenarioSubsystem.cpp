@@ -9,6 +9,7 @@ void UScenarioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	
 	CurScenario = EScenarioType::None;
+	StartScenario(EScenarioType::Prologue_Immigration);
 }
 
 void UScenarioSubsystem::Deinitialize()
@@ -36,7 +37,23 @@ void UScenarioSubsystem::StartScenario(EScenarioType NewScenario)
 			{
 				FQuestRuntimeData NewQuestData;
 				NewQuestData.QuestID = TargetQuestID;
-				NewQuestData.QuestState = EScenarioState::InProgress; // 퀘스트 시작 시 '진행 중' 부여
+
+				// 메인 퀘스트는 바로 시작, 서브 퀘스트는 대기(NotStarted) 상태로 둡니다.
+				if (const FQuestTableRow* QuestData = DataManager->GetQuestData(TargetQuestID))
+				{
+					if (QuestData->QuestType == EQuestType::MainQuest)
+					{
+						NewQuestData.QuestState = EScenarioState::InProgress;
+					}
+					else
+					{
+						NewQuestData.QuestState = EScenarioState::NotStarted;
+					}
+				}
+				else
+				{
+					NewQuestData.QuestState = EScenarioState::InProgress;
+				}
               
 				ActiveQuests.Add(TargetQuestID, NewQuestData);
 			}
@@ -62,6 +79,43 @@ void UScenarioSubsystem::EndScenario(bool bSuccess)
 
 	OnScenarioEnded.Broadcast(EndScene, bSuccess);
 	OnScenarioStateChanged.Broadcast(CurScenario);
+}
+
+void UScenarioSubsystem::StartQuest(FName QuestID)
+{
+	// 1. 등록되지 않은 퀘스트인지 확인
+	if (!ActiveQuests.Contains(QuestID))
+	{
+		PRINTLOGW_JW(TEXT("StartQuest 실패: ActiveQuests에 퀘스트가 없습니다 (시나리오 미시작 또는 목록에 없음). ID: %s"), *QuestID.ToString());
+		return;
+	}
+
+	// 2. 이미 시작되었거나 완료된 상태인지 확인
+	if (ActiveQuests[QuestID].QuestState != EScenarioState::NotStarted)
+	{
+		PRINTLOGW_JW(TEXT("StartQuest 실패: 퀘스트가 대기(NotStarted) 상태가 아닙니다. ID: %s (현재 상태: %d)"), *QuestID.ToString(), (int32)ActiveQuests[QuestID].QuestState);
+		return;
+	}
+
+	ActiveQuests[QuestID].QuestState = EScenarioState::InProgress;
+	PRINTLOGW_JW(TEXT("퀘스트 시작 성공!: %s"), *QuestID.ToString());
+
+	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
+	{
+		if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
+		{
+			// 서브 퀘스트인 경우 토스트 알림 발생
+			if (QuestData->QuestType == EQuestType::SubQuest)
+			{
+				OnQuestStarted.Broadcast(QuestID, QuestData->QuestTitle, QuestData->QuestDescription);
+				PRINTLOGW_JW(TEXT("서브 퀘스트 토스트 발생!: %s"), *QuestID.ToString());
+			}
+			else
+			{
+				PRINTLOGW_JW(TEXT("StartQuest 알림: %s는 서브 퀘스트가 아니므로 토스트를 띄우지 않습니다."), *QuestID.ToString());
+			}
+		}
+	}
 }
 
 void UScenarioSubsystem::CompleteQuest(FName QuestID)

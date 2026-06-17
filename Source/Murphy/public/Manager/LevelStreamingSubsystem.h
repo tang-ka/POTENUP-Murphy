@@ -18,7 +18,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void TravelAllPlayers(FName LevelKey);
 	
-	
 	UFUNCTION(BlueprintCallable)
 	void LoadSubLevel(FName LevelName, bool bMakeVisibleAfterLoad = true, bool bShouldBlockOnLoad = false);
 

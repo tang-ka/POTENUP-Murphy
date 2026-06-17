@@ -6,13 +6,13 @@
 #include "Interfaces/IHttpRequest.h" 
 #include "Interfaces/IHttpResponse.h"
 #include "Data/AIDataTypes.h"
-#include "NetSubsystem.generated.h"
+#include "AIBridgeSubsystem.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResponseReceived, const FString&, ResponseData);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResponseDataReceived, const FAIResponseData&, ResponseData);
 
 UCLASS()
-class MURPHY_API UNetSubsystem : public UGameInstanceSubsystem
+class MURPHY_API UAIBridgeSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	

@@ -248,6 +248,10 @@ void USTTWebSocketComponent::DispatchServerEvent(const FString& EventType, const
 		FString ErrorMessage;
 		JsonObj->TryGetStringField(TEXT("message"), ErrorMessage);
 		PRINTLOGE_JW(TEXT("[STTWebSocket] 에러 이벤트 [%s]: %s"), *EventType, *ErrorMessage);
+		FString RawPayload;
+		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RawPayload);
+		FJsonSerializer::Serialize(JsonObj.ToSharedRef(), Writer);
+		PRINTLOGE_JW(TEXT("[STTWebSocket] 에러 raw payload: %s"), *RawPayload);
 		OnSTTError.Broadcast(EventType, ErrorMessage);
 	}
 	else

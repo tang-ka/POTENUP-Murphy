@@ -3,7 +3,7 @@
 #include "Actors/Characters/AgentNPCBase.h"
 #include "VoiceChat/STTWebSocketComponent.h"
 #include "VoiceChat/VoiceRecorderComponent.h"
-#include "Manager/NetSubsystem.h"
+#include "Manager/AIBridgeSubsystem.h"
 #include "EnhancedInputComponent.h"
 #include "Murphy.h"
 
@@ -128,7 +128,7 @@ void ASTTPlayerController::OnFinalTranscriptReady(const FString& FinalText)
 {
 	PRINTLOGW_JW(TEXT("[STTPlayerController] final_transcript 확정: \"%s\" → /respond 호출"), *FinalText);
 
-	UNetSubsystem* NetSub = GetGameInstance() ? GetGameInstance()->GetSubsystem<UNetSubsystem>() : nullptr;
+	UAIBridgeSubsystem* NetSub = GetGameInstance() ? GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>() : nullptr;
 	if (!NetSub) return;
 
 	// NPC에게 플레이어가 말을 끝마쳤음을 알림 (타이핑 대기 UI 연출 등)

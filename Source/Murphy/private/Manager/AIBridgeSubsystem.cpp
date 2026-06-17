@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Manager/NetSubsystem.h"
+#include "Manager/AIBridgeSubsystem.h"
 
 #include "Murphy.h"
 
@@ -13,19 +13,19 @@
 #include "JsonObjectConverter.h"
 #include "Settings/MurphyNetSettings.h"
 
-void UNetSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void UAIBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 }
 
-void UNetSubsystem::Deinitialize()
+void UAIBridgeSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 	
 	CancelPendingRequests();
 }
 
-void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& WAVFilePath, FOnAIResponseDataReceived OnResponseDelegate)
+void UAIBridgeSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& WAVFilePath, FOnAIResponseDataReceived OnResponseDelegate)
 {
 	PendingStructResponseDelegate = OnResponseDelegate;
 	
@@ -93,11 +93,11 @@ void UNetSubsystem::SendToAI(const FAIRequestData& RequestData, const FString& W
 	Request->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
 	Request->SetContent(Payload);
 	Request->SetTimeout(300.f); // AI 응답에 시간이 걸릴 수 있으므로 타임아웃을 120초로 증가
-	Request->OnProcessRequestComplete().BindUObject(this, &UNetSubsystem::OnHttpResponseReceived);
+	Request->OnProcessRequestComplete().BindUObject(this, &UAIBridgeSubsystem::OnHttpResponseReceived);
 	Request->ProcessRequest();
 }
 
-void UNetSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, const FString& Transcript, FOnAIResponseDataReceived OnResponseDelegate)
+void UAIBridgeSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, const FString& Transcript, FOnAIResponseDataReceived OnResponseDelegate)
 {
 	PendingStructResponseDelegate = OnResponseDelegate;
 
@@ -138,13 +138,13 @@ void UNetSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestData, co
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	Request->SetContentAsString(JsonBody);
 	Request->SetTimeout(300.f);
-	Request->OnProcessRequestComplete().BindUObject(this, &UNetSubsystem::OnHttpResponseReceived);
+	Request->OnProcessRequestComplete().BindUObject(this, &UAIBridgeSubsystem::OnHttpResponseReceived);
 	Request->ProcessRequest();
 
 	PRINTLOGW_JW(TEXT("[NetSub|STT] SendToAIWithTranscript 전송: transcript=\"%s\""), *Transcript);
 }
 
-void UNetSubsystem::CancelPendingRequests()
+void UAIBridgeSubsystem::CancelPendingRequests()
 {
 	if (PendingStructResponseDelegate.IsBound())
 	{
@@ -153,7 +153,7 @@ void UNetSubsystem::CancelPendingRequests()
 	}
 }
 
-void UNetSubsystem::HandleServerResponseStruct(const FString& ResponseData)
+void UAIBridgeSubsystem::HandleServerResponseStruct(const FString& ResponseData)
 {
 	if (PendingStructResponseDelegate.IsBound())
 	{
@@ -174,7 +174,7 @@ void UNetSubsystem::HandleServerResponseStruct(const FString& ResponseData)
 	}
 }
 
-void UNetSubsystem::OnHttpResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+void UAIBridgeSubsystem::OnHttpResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
 	FString ResponseStr = TEXT("");
 	if (!bWasSuccessful || !Response.IsValid() || Response->GetResponseCode() != 200)

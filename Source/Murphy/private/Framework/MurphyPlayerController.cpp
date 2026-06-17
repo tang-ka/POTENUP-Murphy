@@ -19,7 +19,7 @@
 #include "Murphy.h"
 #include "Manager/CinematicManagerSubsystem.h"
 #include "Manager/LevelStreamingSubsystem.h"
-#include "Manager/NetSubsystem.h"
+#include "Manager/AIBridgeSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
 #include "GameFramework/PlayerStart.h"
@@ -86,7 +86,7 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 	
 	TargetNPC->NotifyPlayerSpoke();
 	
-	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
+	if (UAIBridgeSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>())
 	{
 		FOnAIResponseDataReceived Callback;
 		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
@@ -196,7 +196,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 
 void AMurphyPlayerController::SendTimeoutAudioToAI()
 {
-	if (UNetSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UNetSubsystem>())
+	if (UAIBridgeSubsystem* NetSubsystem = GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>())
 	{
 		FOnAIResponseDataReceived Callback;
 		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);

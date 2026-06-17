@@ -7,7 +7,7 @@
 #include "Framework/MurphyPlayerController.h"
 #include "VoiceChat/VoiceRecorderComponent.h"
 #include "VoiceChat/STTWebSocketComponent.h"
-#include "Manager/NetSubsystem.h"
+#include "Manager/AIBridgeSubsystem.h"
 
 ASTTTestPlayer::ASTTTestPlayer()
 {
@@ -164,8 +164,8 @@ void ASTTTestPlayer::OnFinalTranscriptReady(const FString& FinalText)
 {
 	PRINTLOGW_JW(TEXT("[STTTestPlayer] final_transcript 확정: \"%s\" → /respond 호출"), *FinalText);
 
-	UNetSubsystem* NetSub = GetGameInstance()
-		? GetGameInstance()->GetSubsystem<UNetSubsystem>()
+	UAIBridgeSubsystem* NetSub = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>()
 		: nullptr;
 
 	if (!NetSub)

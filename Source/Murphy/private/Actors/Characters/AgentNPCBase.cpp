@@ -1,6 +1,7 @@
 
 #include "Actors/Characters/AgentNPCBase.h"
 
+#include "Animation/WonFaceAnimInstance.h"
 #include "HttpManager.h"
 #include "Murphy.h"
 #include "Components/AudioComponent.h"
@@ -10,7 +11,9 @@
 #include "Framework/MurphyPlayerController.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/UnrealType.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
+#include "Manager/DataManager.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "UI/AgentEmojiUI.h"
 #include "Kismet/GameplayStatics.h"
@@ -24,12 +27,14 @@ AAgentNPCBase::AAgentNPCBase()
 	InteractionBox->SetupAttachment(RootComponent);
 	InteractionBox->SetBoxExtent(FVector(200.f, 200.f, 200.f));
 	
-	FaceMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceMesh"));
-	FaceMesh->SetupAttachment(GetMesh());
+	// FaceMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FaceMesh"));
+	// FaceMesh->SetupAttachment(GetMesh());
 	
 	VoiceComp = CreateDefaultSubobject<UAudioComponent>(TEXT("VoiceComp"));
-	VoiceComp->SetupAttachment(FaceMesh);
 	VoiceComp->bAutoActivate = false;
+	VoiceComp->EnvelopeFollowerAttackTime = 5;
+	VoiceComp->EnvelopeFollowerReleaseTime = 60;
+	// VoiceComp->SetupAttachment(FaceMesh);
 	
 	EmojiComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComp"));
 	EmojiComp->SetupAttachment(GetMesh());
@@ -47,6 +52,19 @@ AAgentNPCBase::AAgentNPCBase()
 void AAgentNPCBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	{
+		if (ResolvedFaceMesh != FaceMesh)
+		{
+			PRINTLOG_JW(TEXT("[AgentNPC] 실제 Face 컴포넌트 연결: %s"), *ResolvedFaceMesh->GetName());
+		}
+
+		if (IsValid(VoiceComp))
+		{
+			VoiceComp->AttachToComponent(ResolvedFaceMesh, FAttachmentTransformRules::KeepRelativeTransform);
+		}
+	}
 	
 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
 	EmojiUI->SetEmojiVisible(false);
@@ -56,6 +74,12 @@ void AAgentNPCBase::BeginPlay()
 	if (!QuestTargetID.IsNone()) PRINTLOGE_JW(TEXT("!!!!Quest ID 를 지정해주세요!!!!")); 
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
+
+	if (IsValid(VoiceComp))
+	{
+		VoiceComp->OnAudioSingleEnvelopeValue.RemoveDynamic(this, &AAgentNPCBase::OnVoiceEnvelopeValue);
+		VoiceComp->OnAudioSingleEnvelopeValue.AddDynamic(this, &AAgentNPCBase::OnVoiceEnvelopeValue);
+	}
 	
 	if (IsValid(InteractionBox))
 	{
@@ -235,6 +259,7 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString)
 {
 	if (EmotionString.Equals(TEXT("Normal"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Normal;
+	if (EmotionString.Equals(TEXT("Nomal"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Normal;
 	if (EmotionString.Equals(TEXT("Joy"),		 ESearchCase::IgnoreCase))	return EAgentEmotion::Joy;
 	if (EmotionString.Equals(TEXT("Anger"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Anger;
 	if (EmotionString.Equals(TEXT("Sadness"),	 ESearchCase::IgnoreCase))	return EAgentEmotion::Sadness;
@@ -252,46 +277,174 @@ EAgentEmotion AAgentNPCBase::ConvertStringToEmotion(const FString& EmotionString
 	return EAgentEmotion::Normal;
 }
 
+USkeletalMeshComponent* AAgentNPCBase::ResolveFaceMeshComponent() const
+{
+	TArray<USkeletalMeshComponent*> SkeletalMeshes;
+	GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+
+	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	{
+		if (IsValid(SkelMesh) && Cast<UWonFaceAnimInstance>(SkelMesh->GetAnimInstance()))
+		{
+			return SkelMesh;
+		}
+	}
+
+	const FString TargetFaceName = FaceComponentName.ToString();
+	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	{
+		if (IsValid(SkelMesh) && !FaceComponentName.IsNone() && SkelMesh->GetName().Equals(TargetFaceName, ESearchCase::IgnoreCase))
+		{
+			return SkelMesh;
+		}
+	}
+
+	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	{
+		if (IsValid(SkelMesh) && !FaceComponentName.IsNone() && SkelMesh->GetName().Contains(TargetFaceName, ESearchCase::IgnoreCase))
+		{
+			return SkelMesh;
+		}
+	}
+
+	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	{
+		if (IsValid(SkelMesh) && !FaceComponentTag.IsNone() && SkelMesh->ComponentHasTag(FaceComponentTag))
+		{
+			return SkelMesh;
+		}
+	}
+
+	return IsValid(FaceMesh) ? FaceMesh.Get() : nullptr;
+}
+
+void AAgentNPCBase::OnVoiceEnvelopeValue(const USoundWave* PlayingSoundWave, const float EnvelopeValue)
+{
+	const float Loudness = FMath::Clamp(EnvelopeValue * 8.0f, 0.0f, 1.0f);
+
+	SetFloatPropertyIfExists(this, TEXT("CurrentLoudness"), Loudness);
+
+	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	{
+		SetFloatPropertyIfExists(ResolvedFaceMesh->GetAnimInstance(), TEXT("FaceLoudness"), Loudness);
+	}
+}
+
+void AAgentNPCBase::SetFloatPropertyIfExists(UObject* TargetObject, FName PropertyName, float Value) const
+{
+	if (!IsValid(TargetObject))
+	{
+		return;
+	}
+
+	if (FFloatProperty* FloatProperty = FindFProperty<FFloatProperty>(TargetObject->GetClass(), PropertyName))
+	{
+		FloatProperty->SetPropertyValue_InContainer(TargetObject, Value);
+	}
+	else if (FDoubleProperty* DoubleProperty = FindFProperty<FDoubleProperty>(TargetObject->GetClass(), PropertyName))
+	{
+		DoubleProperty->SetPropertyValue_InContainer(TargetObject, Value);
+	}
+}
+
 void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 {
 	// 1. 상태 변수 최신화 (애니메이션 블루프린트에서 매 프레임 읽어갈 데이터)
 	CurrentEmotion = EmotionLevel;
-    
-	// 2. 이모지 UI 업데이트 로직
-	if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(EmotionLevel))
+
+	const FString EmotionString = StaticEnum<EAgentEmotion>()->GetNameStringByValue(static_cast<int64>(EmotionLevel));
+	const FName EmotionRowName(*EmotionString);
+	const FAI_EmotionData* EmotionData = nullptr;
+
+	if (const UGameInstance* GameInstance = GetGameInstance())
 	{
-		if (IsValid(EmojiUI))
+		if (const UDataManager* DataManager = GameInstance->GetSubsystem<UDataManager>())
 		{
-			EmojiUI->SetEmoji(*FoundTexture);
+			EmotionData = DataManager->GetEmotionData(EmotionRowName);
+		}
+	}
+
+	// 2. 페이셜 애니메이션 연동: DataTable Row의 MuscleValues를 얼굴 AnimBP에 전달
+	if (EmotionData)
+	{
+		if (EmotionData->MuscleValues.IsEmpty())
+		{
+			PRINTLOGW_JW(TEXT("[AgentNPC] 감정 Row는 찾았지만 MuscleValues가 비어 있습니다: %s"), *EmotionString);
+		}
+
+		if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+		{
+			if (UWonFaceAnimInstance* FaceAnimInst = Cast<UWonFaceAnimInstance>(ResolvedFaceMesh->GetAnimInstance()))
+			{
+				FaceAnimInst->TargetEmotionMap = EmotionData->MuscleValues;
+				PRINTLOG_JW(TEXT("[AgentNPC] 얼굴 표정 데이터 적용 -> Mesh:%s Emotion:%s MuscleCount:%d"), *ResolvedFaceMesh->GetName(), *EmotionString, EmotionData->MuscleValues.Num());
+			}
+			else
+			{
+				PRINTLOGW_JW(TEXT("[AgentNPC] %s AnimInstance가 UWonFaceAnimInstance가 아닙니다: %s"), *ResolvedFaceMesh->GetName(), *EmotionString);
+			}
+		}
+		else
+		{
+			PRINTLOGW_JW(TEXT("[AgentNPC] Face 컴포넌트를 찾지 못해 얼굴 표정을 적용하지 못했습니다: %s"), *EmotionString);
 		}
 	}
     
-	// 3. 일회성 감정 표현(애니메이션 몽타주) 재생 로직
-	if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(EmotionLevel))
+	// 3. 이모지 UI 업데이트 로직
+	UTexture2D* EmotionTexture = nullptr;
+	if (EmotionData && !EmotionData->EmotionTextures.IsNull())
+	{
+		EmotionTexture = EmotionData->EmotionTextures.LoadSynchronous();
+	}
+	if (!EmotionTexture)
+	{
+		if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(EmotionLevel))
+		{
+			EmotionTexture = *FoundTexture;
+		}
+	}
+
+	if (IsValid(EmojiUI) && IsValid(EmotionTexture))
+	{
+		EmojiUI->SetEmoji(EmotionTexture);
+	}
+
+	// 4. 일회성 감정 표현(애니메이션 몽타주) 재생 로직
+	UAnimMontage* EmotionMontage = nullptr;
+	if (EmotionData && !EmotionData->EmotionMontages.IsNull())
+	{
+		EmotionMontage = EmotionData->EmotionMontages.LoadSynchronous();
+	}
+	if (!EmotionMontage)
+	{
+		if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(EmotionLevel))
+		{
+			EmotionMontage = *FoundMontage;
+		}
+	}
+
+	if (IsValid(EmotionMontage))
 	{
 		// 메타휴먼은 얼굴(Face), 몸통(Body) 등 부위가 나뉘어 있으므로 모든 컴포넌트를 순회하며 재생합니다.
 		TArray<USkeletalMeshComponent*> SkeletalMeshes;
 		GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+		USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent();
 
 		for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
 		{
+			if (!IsValid(SkelMesh) || SkelMesh == ResolvedFaceMesh)
+			{
+				continue;
+			}
+
 			if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
 			{
-				AnimInst->Montage_Play(*FoundMontage);
+				AnimInst->Montage_Play(EmotionMontage);
 			}
 		}
        
-		// 4. [핵심 추가] 페이셜 애니메이션 연동을 위해 블루프린트로 신호 보내기
-    
-		// 우리가 쓰는 Enum(예: EAgentEmotion::Smile)을 팀원의 데이터 테이블에 맞게 문자열("Smile")로 변환합니다.
-		FString EmotionString = StaticEnum<EAgentEmotion>()->GetNameStringByValue(static_cast<int64>(EmotionLevel));
-		// C++에서 이 함수를 호출하면, 블루프린트의 빨간색 이벤트 노드가 실행됩니다!
-		OnFaceEmotionChanged(FName(*EmotionString));
-		
-		PRINTLOG_CW(TEXT("[AgentNPC] 얼굴 표정 블루프린트 이벤트 호출 -> %s"), *EmotionString);
-		
 		// 성공 로그는 콘솔창이 지저분해지지 않게 딱 한 줄만 깔끔하게 남깁니다.
-		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 재생 -> %s"), *(*FoundMontage)->GetName());
+		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 재생 -> %s"), *EmotionMontage->GetName());
 	}
 }
 
@@ -337,6 +490,12 @@ void AAgentNPCBase::StopTypingWait()
 
 void AAgentNPCBase::OnVoiceFinished()
 {	
+	SetFloatPropertyIfExists(this, TEXT("CurrentLoudness"), 0.0f);
+	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	{
+		SetFloatPropertyIfExists(ResolvedFaceMesh->GetAnimInstance(), TEXT("FaceLoudness"), 0.0f);
+	}
+
 	if (bIsScenarioCompleted)
 	{
 		PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료. 1분 대기 타이머를 끄고 상호작용을 종료합니다."));
@@ -370,7 +529,6 @@ void AAgentNPCBase::OnVoiceFinished()
 	bIsWaitingForPlayer = true;
 	CurWaitTime = 0;
 	PRINTLOG_JW(TEXT("[AgentNPC] NPC 대사 종료. 1분 대기 타이머를 시작합니다."));
-
 }
 
 void AAgentNPCBase::NotifyPlayerSpoke()
@@ -393,6 +551,7 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// 시나리오 종료 판단
 	if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
 		ResponseData.next_action == TEXT("FAIL_END") || 
+		ResponseData.next_action == TEXT("IMM_BAD_END_VERBAL_ABUSE") || // todo 욕을 하는 경우 끝남 -> 이건 게임오버 종료 조건 
 		ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK")) // 이거는 입국심사때의 마지막 노드 
 	{
 		bIsScenarioCompleted = true;
@@ -401,30 +560,30 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// ==========================================================
 	// 🔴 [임시 테스트 코드] 서버 데이터 대신 감정 순서대로 무한 순환하기
 	// ==========================================================
-	static int32 TestEmotionIndex = 0; // 함수가 끝나도 숫자가 리셋되지 않고 유지됩니다.
+	// static int32 TestEmotionIndex = 0; // 함수가 끝나도 숫자가 리셋되지 않고 유지됩니다.
 
 	// 현재 인덱스를 Enum 타입으로 강제 변환
-	EAgentEmotion DummyEmotion = static_cast<EAgentEmotion>(TestEmotionIndex);
+	// EAgentEmotion DummyEmotion = static_cast<EAgentEmotion>(TestEmotionIndex);
     
 	// 우리가 만든 소화 기관에 쏙 넣어주기 (이모지 변경 + ABP 변수 최신화)
-	UpdateEmotion(DummyEmotion);
+	// UpdateEmotion(DummyEmotion);
     
-	PRINTLOGW_JW(TEXT("[AgentNPC][TEST] 임시 감정 순환 가동 중 -> Index: %d"), TestEmotionIndex);
+	// PRINTLOGW_JW(TEXT("[AgentNPC][TEST] 임시 감정 순환 가동 중 -> Index: %d"), TestEmotionIndex);
 
 	// 대답이 끝날 때마다 다음 감정 인덱스로 1씩 증가 (총 7개 감정이므로 0~6까지만 돌고 다시 0으로)
-	TestEmotionIndex = (TestEmotionIndex + 1) % 7;
+	// TestEmotionIndex = (TestEmotionIndex + 1) % 7;
 	// ==========================================================
 	
 	//===========================================================
 	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
 	// 🔴 랜덤 로직 삭제 & 서버 감정 연동 (서버가 정보 보내주면 복구할 곳)
 	//===========================================================
-	//FString ServerEmotion = ResponseData.npc.emotion; 
-	//EAgentEmotion ParsedEmotion = ConvertStringToEmotion(ServerEmotion);
+	FString ServerEmotion = ResponseData.npc.emotion; 
+	EAgentEmotion ParsedEmotion = ConvertStringToEmotion(ServerEmotion);
 	
 	// 파싱된 진짜 감정으로 변수와 이모지 동시 업데이트
-	//UpdateEmotion(ParsedEmotion);
-	//PRINTLOG_JW(TEXT("[AgentNPC] 감정 동기화 완료 -> %s (Enum Index: %d)"), *ServerEmotion, (int32)ParsedEmotion);
+	UpdateEmotion(ParsedEmotion);
+	PRINTLOG_JW(TEXT("[AgentNPC] 감정 동기화 완료 -> %s (Enum Index: %d)"), *ServerEmotion, (int32)ParsedEmotion);
 	//===========================================================
 	
 	// TTS 재생

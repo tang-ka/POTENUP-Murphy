@@ -11,26 +11,10 @@
 class UBoxComponent;
 class UAudioComponent;
 class UWidgetComponent;
+class USoundWave;
 class UScenarioSubsystem;
 class UAgentEmojiUI;
 
-UENUM(BlueprintType)
-enum class EAgentEmotion : uint8
-{
-	Normal,
-	Joy,
-	Anger,
-	Sadness,
-	Panic,
-	Suspicion,
-	Disgust,
-	Fear,
-	Smirk,
-	Surprise,
-	Pain,
-	Confusion,
-	Boredom
-};
 
 UCLASS()
 class MURPHY_API AAgentNPCBase : public ACharacter
@@ -60,6 +44,14 @@ protected:
 	// [메타휴먼] 메타휴먼 얼굴 파츠를 조립할 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|MetaHuman")
 	TObjectPtr<USkeletalMeshComponent> FaceMesh;
+
+	// 자식 블루프린트에서 추가한 실제 메타휴먼 Face 컴포넌트 이름
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|MetaHuman")
+	FName FaceComponentName = TEXT("Face");
+
+	// 이름이 바뀌는 경우를 대비한 Face 컴포넌트 태그
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|MetaHuman")
+	FName FaceComponentTag = TEXT("Face");
 	
 	// [이모지] Agent의 감정을 더 정확히 표현 할 이모지 위젯 컴포넌트 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|MetaHuman")
@@ -113,6 +105,14 @@ protected:
 	
 	// 서버에서 온 감정 문자열("Smile" 등)을 EAgentEmotion Enum으로 변환하는 헬퍼 함수
 	EAgentEmotion ConvertStringToEmotion(const FString& EmotionString);
+
+	// 자식 블루프린트에 추가된 실제 Face SkeletalMeshComponent를 찾습니다.
+	USkeletalMeshComponent* ResolveFaceMeshComponent() const;
+
+	UFUNCTION()
+	void OnVoiceEnvelopeValue(const USoundWave* PlayingSoundWave, const float EnvelopeValue);
+
+	void SetFloatPropertyIfExists(UObject* TargetObject, FName PropertyName, float Value) const;
 	
 private:
 	// === InteractionBox Overlap Event ===

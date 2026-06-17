@@ -30,4 +30,8 @@ public:
 	/** 아이템 DataTable (FItemTableRow 기반 CSV) */
 	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> ItemDataTable;
+
+	/** NPC 감정 DataTable (FAI_EmotionData 기반) */
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
+	TSoftObjectPtr<UDataTable> EmotionDataTable;
 };

@@ -9,6 +9,8 @@
 #include "WebSocketsModule.h"
 #include "IWebSocket.h"
 #include "Settings/MurphyNetSettings.h"
+#include "Actors/Characters/MurphyPlayer.h"
+#include "UI/HUD/MainHUD.h"
 
 // WebSocket 엔드포인트 경로. 호스트는 UMurphyNetSettings에서 가져온다.
 static const FString STT_WS_PATH = TEXT("/api/game/ai/stt/stream");
@@ -216,6 +218,22 @@ void USTTWebSocketComponent::DispatchServerEvent(const FString& EventType, const
 			(*SubtitleObj)->TryGetStringField(TEXT("text"), SubtitleText);
 		}
 		PRINTLOGW_JW(TEXT("[STTWebSocket] partial_transcript: \"%s\""), *SubtitleText);
+		
+		// MainHUD를 통한 자막 실시간 갱신
+		if (GetWorld())
+		{
+			if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+			{
+				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(PC->GetPawn()))
+				{
+					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+					{
+						MainHUD->UpdateCaption(SubtitleText);
+					}
+				}
+			}
+		}
+		
 		OnSubtitleUpdated.Broadcast(SubtitleText, false);
 	}
 	else if (EventType == TEXT("final_transcript"))
@@ -232,6 +250,21 @@ void USTTWebSocketComponent::DispatchServerEvent(const FString& EventType, const
 
 		PRINTLOGW_JW(TEXT("[STTWebSocket] final_transcript: \"%s\" (committed=%s)"),
 			*SubtitleText, bCommitted ? TEXT("true") : TEXT("false"));
+
+		// MainHUD를 통한 자막 확정 갱신
+		if (GetWorld())
+		{
+			if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+			{
+				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(PC->GetPawn()))
+				{
+					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+					{
+						MainHUD->UpdateCaption(SubtitleText);
+					}
+				}
+			}
+		}
 
 		OnSubtitleUpdated.Broadcast(SubtitleText, true);
 

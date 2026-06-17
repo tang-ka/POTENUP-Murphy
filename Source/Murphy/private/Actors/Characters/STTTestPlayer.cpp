@@ -246,50 +246,25 @@ void ASTTTestPlayer::OnAIRespondReceived(const FAIResponseData& ResponseData)
 
 void ASTTTestPlayer::PrepareTestTurnData()
 {
-	// 실제 게임에서는 ScenarioSubsystem / DataManager에서 현재 노드 정보를 받아 채울 것.
-	// 현재는 테스트용 하드코딩 값 사용.
-	CachedTurnData = FAIRequestData();
-	CachedTurnData.contract_version                      = TEXT("dev_c_unreal_turn.v1");
-	CachedTurnData.request_id                            = TEXT("req_turn_stt_test_001");
-	
-	CachedTurnData.session.session_id                    = TEXT("session_test_001");
-	CachedTurnData.session.player_id                     = TEXT("player_test");
-	CachedTurnData.session.chapter_id                    = TEXT("CH0_03_IMMIGRATION_CHECK");
-	CachedTurnData.session.scene_id                      = TEXT("JFK_IMMIGRATION_HALL");
-	CachedTurnData.session.current_node_id               = TEXT("IMM_003_DURATION");
-	CachedTurnData.session.turn_index                    = 3;
-	
-	CachedTurnData.npc.npc_id                            = TEXT("hale");
-	CachedTurnData.npc.npc_role                          = TEXT("immigration_officer");
-	CachedTurnData.npc.last_npc_message                  = TEXT("How long will you stay?");
-	
-	CachedTurnData.audio.mime_type                       = TEXT("audio/wav");
-	CachedTurnData.audio.sample_rate_hz                  = 16000;
-	CachedTurnData.audio.channels                        = 1;
-	CachedTurnData.audio.duration_ms                     = 3200;
-	CachedTurnData.audio.language_hint                   = TEXT("en");
-	
-	// CachedTurnData.interaction.contract_version          = TEXT("dev_c_interaction_context.v1");
-	CachedTurnData.interaction.initiator                 = TEXT("npc");
-	CachedTurnData.interaction.interaction_type          = TEXT("quest");
-	// CachedTurnData.interaction.quest_id                  = TEXT("immigration_check");
-	// CachedTurnData.interaction.interaction_id            = TEXT("imm_duration_turn");
-	CachedTurnData.interaction.time_limit_s              = 30;
-	CachedTurnData.interaction.first_contact             = false;
-	
-	CachedTurnData.player_profile.nickname               = TEXT("Player");
-	CachedTurnData.player_profile.english_confidence     = TEXT("beginner");
-	CachedTurnData.player_profile.tier                   = TEXT("Bronze");
-	CachedTurnData.player_profile.travel_speaking_level  = TEXT("TSL_1_SURVIVAL");
-	
-	CachedTurnData.scenario_state.patience               = 100;
-	CachedTurnData.scenario_state.suspicion              = 0;
-	CachedTurnData.scenario_state.retry_count            = 0;
-	CachedTurnData.scenario_state.hint_count             = 0;
-	
-	CachedTurnData.game_state.current_objective          = TEXT("Answer the officer's question.");
-	// 서버의 대화 트리(Graph)가 자유롭게 다음 노드를 선택할 수 있도록 제한 해제
-	CachedTurnData.client_allowed_next_nodes.Empty();
+	AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetController());
+	if (PC)
+	{
+		// MurphyPlayerController에서 최신 턴 데이터 생성
+		CachedTurnData = PC->GenerateAIRequestData();
 
-	PRINTLOGW_JW(TEXT("[STTTestPlayer] TurnData 준비 완료: req_id=%s"), *CachedTurnData.request_id);
+		// WebSocket STT를 위한 오디오 설정 오버라이드
+		CachedTurnData.audio.mime_type                       = TEXT("audio/wav");
+		CachedTurnData.audio.sample_rate_hz                  = 16000;
+		CachedTurnData.audio.channels                        = 1;
+		CachedTurnData.audio.duration_ms                     = 3200; // Chunking Mode에서는 의미 없지만 더미로 세팅
+		
+		// 서버의 대화 트리(Graph)가 자유롭게 다음 노드를 선택할 수 있도록 제한 해제
+		CachedTurnData.client_allowed_next_nodes.Empty();
+
+		PRINTLOGW_JW(TEXT("[STTTestPlayer] TurnData 준비 완료: req_id=%s, current_node=%s"), *CachedTurnData.request_id, *CachedTurnData.session.current_node_id);
+	}
+	else
+	{
+		PRINTLOGE_JW(TEXT("[STTTestPlayer] AMurphyPlayerController를 찾을 수 없어 턴 데이터를 생성할 수 없습니다."));
+	}
 }

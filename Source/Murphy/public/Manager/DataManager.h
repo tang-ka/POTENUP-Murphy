@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Data/AIDataTypes.h"
 #include "Data/GameDataTypes.h"
 #include "Data/PhoneDataTypes.h"
 #include "DataManager.generated.h"
@@ -94,6 +95,22 @@ public:
 	TArray<FName> GetAllItemRowNames() const;
 #pragma endregion
 
+	// === 감정 데이터 조회 ===
+#pragma region EmotionData
+	/**
+	 * Row Name으로 NPC 감정 데이터를 반환합니다.
+	 * @param RowName DataTable의 행 이름 (예: Normal, Joy, Anger)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	FAI_EmotionData* GetEmotionData(const FName& RowName) const;
+
+	/**
+	 * 로드된 감정 DataTable의 모든 Row Name 목록을 반환합니다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Emotion")
+	TArray<FName> GetAllEmotionRowNames() const;
+#pragma endregion
+
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */
 	void LoadDataTables();
@@ -109,4 +126,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> ItemDataTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EmotionDataTable;
 };

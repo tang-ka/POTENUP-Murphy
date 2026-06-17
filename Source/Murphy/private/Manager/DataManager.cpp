@@ -4,7 +4,6 @@
 #include "Settings/DataManagerSettings.h"
 #include "Engine/DataTable.h"
 #include "Murphy.h"
-#include "Settings/DataManagerSettings.h"
 
 void UDataManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -21,6 +20,7 @@ void UDataManager::Deinitialize()
 	QuestDataTable = nullptr;
 	PhoneAppDataTable = nullptr;
 	ItemDataTable = nullptr;
+	EmotionDataTable = nullptr;
 }
 
 void UDataManager::LoadDataTables()
@@ -86,6 +86,20 @@ void UDataManager::LoadDataTables()
 	else
 	{
 		PRINTLOGW_JW(TEXT("ItemDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
+
+	// NPC 감정 DataTable 동기 로드
+	if (!Settings->EmotionDataTable.IsNull())
+	{
+		EmotionDataTable = Settings->EmotionDataTable.LoadSynchronous();
+		if (!EmotionDataTable)
+		{
+			PRINTLOGE_JW(TEXT("EmotionDataTable 로드 실패: %s"), *Settings->EmotionDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("EmotionDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
 	}
 }
 
@@ -218,5 +232,33 @@ TArray<FName> UDataManager::GetAllItemRowNames() const
 	}
 
 	return ItemDataTable->GetRowNames();
+}
+
+FAI_EmotionData* UDataManager::GetEmotionData(const FName& RowName) const
+{
+	if (!EmotionDataTable)
+	{
+		PRINTLOGE_JW(TEXT("EmotionDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+
+	FAI_EmotionData* Row = EmotionDataTable->FindRow<FAI_EmotionData>(RowName, TEXT("GetEmotionData"));
+	if (!Row)
+	{
+		PRINTLOGW_JW(TEXT("감정 Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row;
+}
+
+TArray<FName> UDataManager::GetAllEmotionRowNames() const
+{
+	if (!EmotionDataTable)
+	{
+		PRINTLOGE_JW(TEXT("EmotionDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+
+	return EmotionDataTable->GetRowNames();
 }
 

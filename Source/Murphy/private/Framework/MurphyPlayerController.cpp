@@ -91,39 +91,7 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		FOnAIResponseDataReceived Callback;
 		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
 		
-		FAIRequestData RequestData;
-		RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
-		RequestData.request_id = FGuid::NewGuid().ToString();
-		
-		RequestData.session.session_id = CurrentSessionId;
-		RequestData.session.player_id = TEXT("player_001");
-		// RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
-		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
-		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
-		RequestData.session.current_node_id = CurrentNodeId;
-		RequestData.session.turn_index = TurnIndex;
-		
-		RequestData.npc.npc_id = TargetNPC->GetNPCName(); // RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
-		RequestData.npc.npc_role = TEXT("immigration_officer");
-		RequestData.npc.last_npc_message = LastNpcMessage;
-		
-		RequestData.audio.mime_type = TEXT("audio/wav");
-		RequestData.audio.sample_rate_hz = 48000;
-		RequestData.audio.channels = 2;
-		RequestData.audio.duration_ms = 2800;
-		RequestData.audio.language_hint = TEXT("en-US");
-		
-		RequestData.player_profile.nickname = TEXT("Sean");
-		RequestData.player_profile.english_confidence = TEXT("beginner");
-		RequestData.player_profile.tier = TEXT("Bronze");
-		RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
-		
-		RequestData.scenario_state = CurrentScenarioState;
-		
-		RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
-		RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
-		RequestData.game_state.completed_intents = { TEXT("submit_passport") };
-		RequestData.game_state.current_objective = TEXT("State the visit purpose");
+		FAIRequestData RequestData = GenerateAIRequestData();
 		
 		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Request Before ---"));
 		PRINTLOGW_JW(TEXT("request_id: %s"), *RequestData.request_id);
@@ -202,39 +170,7 @@ void AMurphyPlayerController::SendTimeoutAudioToAI()
 		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
 		
 		// OnAudioRecordingFinished와 동일하게 RequestData 세팅
-		FAIRequestData RequestData;
-		RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
-		RequestData.request_id = FGuid::NewGuid().ToString();
-		
-		RequestData.session.session_id = CurrentSessionId;
-		RequestData.session.player_id = TEXT("player_001");
-		// RequestData.session.chapter_id = TEXT("CH0_IMMIGRATION");
-		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
-		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
-		RequestData.session.current_node_id = CurrentNodeId;
-		RequestData.session.turn_index = TurnIndex;
-		
-		RequestData.npc.npc_id = TEXT("OFFICER_MILLER");
-		RequestData.npc.npc_role = TEXT("immigration_officer");
-		RequestData.npc.last_npc_message = LastNpcMessage;
-		
-		RequestData.audio.mime_type = TEXT("audio/wav");
-		RequestData.audio.sample_rate_hz = 48000;
-		RequestData.audio.channels = 2;
-		RequestData.audio.duration_ms = 2800;
-		RequestData.audio.language_hint = TEXT("en-US");
-		
-		RequestData.player_profile.nickname = TEXT("Sean");
-		RequestData.player_profile.english_confidence = TEXT("beginner");
-		RequestData.player_profile.tier = TEXT("Bronze");
-		RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
-		
-		RequestData.scenario_state = CurrentScenarioState;
-		
-		RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
-		RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
-		RequestData.game_state.completed_intents = { TEXT("submit_passport") };
-		RequestData.game_state.current_objective = TEXT("State the visit purpose");
+		FAIRequestData RequestData = GenerateAIRequestData();
 		
 		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Request Before ---"));
 		PRINTLOGW_JW(TEXT("request_id: %s"), *RequestData.request_id);
@@ -461,4 +397,54 @@ void AMurphyPlayerController::Test_SimulateAIResponse(const FString& SimulatedJS
 	{
 		PRINTLOGE_JW(TEXT("[Test] 시뮬레이션 실패! JSON 문법이 틀렸거나 파싱에 실패했습니다."));
 	}
+}
+
+FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
+{
+	FAIRequestData RequestData;
+	RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
+	RequestData.request_id = FGuid::NewGuid().ToString();
+	
+	RequestData.session.session_id = CurrentSessionId;
+	RequestData.session.player_id = TEXT("player_001");
+	RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
+	RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
+	RequestData.session.current_node_id = CurrentNodeId;
+	RequestData.session.turn_index = TurnIndex;
+	
+	if (IsValid(TargetNPC))
+	{
+		RequestData.npc.npc_id = TargetNPC->GetNPCName();
+	}
+	else
+	{
+		RequestData.npc.npc_id = TEXT("OFFICER_MILLER"); // fallback
+	}
+	RequestData.npc.npc_role = TEXT("immigration_officer");
+	RequestData.npc.last_npc_message = LastNpcMessage;
+	
+	RequestData.audio.mime_type = TEXT("audio/wav");
+	RequestData.audio.sample_rate_hz = 48000;
+	RequestData.audio.channels = 2;
+	RequestData.audio.duration_ms = 2800;
+	RequestData.audio.language_hint = TEXT("en-US");
+
+	RequestData.interaction.initiator = TEXT("npc");
+	RequestData.interaction.interaction_type = TEXT("quest");
+	RequestData.interaction.time_limit_s = 30;
+	RequestData.interaction.first_contact = false;
+	
+	RequestData.player_profile.nickname = TEXT("Sean");
+	RequestData.player_profile.english_confidence = TEXT("beginner");
+	RequestData.player_profile.tier = TEXT("Bronze");
+	RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
+	
+	RequestData.scenario_state = CurrentScenarioState;
+	
+	RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
+	RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };
+	RequestData.game_state.completed_intents = { TEXT("submit_passport") };
+	RequestData.game_state.current_objective = TEXT("State the visit purpose");
+	
+	return RequestData;
 }

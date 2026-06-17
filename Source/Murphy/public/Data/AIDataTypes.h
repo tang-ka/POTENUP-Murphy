@@ -2,7 +2,49 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DataTable.h"
 #include "AIDataTypes.generated.h"
+
+class UAnimMontage;
+class UTexture2D;
+
+// ===  AI Enums ===
+
+UENUM(BlueprintType)
+enum class EAgentEmotion : uint8
+{
+	Normal,
+	Joy,
+	Anger,
+	Sadness,
+	Panic,
+	Suspicion,
+	Disgust,
+	Fear,
+	Smirk,
+	Surprise,
+	Pain,
+	Confusion,
+	Boredom
+};
+
+USTRUCT(BlueprintType)
+struct FAI_EmotionData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Emotion", meta=(ToolTip="감정 이름"))
+	EAgentEmotion EmotionName = EAgentEmotion::Normal;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Emotion", meta=(ToolTip="얼굴 근육 맵"))
+	TMap<FName, float> MuscleValues;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Emotion", meta=(ToolTip="이모지"))
+	TSoftObjectPtr<UTexture2D> EmotionTextures;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Emotion", meta=(ToolTip="애니메이션 몽타주"))
+	TSoftObjectPtr<UAnimMontage> EmotionMontages;
+};
 
 //  === [Unreal -> AI] Request Structs ===
 
@@ -255,6 +297,7 @@ struct FAI_STTResponse
 	bool needs_repeat = false;
 };
 
+
 USTRUCT(BlueprintType)
 struct FAI_NPCResponse
 {
@@ -464,3 +507,4 @@ struct FAIResponseData
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="개발/디버깅 정보"))
 	FAI_Debug debug;
 };
+

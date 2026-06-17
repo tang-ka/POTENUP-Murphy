@@ -161,3 +161,4 @@ struct FItemTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
 	TSoftObjectPtr<UTexture2D> ItemDetailIcon;
 };
+

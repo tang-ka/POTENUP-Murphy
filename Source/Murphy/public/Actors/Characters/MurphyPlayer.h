@@ -29,7 +29,7 @@ enum class EPlayerChatState : uint8
 	Recording,
 	WaitingForAI,
 	Talking
-};
+};		
 
 UCLASS()
 class MURPHY_API AMurphyPlayer : public ACharacter

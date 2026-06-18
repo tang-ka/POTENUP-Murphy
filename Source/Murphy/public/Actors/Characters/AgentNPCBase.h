@@ -15,7 +15,6 @@ class USoundWave;
 class UScenarioSubsystem;
 class UAgentEmojiUI;
 
-
 UCLASS()
 class MURPHY_API AAgentNPCBase : public ACharacter
 {

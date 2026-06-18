@@ -117,31 +117,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 	if (IsValid(TargetNPC))
 	{
 		TargetNPC->ProcessDialogueResponse(ResponseData);
-		
-		// 응답 수신 후 상태 갱신
-		LastNpcMessage = ResponseData.npc.text;
-		
-		CurrentScenarioState.patience += ResponseData.state_delta.patience_delta;
-		CurrentScenarioState.suspicion += ResponseData.state_delta.suspicion_delta;
-		CurrentScenarioState.retry_count += ResponseData.state_delta.retry_count_delta;
-		CurrentScenarioState.hint_count += ResponseData.state_delta.hint_count_delta;
-		
-		TurnIndex += 1;
-		
-		// if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
-		// {
-		// 	CurrentNodeId = ResponseData.next_node_id;
-		// }
-		
-		if (!ResponseData.current_node_id.IsEmpty())
-		{
-			CurrentNodeId = ResponseData.current_node_id;
-		}
-
-		if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
-		{
-			CurrentNodeId = ResponseData.next_node_id;
-		}
+		TargetNPC->UpdateSessionStateFromResponse(ResponseData);
 		
 		// 필수 디버그 로그 추가 (응답 후)
 		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Response After ---"));
@@ -149,7 +125,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		PRINTLOGW_JW(TEXT("response.next_action: %s"), *ResponseData.next_action);
 		PRINTLOGW_JW(TEXT("response.next_node_id: %s"), *ResponseData.next_node_id);
 		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text);
-		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *CurrentNodeId);
+		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *TargetNPC->GetCurrentNodeId());
 
 		// AI 응답이 도착해 대화가 끝나면 NPC점유 해제 및 상태 초기화
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
@@ -405,23 +381,34 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	RequestData.contract_version = TEXT("dev_c_unreal_turn.v1");
 	RequestData.request_id = FGuid::NewGuid().ToString();
 	
-	RequestData.session.session_id = CurrentSessionId;
 	RequestData.session.player_id = TEXT("player_001");
-	RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
-	RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
-	RequestData.session.current_node_id = CurrentNodeId;
-	RequestData.session.turn_index = TurnIndex;
 	
 	if (IsValid(TargetNPC))
 	{
+		RequestData.session.session_id = TargetNPC->GetCurrentSessionId();
+		RequestData.session.chapter_id = TargetNPC->GetChapterId();
+		RequestData.session.scene_id = TargetNPC->GetSceneId();
+		RequestData.session.current_node_id = TargetNPC->GetCurrentNodeId();
+		RequestData.session.turn_index = TargetNPC->GetTurnIndex();
+		
 		RequestData.npc.npc_id = TargetNPC->GetNPCName();
+		RequestData.npc.npc_role = TargetNPC->GetNPCRole();
+		RequestData.npc.last_npc_message = TargetNPC->GetLastNpcMessage();
+		
+		RequestData.scenario_state = TargetNPC->GetScenarioState();
 	}
 	else
 	{
+		RequestData.session.session_id = TEXT("session_fallback");
+		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
+		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
+		RequestData.session.current_node_id = TEXT("IMM_002_PURPOSE");
+		RequestData.session.turn_index = 1;
+		
 		RequestData.npc.npc_id = TEXT("OFFICER_MILLER"); // fallback
+		RequestData.npc.npc_role = TEXT("immigration_officer");
+		RequestData.npc.last_npc_message = TEXT("What is the purpose of your visit?");
 	}
-	RequestData.npc.npc_role = TEXT("immigration_officer");
-	RequestData.npc.last_npc_message = LastNpcMessage;
 	
 	RequestData.audio.mime_type = TEXT("audio/wav");
 	RequestData.audio.sample_rate_hz = 48000;
@@ -438,8 +425,6 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	RequestData.player_profile.english_confidence = TEXT("beginner");
 	RequestData.player_profile.tier = TEXT("Bronze");
 	RequestData.player_profile.travel_speaking_level = TEXT("TSL_1_SURVIVAL");
-	
-	RequestData.scenario_state = CurrentScenarioState;
 	
 	RequestData.game_state.inventory = { TEXT("passport"), TEXT("boarding_pass"), TEXT("return_ticket") };
 	RequestData.game_state.flags = { TEXT("arrived_at_jfk"), TEXT("passport_submitted") };

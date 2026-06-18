@@ -61,6 +61,9 @@ private:
 	UFUNCTION()
 	void HandleScenarioStateChanged(EScenarioType NewScenario);
 	
+	UFUNCTION()
+	void HandleQuestStarted(FName QuestID, FText QuestTitle, FText QuestDescription);
+	
 private:
 	UPROPERTY()
 	TSubclassOf<UCommonPopupWidget> CachedPopupClass;

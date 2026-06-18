@@ -43,6 +43,9 @@ private:
 	void OnAudioRecordingFinished(const FString& SavedFilePath);
 	
 public:
+	// 공통: 현재 세션 상태를 바탕으로 AI 요청 데이터를 생성
+	FAIRequestData GenerateAIRequestData();
+
 	// NetSubsystem에서 전달해주는 AI 응답 구조체를 받아 처리할 콜백
 	UFUNCTION()
 	void OnAIResponseReceived(const FAIResponseData& ResponseData);

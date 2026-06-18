@@ -10,8 +10,10 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScenarioStateChanged, EScenarioType, NewScenario);
 // 시나리오 끝난 경우 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnScenarioEnded, EScenarioType, EndedScenario, bool, bSuccess); 
-// 완료한 퀘스트 Delgate
+// 완료한 퀘스트 Delegate
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuestCompleted, FName, CompletedQuestID);
+// SubQuest가 새로 시작된 경우 (QuestID, Title, Description)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnQuestStarted, FName, QuestID, FText, QuestTitle, FText, QuestDescription);
 
 UCLASS()
 class MURPHY_API UScenarioSubsystem : public UGameInstanceSubsystem
@@ -37,6 +39,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
 	void CompleteQuest(FName QuestID);
 	
+	// 특정 조건 만족 시 수동으로 퀘스트를 시작합니다 (예: 서브퀘스트 발생)
+	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
+	void StartQuest(FName QuestID);
+	
 	// 특정 조건과 대상 ID를 가진 이벤트를 수신하여 퀘스트를 달성 처리합니다.
 	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
 	void NotifyQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
@@ -54,6 +60,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category="Murphy|Quest|Delegates")
 	FOnQuestCompleted OnQuestCompleted;
+	
+	UPROPERTY(BlueprintAssignable, Category="Murphy|Quest|Delegates")
+	FOnQuestStarted OnQuestStarted;
 	
 private:
 	// 모든 활성 퀘스트가 완료되었는지 검사합니다.

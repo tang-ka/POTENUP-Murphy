@@ -94,6 +94,10 @@ struct FQuestTableRow : public FTableRowBase
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
 	EQuestType QuestType = EQuestType::MainQuest;
 
+	/** 퀘스트 제목 텍스트 (비어있으면 토스트에서 "돌발 미션"으로 표시) */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	FText QuestTitle;
+
 	/** 퀘스트 목표 텍스트 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
 	FText QuestDescription;
@@ -157,3 +161,4 @@ struct FItemTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
 	TSoftObjectPtr<UTexture2D> ItemDetailIcon;
 };
+

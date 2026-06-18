@@ -7,6 +7,7 @@
 #include "UI/HUD/BagPopupWidget.h"
 #include "UI/HUD/MyMicWidget.h"
 #include "UI/HUD/PhonePopupWidget.h"
+#include "UI/HUD/CaptionWidget.h"
 
 void UMainHUD::NativeConstruct()
 {
@@ -64,5 +65,10 @@ void UMainHUD::UpdateMicState(bool bIsRecording)
 		WBP_MyMic->SetRecordingState(bIsRecording);
 	}
 }
-
-
+void UMainHUD::UpdateCaption(const FString& CaptionText)
+{
+	if (WBP_PlayerCaption != nullptr)
+	{
+		WBP_PlayerCaption->SetCaption(CaptionText);
+	}
+}

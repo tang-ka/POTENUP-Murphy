@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MainHUD.generated.h"
 
+class UCaptionWidget;
 class UPhonePopupWidget;
 class UMyMicWidget;
 class UQuestPanelWidget;
@@ -28,6 +29,8 @@ protected:
 	TObjectPtr<UBagPopupWidget> WBP_BagPopup;		// 가방 (기본 닫힘)
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UPhonePopupWidget> WBP_PhonePopup;	// 핸드폰 (기본 닫힘)
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UCaptionWidget> WBP_PlayerCaption;	// 플레이어 자막
 	
 public:
 	virtual void NativeConstruct() override;
@@ -37,6 +40,7 @@ public:
 	void RequestTogglePhone();
 	
 	void UpdateMicState(bool bIsRecording);
+	void UpdateCaption(const FString& CaptionText);
 
 	/** ItemBaseActor에서 가방에 아이템 추가 시 사용 */
 	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }

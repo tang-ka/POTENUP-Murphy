@@ -75,6 +75,8 @@ void AAgentNPCBase::BeginPlay()
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
 
+	InitializeSessionState();
+
 	if (IsValid(VoiceComp))
 	{
 		VoiceComp->OnAudioSingleEnvelopeValue.RemoveDynamic(this, &AAgentNPCBase::OnVoiceEnvelopeValue);
@@ -150,8 +152,6 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 			TargetLookAtLocation = CameraManager->GetCameraLocation();
 		}
 	}
-	
-	
 	
 	if (bIsWaitingForPlayer)
 	{
@@ -560,9 +560,15 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// 시나리오 종료 판단
 	if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
 		ResponseData.next_action == TEXT("FAIL_END") || 
-		ResponseData.next_action == TEXT("IMM_BAD_END_VERBAL_ABUSE") || // todo 욕을 하는 경우 끝남 -> 이건 게임오버 종료 조건 
 		ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK")) // 이거는 입국심사때의 마지막 노드 
 	{
+		bIsScenarioCompleted = true;
+	}
+	
+	// todo 욕을 하는 경우 끝남 -> 이건 게임오버 종료 조건 
+	if (ResponseData.next_node_id == TEXT("IMM_BAD_END_VERBAL_ABUSE"))
+	{
+		PRINTLOGW_JW(TEXT("[AgentNPC] 욕으로 인한 시나리오 중단!!"));
 		bIsScenarioCompleted = true;
 	}
 	
@@ -584,7 +590,6 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// ==========================================================
 	
 	//===========================================================
-	// TODO: 추후 AI 팀과 Tone 키워드가 맞춰지면 문자열 파싱 로직으로 복구
 	// 🔴 랜덤 로직 삭제 & 서버 감정 연동 (서버가 정보 보내주면 복구할 곳)
 	//===========================================================
 	FString ServerEmotion = ResponseData.npc.emotion; 
@@ -712,3 +717,51 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 	}
 }
 
+
+// ==========================================
+// [AI Session]
+// ==========================================
+
+void AAgentNPCBase::InitializeSessionState()
+{
+	CurrentSessionId = FString::Printf(TEXT("session_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short));
+	CurrentNodeId = InitialNodeId;
+	TurnIndex = 1;
+	LastNpcMessage = InitialNpcMessage;
+	CurrentScenarioState = FAI_ScenarioState();
+	
+	PRINTLOG_JW(TEXT("[AgentNPC] 세션 상태 초기화: %s / Node: %s"), *CurrentSessionId, *CurrentNodeId);
+}
+
+void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& ResponseData)
+{
+	LastNpcMessage = ResponseData.npc.text;
+	
+	CurrentScenarioState.patience += ResponseData.state_delta.patience_delta;
+	CurrentScenarioState.suspicion += ResponseData.state_delta.suspicion_delta;
+	CurrentScenarioState.retry_count += ResponseData.state_delta.retry_count_delta;
+	CurrentScenarioState.hint_count += ResponseData.state_delta.hint_count_delta;
+	
+	TurnIndex += 1;
+	
+	if (!ResponseData.current_node_id.IsEmpty())
+	{
+		CurrentNodeId = ResponseData.current_node_id;
+	}
+
+	if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
+	{
+		CurrentNodeId = ResponseData.next_node_id;
+	}
+	
+	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
+	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	{
+		if (IsValid(InteractionBox))
+		{
+			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
+		}
+		bIsScenarioCompleted = true;
+	}
+}

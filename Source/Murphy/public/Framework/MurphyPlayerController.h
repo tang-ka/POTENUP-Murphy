@@ -76,12 +76,4 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<AAgentNPCBase> TargetNPC;
-	
-	// --- AI Session State ---
-	FString CurrentSessionId = TEXT("session_001");
-	FString CurrentNodeId = TEXT("IMM_002_PURPOSE");
-	int32 TurnIndex = 1;
-	FString LastNpcMessage = TEXT("What is the purpose of your visit?");
-	
-	FAI_ScenarioState CurrentScenarioState;
 };

@@ -71,8 +71,17 @@ void USTTWebSocketComponent::SendAudioChunk(const TArray<uint8>& PCM16Data, bool
 		return;
 	}
 
+	// 서버의 Pydantic Validator가 비어있는 audio_base64("")를 에러 처리하는 것을 방지하기 위해
+	// 전송할 데이터가 없다면 무음(0) 데이터 2바이트(1 sample)를 임의로 추가합니다.
+	TArray<uint8> DataToSend = PCM16Data;
+	if (DataToSend.Num() == 0)
+	{
+		DataToSend.Add(0);
+		DataToSend.Add(0);
+	}
+
 	// base64 인코딩
-	const FString Base64Audio = FBase64::Encode(PCM16Data.GetData(), PCM16Data.Num());
+	const FString Base64Audio = FBase64::Encode(DataToSend.GetData(), DataToSend.Num());
 
 	// JSON 조립
 	const TSharedRef<FJsonObject> JsonObj = MakeShared<FJsonObject>();

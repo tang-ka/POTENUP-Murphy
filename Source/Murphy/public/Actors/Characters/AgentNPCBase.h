@@ -82,7 +82,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Sound")
 	TObjectPtr<USoundBase> ForShortAnswerSound;
 	
-	// 감정별 이모지 텍스처를 매핑해두는 딕셔너리 (블루프린트에서 할당)
+	// 감정별 이모지 텍스처를 매
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Emoji")
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
 	
@@ -216,5 +216,52 @@ public:
 	// 애니메이션 블루프린트(ABP)가 실제로 읽어갈 최종 스위치
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
 	bool bEnableIK = false;
+
+public:
+	// === AI Session Config (에디터에서 초기값 설정) ===
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Session Config")
+	FString InitialChapterId = TEXT("CH0_03_IMMIGRATION_CHECK");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Session Config")
+	FString InitialSceneId = TEXT("JFK_IMMIGRATION_HALL");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Session Config")
+	FString InitialNodeId = TEXT("IMM_002_PURPOSE");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Session Config")
+	FString InitialNpcMessage = TEXT("What is the purpose of your visit?");
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Session Config")
+	FString NPCRole = TEXT("immigration_officer");
+
+	// === AI Runtime State (게임 중 변경되는 값) ===
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
+	FString CurrentSessionId = TEXT("session_001");
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
+	FString CurrentNodeId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
+	int32 TurnIndex = 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
+	FString LastNpcMessage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
+	FAI_ScenarioState CurrentScenarioState;
+
+public:
+	// === Session Methods ===
+	void InitializeSessionState();
+	void UpdateSessionStateFromResponse(const FAIResponseData& ResponseData);
+
+	FString GetChapterId() const { return InitialChapterId; }
+	FString GetSceneId() const { return InitialSceneId; }
+	FString GetCurrentSessionId() const { return CurrentSessionId; }
+	FString GetCurrentNodeId() const { return CurrentNodeId; }
+	int32 GetTurnIndex() const { return TurnIndex; }
+	FString GetLastNpcMessage() const { return LastNpcMessage; }
+	FString GetNPCRole() const { return NPCRole; }
+	FAI_ScenarioState GetScenarioState() const { return CurrentScenarioState; }
 	
 };

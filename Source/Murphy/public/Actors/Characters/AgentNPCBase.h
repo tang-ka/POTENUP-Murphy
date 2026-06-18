@@ -124,7 +124,7 @@ private:
 public:
 	// === NPC Info ==
 	// NPC 이름
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Info")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AI|Info")
 	FName NPCName;
 	
 	// NPC의 역할 

@@ -17,6 +17,7 @@ void USystemMenuUI::NativeConstruct()
 
 void USystemMenuUI::OnExitGameButtonClicked()
 {
+	
 }
 
 void USystemMenuUI::OnOptionButtonClicked()

@@ -203,6 +203,11 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	APawn* OtherPawn = Cast<APawn>(OtherActor);
 	if (!IsValid(OtherPawn) || OtherPawn == this) return;
 
+	if (bIsScenarioCompleted)
+	{
+		return; 
+	}
+	
 	if (AMurphyPlayerController* MyPC = Cast<AMurphyPlayerController>(OtherPawn->GetController()))
 	{
 		if (MyPC->IsLocalController())
@@ -235,7 +240,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 			// 3 오버랩 직후에는 기본 이모지로 초기화
 			UpdateEmotion(EAgentEmotion::Normal);
 			EmojiUI->SetEmojiVisible(true);
-			bIsScenarioCompleted = false; // 시나리오 시작 
+			// bIsScenarioCompleted = false; // 시나리오 시작 
 			
 			PRINTLOG_JW(TEXT("PC에 현재 Overlap 된 NPC Active (입국심사 시작)."));
 		}
@@ -253,6 +258,10 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 		
 		EmojiUI->SetEmojiVisible(false);
 	}
+	
+	// 플레이어가 박스 밖으로 나가면 즉시 시선을 거둡니다.
+	bIsLookingAtPlayer = false;
+	CurrentInteractPlayer = nullptr;
 }
 
 // 서버 문자열을 엔진 Enum으로 변환

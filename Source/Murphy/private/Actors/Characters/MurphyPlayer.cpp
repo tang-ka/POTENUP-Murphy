@@ -4,6 +4,7 @@
 #include "Actors/Items/ItemBaseActor.h"
 
 #include "VoiceChat/VoiceRecorderComponent.h"
+#include "VoiceChat/STTWebSocketComponent.h"
 #include "Components/PlayerViewComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -28,6 +29,7 @@ AMurphyPlayer::AMurphyPlayer()
 	// PrimaryActorTick.bCanEverTick = true; // 채팅 중 카메라 보간을 위해 -> PlayerViewComponent::TickComponent로 이전, Actor Tick 불필요
 
 	VoiceRecorderComp = CreateDefaultSubobject<UVoiceRecorderComponent>(TEXT("VoiceRecorderComp"));
+	STTWebSocketComp = CreateDefaultSubobject<USTTWebSocketComponent>(TEXT("STTWebSocketComp"));
 
 	PlayerViewComp = CreateDefaultSubobject<UPlayerViewComponent>(TEXT("PlayerViewComp"));
 
@@ -63,6 +65,22 @@ void AMurphyPlayer::BeginPlay()
 		{
 			PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
 		}
+	}
+
+	if (STTWebSocketComp)
+	{
+		STTWebSocketComp->OnSubtitleUpdated.RemoveDynamic(this, &AMurphyPlayer::OnSTTSubtitleUpdated);
+		STTWebSocketComp->OnSubtitleUpdated.AddDynamic(this, &AMurphyPlayer::OnSTTSubtitleUpdated);
+		STTWebSocketComp->OnFinalTranscriptReady.RemoveDynamic(this, &AMurphyPlayer::OnSTTFinalTranscriptReady);
+		STTWebSocketComp->OnFinalTranscriptReady.AddDynamic(this, &AMurphyPlayer::OnSTTFinalTranscriptReady);
+		STTWebSocketComp->OnSTTError.RemoveDynamic(this, &AMurphyPlayer::OnSTTError);
+		STTWebSocketComp->OnSTTError.AddDynamic(this, &AMurphyPlayer::OnSTTError);
+	}
+
+	if (VoiceRecorderComp)
+	{
+		VoiceRecorderComp->OnAudioChunkReady.RemoveDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
+		VoiceRecorderComp->OnAudioChunkReady.AddDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
 	}
 
 	// MainHUDClassInstance 생성
@@ -135,6 +153,14 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 			PlayerInput->BindAction(IA_TogglePhone, ETriggerEvent::Started, this, &AMurphyPlayer::TogglePhonePressed);
 			PlayerInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &AMurphyPlayer::InteractPressed);	// F키
 			PlayerInput->BindAction(IA_SystemMenu, ETriggerEvent::Started, this, &AMurphyPlayer::SystemMenuPressed);
+			if (IA_STTStart)
+			{
+				PlayerInput->BindAction(IA_STTStart, ETriggerEvent::Started, this, &AMurphyPlayer::STTRecordStart);
+			}
+			if (IA_STTStop)
+			{
+				PlayerInput->BindAction(IA_STTStop, ETriggerEvent::Started, this, &AMurphyPlayer::STTRecordEnd);
+			}
 		}
 	}
 }
@@ -189,11 +215,10 @@ void AMurphyPlayer::EndChatWithNPC()
 	// 	return;
 	// }
 
-	// ThirdPersonFocus 모드에서 정렬 중이면 종료 처리를 보류 (정렬 완료 시 HandleViewTransitionComplete에서 재호출)
+	// ThirdPersonFocus 정렬 중이어도 대화 상태는 즉시 해제한다. 시점 복귀만 PlayerViewComp에 예약한다.
 	if (ChatViewMode == EChatViewMode::ThirdPersonFocus && PlayerViewComp && PlayerViewComp->IsTransitioning())
 	{
 		PlayerViewComp->RequestViewState(EPlayerViewState::Idle);
-		return;
 	}
 
 	if (TargetNPC)
@@ -349,6 +374,176 @@ void AMurphyPlayer::RecordAudioPlay(const FInputActionValue& Value)
 {
 	PRINTLOGW_JW(TEXT("[VoiceTest] - Play"));
 	VoiceRecorderComp->PlayRecordedSamples();
+}
+
+void AMurphyPlayer::STTRecordStart(const FInputActionValue& Value)
+{
+	if (!STTWebSocketComp || !VoiceRecorderComp)
+	{
+		PRINTLOGE_JW(TEXT("[MurphyPlayer|STT] 컴포넌트가 없어 STT 세션을 시작할 수 없습니다."));
+		return;
+	}
+
+	if (bSTTSessionActive || STTWebSocketComp->IsConnected())
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 이미 STT 세션이 진행 중입니다."));
+		return;
+	}
+
+	if (VoiceRecorderComp->IsRecording())
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 이미 녹음 중입니다."));
+		return;
+	}
+
+	if (CurChatState == EPlayerChatState::Recording || CurChatState == EPlayerChatState::WaitingForAI)
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 현재 상태에서는 STT를 시작할 수 없습니다. State=%d"), static_cast<int32>(CurChatState));
+		return;
+	}
+
+	AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetController());
+	if (!PC)
+	{
+		PRINTLOGE_JW(TEXT("[MurphyPlayer|STT] MurphyPlayerController를 찾을 수 없습니다."));
+		return;
+	}
+
+	AAgentNPCBase* OverlappedNPC = PC->GetTargetNPC();
+	if (!IsValid(OverlappedNPC))
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] NPC가 근처에 없습니다. STT 녹음을 시작하지 않습니다."));
+		return;
+	}
+
+	if (CurChatState == EPlayerChatState::Idle)
+	{
+		if (!OverlappedNPC->CanTalkWithPlayer())
+		{
+			PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 해당 NPC는 다른 플레이어와 대화중입니다."));
+			return;
+		}
+
+		StartChatWithNPC(OverlappedNPC);
+	}
+
+	FSTT_SessionStart SessionPayload;
+	if (!PC->BuildRealtimeSTTTurnData(CachedSTTTurnData, SessionPayload))
+	{
+		EndChatWithNPC();
+		return;
+	}
+
+	PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] STT 세션 시작"));
+
+	SetSTTSessionActive(true);
+
+	// StartRecording 직전 ChunkingMode와 델리게이트를 확실히 세팅한다.
+	VoiceRecorderComp->OnAudioChunkReady.RemoveDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
+	VoiceRecorderComp->OnAudioChunkReady.AddDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
+	VoiceRecorderComp->SetChunkingMode(true, 100);
+
+	STTWebSocketComp->Connect(SessionPayload);
+	VoiceRecorderComp->StartRecording();
+
+	SetMicUIState(false);
+	SetChatState(EPlayerChatState::Recording);
+	RecordTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+}
+
+void AMurphyPlayer::STTRecordEnd(const FInputActionValue& Value)
+{
+	if (!bSTTSessionActive)
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 활성 STT 세션이 없습니다."));
+		return;
+	}
+
+	if (!VoiceRecorderComp || !VoiceRecorderComp->IsRecording())
+	{
+		PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 녹음 중이 아닙니다."));
+		return;
+	}
+
+	PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] STT 녹음 정지 (마지막 청크 commit=true 예약)"));
+
+	VoiceRecorderComp->StopRecording(TEXT(""), false);
+	SetMicUIState(false);
+	SetChatState(EPlayerChatState::WaitingForAI);
+}
+
+void AMurphyPlayer::OnSTTAudioChunkReady(const TArray<uint8>& PCM16Chunk, bool bIsLastChunk)
+{
+	if (!bSTTSessionActive || !STTWebSocketComp || !STTWebSocketComp->IsConnected())
+	{
+		return;
+	}
+
+	STTWebSocketComp->SendAudioChunk(PCM16Chunk, bIsLastChunk);
+}
+
+void AMurphyPlayer::OnSTTSubtitleUpdated(const FString& Text, bool bIsFinal)
+{
+	PRINTLOGW_JW(TEXT("[MurphyPlayer|STT 자막%s] \"%s\""), bIsFinal ? TEXT(" (FINAL)") : TEXT(""), *Text);
+}
+
+void AMurphyPlayer::OnSTTFinalTranscriptReady(const FString& FinalText)
+{
+	PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] final_transcript 확정: \"%s\""), *FinalText);
+
+	AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetController());
+	if (!PC)
+	{
+		PRINTLOGE_JW(TEXT("[MurphyPlayer|STT] MurphyPlayerController를 찾을 수 없습니다."));
+		SetSTTSessionActive(false);
+		SetChatState(EPlayerChatState::Idle);
+		EndChatWithNPC();
+		return;
+	}
+
+	const bool bSent = PC->SendRealtimeSTTTranscriptToAI(CachedSTTTurnData, FinalText);
+
+	if (STTWebSocketComp)
+	{
+		STTWebSocketComp->Disconnect();
+	}
+
+	SetSTTSessionActive(false);
+
+	if (bSent)
+	{
+		SetChatState(EPlayerChatState::WaitingForAI);
+	}
+	else
+	{
+		EndChatWithNPC();
+		SetMicUIState(IsValid(PC->GetTargetNPC()));
+	}
+}
+
+void AMurphyPlayer::OnSTTError(const FString& ErrorType, const FString& Message)
+{
+	PRINTLOGE_JW(TEXT("[MurphyPlayer|STT] STT 에러 [%s]: %s"), *ErrorType, *Message);
+	PRINTLOGW_JW(TEXT("[MurphyPlayer|STT] 기존 multipart WAV 방식(IA_Record)은 계속 사용할 수 있습니다."));
+
+	SetSTTSessionActive(false);
+
+	if (STTWebSocketComp)
+	{
+		STTWebSocketComp->Disconnect();
+	}
+
+	if (VoiceRecorderComp && VoiceRecorderComp->IsRecording())
+	{
+		VoiceRecorderComp->StopRecording(TEXT(""), false);
+	}
+
+	EndChatWithNPC();
+
+	if (AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetController()))
+	{
+		SetMicUIState(IsValid(PC->GetTargetNPC()));
+	}
 }
 
 void AMurphyPlayer::ToggleBagPressed()

@@ -15,7 +15,6 @@ class USoundWave;
 class UScenarioSubsystem;
 class UAgentEmojiUI;
 
-
 UCLASS()
 class MURPHY_API AAgentNPCBase : public ACharacter
 {
@@ -156,6 +155,7 @@ public:
 protected:
 	// === Quest === 
 	// Quest ID (NPC_ImmigrationOfficer, NPC_ServiceDesk, NPC_CustomsOfficer ... 상속받아 만들어진 액터에게 부여)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Murphy|Quest")
 	FName QuestTargetID;
 	
 	// 시나리오 완료 여부 추적 플래그

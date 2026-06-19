@@ -433,3 +433,71 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	
 	return RequestData;
 }
+
+bool AMurphyPlayerController::BuildRealtimeSTTTurnData(FAIRequestData& OutRequestData, FSTT_SessionStart& OutSessionPayload)
+{
+	if (!IsValid(TargetNPC))
+	{
+		PRINTLOGW_JW(TEXT("[MurphyController|STT] 대화할 NPC가 없어 STT 요청 데이터를 만들 수 없습니다."));
+		return false;
+	}
+
+	OutRequestData = GenerateAIRequestData();
+
+	// WebSocket STT는 16kHz mono PCM16 청크를 전송한다.
+	OutRequestData.audio.mime_type = TEXT("audio/wav");
+	OutRequestData.audio.sample_rate_hz = 16000;
+	OutRequestData.audio.channels = 1;
+	OutRequestData.audio.duration_ms = 3200;
+
+	// 서버가 현재 노드 컨텍스트 기준으로 자연스럽게 다음 노드를 고르게 한다.
+	OutRequestData.client_allowed_next_nodes.Empty();
+
+	OutSessionPayload.request_id = OutRequestData.request_id;
+	OutSessionPayload.session_id = OutRequestData.session.session_id;
+	OutSessionPayload.turn_index = OutRequestData.session.turn_index;
+	OutSessionPayload.chapter_id = OutRequestData.session.chapter_id;
+	OutSessionPayload.scene_id = OutRequestData.session.scene_id;
+	OutSessionPayload.current_node_id = OutRequestData.session.current_node_id;
+
+	PRINTLOGW_JW(TEXT("[MurphyController|STT] TurnData 준비 완료: req_id=%s, current_node=%s"),
+		*OutRequestData.request_id, *OutRequestData.session.current_node_id);
+
+	return true;
+}
+
+bool AMurphyPlayerController::SendRealtimeSTTTranscriptToAI(const FAIRequestData& RequestData, const FString& FinalText)
+{
+	UAIBridgeSubsystem* NetSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>()
+		: nullptr;
+	if (!NetSubsystem)
+	{
+		PRINTLOGE_JW(TEXT("[MurphyController|STT] AIBridgeSubsystem을 찾을 수 없습니다."));
+		return false;
+	}
+
+	const FString TrimmedFinalText = FinalText.TrimStartAndEnd();
+	if (TrimmedFinalText.IsEmpty())
+	{
+		PRINTLOGW_JW(TEXT("[MurphyController|STT] final transcript가 비어 있어 /respond 호출을 건너뜁니다."));
+		return false;
+	}
+
+	if (IsValid(TargetNPC))
+	{
+		TargetNPC->NotifyPlayerSpoke();
+	}
+
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		MurphyPlayer->SetMicUIState(false);
+	}
+
+	FOnAIResponseDataReceived Callback;
+	Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResponseReceived);
+	NetSubsystem->SendToAIWithTranscript(RequestData, TrimmedFinalText, Callback);
+
+	PRINTLOGW_JW(TEXT("[MurphyController|STT] final transcript /respond 전송: \"%s\""), *TrimmedFinalText);
+	return true;
+}

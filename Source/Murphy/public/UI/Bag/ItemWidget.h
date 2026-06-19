@@ -61,4 +61,7 @@ private:
 
 	/** 상세 팝업 표시 (B 경로) */
 	void ShowDetailPopup();
+
+	/** Bag 아이템 조작을 퀘스트 시스템에 통보합니다. */
+	void NotifyQuestCondition(EQuestClearCondition Condition) const;
 };

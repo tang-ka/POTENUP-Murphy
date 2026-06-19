@@ -6,6 +6,7 @@
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
 #include "Data/CinematicTypes.h"
+#include "Data/STTDataTypes.h"
 #include "MurphyPlayerController.generated.h"
 
 class AAgentNPCBase;
@@ -45,6 +46,12 @@ private:
 public:
 	// 공통: 현재 세션 상태를 바탕으로 AI 요청 데이터를 생성
 	FAIRequestData GenerateAIRequestData();
+
+	// Realtime STT용: 현재 세션 상태를 바탕으로 /stt/stream 세션 시작 데이터까지 생성
+	bool BuildRealtimeSTTTurnData(FAIRequestData& OutRequestData, FSTT_SessionStart& OutSessionPayload);
+
+	// Realtime STT final transcript를 /respond로 전달
+	bool SendRealtimeSTTTranscriptToAI(const FAIRequestData& RequestData, const FString& FinalText);
 
 	// NetSubsystem에서 전달해주는 AI 응답 구조체를 받아 처리할 콜백
 	UFUNCTION()

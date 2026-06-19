@@ -64,6 +64,8 @@ void UScenarioSubsystem::StartScenario(EScenarioType NewScenario)
 			PRINTLOGW_JW(TEXT("시나리오 Row를 찾지 못함: %s (데이터 없으면 정상)"), *EnumName);
 		}
 	}
+
+	TryStartQuestsByEvent(NAME_None, EQuestStartCondition::ScenarioStart);
 	
 	OnScenarioStateChanged.Broadcast(CurScenario);
 }
@@ -84,35 +86,36 @@ void UScenarioSubsystem::EndScenario(bool bSuccess)
 void UScenarioSubsystem::StartQuest(FName QuestID)
 {
 	// 1. 등록되지 않은 퀘스트인지 확인
-	if (!ActiveQuests.Contains(QuestID))
+	FQuestRuntimeData* RuntimeData = ActiveQuests.Find(QuestID);
+	if (!RuntimeData)
 	{
 		PRINTLOGW_JW(TEXT("StartQuest 실패: ActiveQuests에 퀘스트가 없습니다 (시나리오 미시작 또는 목록에 없음). ID: %s"), *QuestID.ToString());
 		return;
 	}
 
 	// 2. 이미 시작되었거나 완료된 상태인지 확인
-	if (ActiveQuests[QuestID].QuestState != EScenarioState::NotStarted)
+	if (RuntimeData->QuestState != EScenarioState::NotStarted)
 	{
-		PRINTLOGW_JW(TEXT("StartQuest 실패: 퀘스트가 대기(NotStarted) 상태가 아닙니다. ID: %s (현재 상태: %d)"), *QuestID.ToString(), (int32)ActiveQuests[QuestID].QuestState);
+		PRINTLOGW_JW(TEXT("StartQuest 실패: 퀘스트가 대기(NotStarted) 상태가 아닙니다. ID: %s (현재 상태: %d)"), *QuestID.ToString(), (int32)RuntimeData->QuestState);
 		return;
 	}
 
-	ActiveQuests[QuestID].QuestState = EScenarioState::InProgress;
+	RuntimeData->QuestState = EScenarioState::InProgress;
 	PRINTLOGW_JW(TEXT("퀘스트 시작 성공!: %s"), *QuestID.ToString());
 
 	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
 	{
 		if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 		{
-			// 서브 퀘스트인 경우 토스트 알림 발생
-			if (QuestData->QuestType == EQuestType::SubQuest)
+			// 서브/토스트 퀘스트인 경우 토스트 알림 발생
+			if (QuestData->bShowToastOnStart && (QuestData->QuestType == EQuestType::SubQuest || QuestData->QuestType == EQuestType::ToastQuest))
 			{
 				OnQuestStarted.Broadcast(QuestID, QuestData->QuestTitle, QuestData->QuestDescription);
-				PRINTLOGW_JW(TEXT("서브 퀘스트 토스트 발생!: %s"), *QuestID.ToString());
+				PRINTLOGW_JW(TEXT("퀘스트 토스트 발생!: %s"), *QuestID.ToString());
 			}
 			else
 			{
-				PRINTLOGW_JW(TEXT("StartQuest 알림: %s는 서브 퀘스트가 아니므로 토스트를 띄우지 않습니다."), *QuestID.ToString());
+				PRINTLOGW_JW(TEXT("StartQuest 알림: %s는 토스트 표시 대상이 아닙니다."), *QuestID.ToString());
 			}
 		}
 	}
@@ -120,49 +123,171 @@ void UScenarioSubsystem::StartQuest(FName QuestID)
 
 void UScenarioSubsystem::CompleteQuest(FName QuestID)
 {
-	// Map에 해당 퀘스트가 존재하는지 확인하고, 아직 진행 중인 경우에만 완료 처리
-	if (ActiveQuests.Contains(QuestID) && ActiveQuests[QuestID].QuestState != EScenarioState::Completed)
+	FQuestRuntimeData* RuntimeData = ActiveQuests.Find(QuestID);
+	if (!RuntimeData)
 	{
-		// 상태를 완료로 변경!
-		ActiveQuests[QuestID].QuestState = EScenarioState::Completed;
-		PRINTLOGW_JW(TEXT("퀘스트 클리어 통과!: %s"), *QuestID.ToString());
-
-		// 퀘스트 완료 델리게이트 브로드캐스트 (UI 등에서 수신)
-		OnQuestCompleted.Broadcast(QuestID);
-
-		// 모든 퀘스트가 완료되었는지 검사
-		CheckAllQuestsCompleted();
+		PRINTLOGW_JW(TEXT("CompleteQuest 실패: ActiveQuests에 퀘스트가 없습니다. ID: %s"), *QuestID.ToString());
+		return;
 	}
+
+	if (RuntimeData->QuestState != EScenarioState::InProgress)
+	{
+		PRINTLOGW_JW(TEXT("CompleteQuest 실패: 퀘스트가 진행 중(InProgress) 상태가 아닙니다. ID: %s (현재 상태: %d)"), *QuestID.ToString(), (int32)RuntimeData->QuestState);
+		return;
+	}
+
+	// 상태를 완료로 변경!
+	RuntimeData->QuestState = EScenarioState::Completed;
+	PRINTLOGW_JW(TEXT("퀘스트 클리어 통과!: %s"), *QuestID.ToString());
+
+	// 퀘스트 완료 델리게이트 브로드캐스트 (UI 등에서 수신)
+	OnQuestCompleted.Broadcast(QuestID);
+
+	// 완료된 퀘스트를 선행 조건으로 삼는 다음 퀘스트를 시작합니다.
+	TryStartQuestsByEvent(QuestID, EQuestStartCondition::QuestCompleted);
+
+	// 모든 퀘스트가 완료되었는지 검사
+	CheckAllQuestsCompleted();
 }
 
 
 // NotifyQuestConditionMet("NPC_ImmigrationOfficer", EQuestClearCondition::TalkToNPC);
 void UScenarioSubsystem::NotifyQuestConditionMet(FName TargetID, EQuestClearCondition Condition)
 {
+	NotifyQuestEvent(TargetID, ConvertClearConditionToStartCondition(Condition));
+}
+
+void UScenarioSubsystem::NotifyQuestEvent(FName TargetID, EQuestStartCondition EventCondition)
+{
+	if (EventCondition == EQuestStartCondition::None)
+	{
+		return;
+	}
+
+	EQuestClearCondition ClearCondition = EQuestClearCondition::None;
+	if (TryConvertStartConditionToClearCondition(EventCondition, ClearCondition))
+	{
+		TryCompleteQuestsByEvent(TargetID, ClearCondition);
+	}
+
+	TryStartQuestsByEvent(TargetID, EventCondition);
+}
+
+void UScenarioSubsystem::NotifyQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition)
+{
+	TryStartQuestsByEvent(TargetID, EventCondition);
+}
+
+void UScenarioSubsystem::TryStartQuestsByEvent(FName TargetID, EQuestStartCondition EventCondition)
+{
+	if (EventCondition == EQuestStartCondition::None)
+	{
+		return;
+	}
+
 	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
 	{
-		// ActiveQuests를 순회하며 조건이 맞는 퀘스트 찾기
 		for (const auto& Pair : ActiveQuests)
 		{
 			FName QuestID = Pair.Key;
 			const FQuestRuntimeData& RuntimeData = Pair.Value;
 
-			// 이미 완료된 퀘스트는 스킵
-			if (RuntimeData.QuestState == EScenarioState::Completed)
+			if (RuntimeData.QuestState != EScenarioState::NotStarted)
 			{
 				continue;
 			}
 
-			// DataManager에서 퀘스트 원본 데이터 가져오기
 			if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 			{
-				// 조건과 타겟 ID가 모두 일치하면 퀘스트 달성!
-				if (QuestData->ClearCondition == Condition && QuestData->QuestTargetID == TargetID)
+				const bool bTargetMatched = QuestData->StartTargetID.IsNone()
+					? TargetID.IsNone()
+					: QuestData->StartTargetID == TargetID;
+
+				if (QuestData->StartCondition == EventCondition && bTargetMatched)
+				{
+					StartQuest(QuestID);
+				}
+			}
+		}
+	}
+}
+
+void UScenarioSubsystem::TryCompleteQuestsByEvent(FName TargetID, EQuestClearCondition ClearCondition)
+{
+	if (ClearCondition == EQuestClearCondition::None)
+	{
+		return;
+	}
+
+	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
+	{
+		// ActiveQuests를 순회하며 조건이 맞는 진행 중 퀘스트 찾기
+		for (const auto& Pair : ActiveQuests)
+		{
+			FName QuestID = Pair.Key;
+			const FQuestRuntimeData& RuntimeData = Pair.Value;
+
+			if (RuntimeData.QuestState != EScenarioState::InProgress)
+			{
+				continue;
+			}
+
+			if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
+			{
+				if (QuestData->ClearCondition == ClearCondition && QuestData->QuestTargetID == TargetID)
 				{
 					CompleteQuest(QuestID);
 				}
 			}
 		}
+	}
+}
+
+EQuestStartCondition UScenarioSubsystem::ConvertClearConditionToStartCondition(EQuestClearCondition ClearCondition)
+{
+	switch (ClearCondition)
+	{
+	case EQuestClearCondition::CheckItem:
+		return EQuestStartCondition::CheckItem;
+	case EQuestClearCondition::ReachLocation:
+		return EQuestStartCondition::ReachLocation;
+	case EQuestClearCondition::TalkToNPC:
+		return EQuestStartCondition::TalkToNPC;
+	case EQuestClearCondition::GetItem:
+		return EQuestStartCondition::GetItem;
+	case EQuestClearCondition::UseItem:
+		return EQuestStartCondition::UseItem;
+	case EQuestClearCondition::None:
+	default:
+		return EQuestStartCondition::None;
+	}
+}
+
+bool UScenarioSubsystem::TryConvertStartConditionToClearCondition(EQuestStartCondition StartCondition, EQuestClearCondition& OutClearCondition)
+{
+	switch (StartCondition)
+	{
+	case EQuestStartCondition::CheckItem:
+		OutClearCondition = EQuestClearCondition::CheckItem;
+		return true;
+	case EQuestStartCondition::ReachLocation:
+		OutClearCondition = EQuestClearCondition::ReachLocation;
+		return true;
+	case EQuestStartCondition::TalkToNPC:
+		OutClearCondition = EQuestClearCondition::TalkToNPC;
+		return true;
+	case EQuestStartCondition::GetItem:
+		OutClearCondition = EQuestClearCondition::GetItem;
+		return true;
+	case EQuestStartCondition::UseItem:
+		OutClearCondition = EQuestClearCondition::UseItem;
+		return true;
+	case EQuestStartCondition::None:
+	case EQuestStartCondition::ScenarioStart:
+	case EQuestStartCondition::QuestCompleted:
+	default:
+		OutClearCondition = EQuestClearCondition::None;
+		return false;
 	}
 }
 
@@ -175,12 +300,34 @@ void UScenarioSubsystem::CheckAllQuestsCompleted()
 	}
 
 	bool bAllCompleted = true;
-	for (const auto& Pair : ActiveQuests)
+	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
 	{
-		if (Pair.Value.QuestState != EScenarioState::Completed)
+		for (const auto& Pair : ActiveQuests)
 		{
-			bAllCompleted = false;
-			break;
+			const FQuestRuntimeData& RuntimeData = Pair.Value;
+			const FQuestTableRow* QuestData = DataManager->GetQuestData(Pair.Key);
+
+			if (QuestData && !QuestData->bRequiredForScenarioEnd)
+			{
+				continue;
+			}
+
+			if (RuntimeData.QuestState != EScenarioState::Completed)
+			{
+				bAllCompleted = false;
+				break;
+			}
+		}
+	}
+	else
+	{
+		for (const auto& Pair : ActiveQuests)
+		{
+			if (Pair.Value.QuestState != EScenarioState::Completed)
+			{
+				bAllCompleted = false;
+				break;
+			}
 		}
 	}
 

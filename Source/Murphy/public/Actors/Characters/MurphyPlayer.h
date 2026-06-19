@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "Components/PlayerViewComponent.h" // EPlayerViewState, EChatViewMode 사용
 #include "Framework/MurphyGameModeBase.h"
+#include "Data/AIDataTypes.h"
 #include "MurphyPlayer.generated.h"
 
 
@@ -17,6 +18,7 @@ struct FInputActionValue;
 class UInputMappingContext;
 class UInputAction;
 class UVoiceRecorderComponent;
+class USTTWebSocketComponent;
 
 class AAgentNPCBase;
 class UMainHUD;
@@ -50,6 +52,10 @@ protected:
 	// === VoiceRecorder ===
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="VoiceChat")
 	TObjectPtr<UVoiceRecorderComponent> VoiceRecorderComp;
+
+	// === Realtime STT ===
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|STT")
+	TObjectPtr<USTTWebSocketComponent> STTWebSocketComp;
 
 	// === Camera ===
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Camera")
@@ -148,6 +154,10 @@ public:
 	UInputAction* IA_Interact;	// F키 - 아이템 상호작용
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input")
 	UInputAction* IA_SystemMenu;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input|STT")
+	UInputAction* IA_STTStart;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Input|STT")
+	UInputAction* IA_STTStop;
 #pragma endregion 
 
 
@@ -158,7 +168,8 @@ public:
 	virtual void RecordStart(const FInputActionValue& Value);
 	virtual void RecordEnd(const FInputActionValue& Value);
 	virtual void RecordAudioPlay(const FInputActionValue& Value);
-
+	virtual void STTRecordStart(const FInputActionValue& Value);
+	virtual void STTRecordEnd(const FInputActionValue& Value);
 #pragma endregion 
 
 	// Toggle Bag, Phone Action
@@ -198,9 +209,24 @@ public:
 	void SetSTTSessionActive(bool bActive) { bSTTSessionActive = bActive; }
 	bool IsSTTSessionActive() const { return bSTTSessionActive; }
 
+protected:
+	UFUNCTION()
+	void OnSTTAudioChunkReady(const TArray<uint8>& PCM16Chunk, bool bIsLastChunk);
+
+	UFUNCTION()
+	void OnSTTSubtitleUpdated(const FString& Text, bool bIsFinal);
+
+	UFUNCTION()
+	void OnSTTFinalTranscriptReady(const FString& FinalText);
+
+	UFUNCTION()
+	void OnSTTError(const FString& ErrorType, const FString& Message);
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Murphy|flag", meta=(AllowPrivateAccess="true"))
 	bool bMovementLocked = false;
 
 	bool bSTTSessionActive = false;
+
+	FAIRequestData CachedSTTTurnData;
 };

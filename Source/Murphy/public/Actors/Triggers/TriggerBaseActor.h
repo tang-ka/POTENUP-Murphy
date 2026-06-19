@@ -31,6 +31,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Components")
 	TObjectPtr<UBoxComponent> TriggerBox;
 
+public:
 	// === 에디터 설정 ===
 	/** 퀘스트 CSV의 QuestTargetID 컬럼값과 일치시킬 ID */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Quest")

@@ -82,7 +82,11 @@ void AItemBaseActor::Interact(AMurphyPlayer* Player)
 		// 2. ScenarioSubsystem에 GetItem 퀘스트 완료 통보
 		if (UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>())
 		{
-			ScenarioSS->NotifyQuestConditionMet(QuestTargetID, EQuestClearCondition::GetItem);
+			const FName EventTargetID = QuestTargetID.IsNone() ? ItemID : QuestTargetID;
+			if (!EventTargetID.IsNone())
+			{
+				ScenarioSS->NotifyQuestConditionMet(EventTargetID, EQuestClearCondition::GetItem);
+			}
 		}
 	}
 

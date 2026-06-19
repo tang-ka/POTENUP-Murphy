@@ -71,7 +71,7 @@ void AAgentNPCBase::BeginPlay()
 	EmojiUI->SetNPCName(TEXT("BBung"));
 	if (!NPCName.IsNone()) EmojiUI->SetNPCName(NPCName.ToString());
 	
-	if (!QuestTargetID.IsNone()) PRINTLOGE_JW(TEXT("!!!!Quest ID 를 지정해주세요!!!!")); 
+	if (QuestTargetID.IsNone()) PRINTLOGE_JW(TEXT("!!!!Quest ID 를 지정해주세요!!!!")); 
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
 
@@ -219,6 +219,14 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
     
 			// 플레이어 액터를 저장해둡니다. (매개변수로 넘어온 OtherActor가 플레이어라고 가정)
 			CurrentInteractPlayer = OtherActor;
+
+			if (!QuestTargetID.IsNone())
+			{
+				if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+				{
+					ScenarioSubsystem->NotifyQuestStartEvent(QuestTargetID, EQuestStartCondition::TalkToNPC);
+				}
+			}
 			
 			//! 이거 대신에서 Overlap되면 퀘스트가 깨지는 걸 넣어야 할 듯
 			// 1 시나리오 매니저 호출 

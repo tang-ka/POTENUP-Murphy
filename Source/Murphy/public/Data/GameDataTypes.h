@@ -40,6 +40,22 @@ enum class EQuestType : uint8
 };
 
 // ========================
+// 퀘스트 시작 조건
+// ========================
+UENUM(BlueprintType)
+enum class EQuestStartCondition : uint8
+{
+	None					UMETA(DisplayName = "None"),
+	ScenarioStart			UMETA(DisplayName = "Scenario Start"),
+	QuestCompleted			UMETA(DisplayName = "Quest Completed"),
+	CheckItem				UMETA(DisplayName = "Check Item"),
+	ReachLocation			UMETA(DisplayName = "ReachLocation"),
+	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
+	GetItem					UMETA(DisplayName = "Get Item"),
+	UseItem					UMETA(DisplayName = "Use Item")
+};
+
+// ========================
 // 퀘스트 완료 조건
 // ========================
 UENUM(BlueprintType)
@@ -49,7 +65,8 @@ enum class EQuestClearCondition : uint8
 	CheckItem				UMETA(DisplayName = "Check Item"),
 	ReachLocation			UMETA(DisplayName = "ReachLocation"),
 	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
-	GetItem					UMETA(DisplayName = "Get Item")
+	GetItem					UMETA(DisplayName = "Get Item"),
+	UseItem					UMETA(DisplayName = "Use Item")
 };
 
 // ========================
@@ -102,13 +119,29 @@ struct FQuestTableRow : public FTableRowBase
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
 	FText QuestDescription;
 
+	/** 퀘스트가 시작되는 조건 */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	EQuestStartCondition StartCondition = EQuestStartCondition::None;
+
+	/** 퀘스트 시작 조건 대상 ID (예: 선행 퀘스트 ID, NPC ID, 위치 ID, 아이템 ID 등) */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	FName StartTargetID;
+
 	/** 퀘스트 완료 조건 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
-	EQuestClearCondition ClearCondition;
+	EQuestClearCondition ClearCondition = EQuestClearCondition::None;
 
-	/** 목표 대상 ID (예: 대화할 NPC ID, 획득할 아이템 ID, 도달할 위치 ID 등) */
+	/** 퀘스트 완료 대상 ID (예: 대화할 NPC ID, 획득할 아이템 ID, 도달할 위치 ID 등) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
 	FName QuestTargetID;
+
+	/** true면 이 퀘스트가 완료되어야 시나리오 종료 조건에 포함됩니다. */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	bool bRequiredForScenarioEnd = true;
+
+	/** true면 퀘스트 시작 시 토스트 알림을 표시합니다. */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
+	bool bShowToastOnStart = true;
 };
 
 // ========================

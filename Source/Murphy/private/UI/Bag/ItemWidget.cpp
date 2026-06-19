@@ -5,6 +5,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Kismet/GameplayStatics.h"
+#include "Manager/ScenarioSubsystem.h"
 
 void UItemWidget::NativeConstruct()
 {
@@ -73,7 +75,7 @@ void UItemWidget::UseItem_Implementation()
 	// todo 기본 구현 - 블루프린트에서 오버라이드하여 실제 사용 로직 추가
 	// 예: 사용 효과, 사운드, 이펙트 등
 
-	// todo 퀘스트 통과 
+	NotifyQuestCondition(EQuestClearCondition::UseItem);
 }
 
 void UItemWidget::ShowDetailPopup()
@@ -93,5 +95,21 @@ void UItemWidget::ShowDetailPopup()
 	DetailWidget->InitDetail(ItemData, this);
 	DetailWidget->AddToViewport(10); // Z-Order: BagPopup보다 위에 표시
 	
-	// todo 퀘스트 통과 
+	NotifyQuestCondition(EQuestClearCondition::CheckItem);
+}
+
+void UItemWidget::NotifyQuestCondition(EQuestClearCondition Condition) const
+{
+	if (ItemData.ItemID.IsNone())
+	{
+		return;
+	}
+
+	if (UGameInstance* GI = UGameplayStatics::GetGameInstance(this))
+	{
+		if (UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>())
+		{
+			ScenarioSS->NotifyQuestConditionMet(ItemData.ItemID, Condition);
+		}
+	}
 }

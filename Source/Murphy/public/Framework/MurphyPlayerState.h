@@ -35,6 +35,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Murphy|State")
 	bool bPassedCurrentScenario = false;
 	
+
 #pragma region Session room state
 	// 선택한 캐릭터 (Carry)
 	UPROPERTY(ReplicatedUsing = OnRep_SessionRoomState, VisibleAnywhere, BlueprintReadOnly, Category="Murphy|Session")
@@ -51,5 +52,18 @@ public:
 	// 룸 상태 복제 시 위젯 갱신용 델리게이트
 	FSimpleMulticastDelegate OnSessionRoomStateChanged;	
 #pragma endregion 
+
+public:
+	// 입국심사서에 입력한 이름 저장
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString SavedSurname;
+	
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString SavedGivenname;
+	
+	// 클라->서버 저장 요청
+	UFUNCTION(Server, Reliable)
+	void ServerSetArrivalData(const FString& InSurname, const FString& InGivenname);
+	
 };
 

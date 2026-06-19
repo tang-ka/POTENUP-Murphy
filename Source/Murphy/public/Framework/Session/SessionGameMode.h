@@ -20,8 +20,14 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 
+	void TryStartGame();
+
 protected:
 	virtual void BeginPlay() override;
+	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+	                              const FString& Options, const FString& Portal) override;
+	
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Session")
+	FName InGameLevelKey = TEXT("Airplane");
 };
-
-

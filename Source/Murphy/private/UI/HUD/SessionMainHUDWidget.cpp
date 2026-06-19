@@ -1,0 +1,80 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "UI/HUD/SessionMainHUDWidget.h"
+
+#include "Murphy.h"
+#include "Components/Button.h"
+#include "Components/HorizontalBox.h"
+#include "Components/TextBlock.h"
+
+void USessionMainHUDWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (Btn_Boy)
+	{
+		Btn_Boy->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnBoyClicked);
+	}
+
+	if (Btn_Girl)
+	{
+		Btn_Girl->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnGirlClicked);
+	}
+
+	if (Btn_Ready)
+	{
+		Btn_Ready->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnReadyClicked);
+	}
+
+	if (Btn_Start)
+	{
+		Btn_Start->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnStartClicked);
+	}
+}
+
+void USessionMainHUDWidget::SetPlayerRole(bool bIsHost)
+{
+	const ESlateVisibility HostVisibility  = bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed;
+	const ESlateVisibility GuestVisibility = bIsHost ? ESlateVisibility::Collapsed : ESlateVisibility::Visible;
+
+	if (Btn_Start) { Btn_Start->SetVisibility(HostVisibility);  }
+	if (Txt_Start) { Txt_Start->SetVisibility(HostVisibility);  }
+	if (Btn_Ready) { Btn_Ready->SetVisibility(GuestVisibility); }
+	if (Txt_Ready) { Txt_Ready->SetVisibility(GuestVisibility); }
+
+	PRINTLOG_SH(TEXT("SetPlayerRole — bIsHost: %s"), bIsHost ? TEXT("true") : TEXT("false"));
+}
+
+void USessionMainHUDWidget::HandleBtnBoyClicked()
+{
+	PRINTLOG_SH(TEXT("Btn_Boy Clicked"));
+	OnCharacterSelected.ExecuteIfBound(EPlayerCharacterType::BoyCharacter);
+}
+
+void USessionMainHUDWidget::HandleBtnGirlClicked()
+{
+	PRINTLOG_SH(TEXT("Btn_Girl Clicked"));
+	OnCharacterSelected.ExecuteIfBound(EPlayerCharacterType::GirlCharacter);
+}
+
+void USessionMainHUDWidget::HandleBtnReadyClicked()
+{
+	bIsReady = !bIsReady;
+
+	if (Txt_Ready)
+	{
+		const FText NewText = bIsReady
+			? FText::FromString(TEXT("준비 취소"))
+			: FText::FromString(TEXT("준비 완료"));
+		Txt_Ready->SetText(NewText);
+	}
+
+	PRINTLOG_SH(TEXT("Btn_Ready Clicked — bIsReady: %s"), bIsReady ? TEXT("true") : TEXT("false"));
+	OnReadyRequested.ExecuteIfBound(bIsReady);
+}
+
+void USessionMainHUDWidget::HandleBtnStartClicked()
+{
+	PRINTLOG_SH(TEXT("Btn_Start Clicked"));
+	OnStartRequested.ExecuteIfBound();
+}

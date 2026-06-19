@@ -6,6 +6,29 @@
 #include "GameDataTypes.generated.h"
 
 // ========================
+// 플레이어 선택 캐릭터
+// ========================
+UENUM(BlueprintType)
+enum class EPlayerCharacterType : uint8
+{
+	None			UMETA(DisplayName = "None"),
+	BoyCharacter		UMETA(DisplayName = "Boy Character"),
+	GirlCharacter		UMETA(DisplayName = "Girl Character")
+};
+
+// ========================
+// 여행지
+// ========================
+UENUM(BlueprintType)
+enum class ETravelDestination : uint8
+{
+	None			UMETA(DisplayName = "None"),
+	NewYork			UMETA(DisplayName = "NewYork"),
+	Tokyo			UMETA(DisplayName = "Tokyo"),
+	Paris			UMETA(DisplayName = "Paris")
+};
+
+// ========================
 // 시나리오 타입 Enum
 // ========================
 UENUM(BlueprintType)

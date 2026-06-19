@@ -12,5 +12,11 @@ void ASessionGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ASessionGameState, ConnectedPlayerCount);
 	DOREPLIFETIME(ASessionGameState, MaxPlayerCount);
 	DOREPLIFETIME(ASessionGameState, SessionName);
+	DOREPLIFETIME(ASessionGameState, SelectedDestination);
+}
+
+void ASessionGameState::OnRep_SelectedDestination()
+{
+	OnSelectedDestinationChanged.Broadcast();
 }
 

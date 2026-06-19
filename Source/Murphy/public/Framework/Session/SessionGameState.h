@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/GameDataTypes.h"
 #include "GameFramework/GameState.h"
 #include "SessionGameState.generated.h"
 
@@ -26,9 +27,20 @@ public:
 	/** 세션 이름 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Session|State")
 	FString SessionName;
+	
+	/** 호스트가 선택한 여행지 */
+	UPROPERTY(ReplicatedUsing = OnRep_SelectedDestination, VisibleAnywhere, BlueprintReadOnly, Category = "Session|State")
+	ETravelDestination SelectedDestination = ETravelDestination::None;
+
+	// 여행지 복제 시 위젯 갱신용 델리게이트
+	FSimpleMulticastDelegate OnSelectedDestinationChanged;
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+protected:
+	UFUNCTION()
+	void OnRep_SelectedDestination();
 };
 
 

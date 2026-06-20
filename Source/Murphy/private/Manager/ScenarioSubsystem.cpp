@@ -9,7 +9,6 @@ void UScenarioSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 	
 	CurScenario = EScenarioType::None;
-	StartScenario(EScenarioType::Prologue_Immigration);
 }
 
 void UScenarioSubsystem::Deinitialize()
@@ -38,6 +37,8 @@ void UScenarioSubsystem::StartScenario(EScenarioType NewScenario)
 				FQuestRuntimeData NewQuestData;
 				NewQuestData.QuestID = TargetQuestID;
 
+				PRINTLOGW_JW(TEXT("퀘스트 %s"), *TargetQuestID.ToString());
+
 				// 메인 퀘스트는 바로 시작, 서브 퀘스트는 대기(NotStarted) 상태로 둡니다.
 				if (const FQuestTableRow* QuestData = DataManager->GetQuestData(TargetQuestID))
 				{
@@ -54,7 +55,7 @@ void UScenarioSubsystem::StartScenario(EScenarioType NewScenario)
 				{
 					NewQuestData.QuestState = EScenarioState::InProgress;
 				}
-              
+
 				ActiveQuests.Add(TargetQuestID, NewQuestData);
 			}
 			PRINTLOGW_JW(TEXT("퀘스트 %d개 런타임 세팅 완료"), ActiveQuests.Num());
@@ -66,7 +67,8 @@ void UScenarioSubsystem::StartScenario(EScenarioType NewScenario)
 	}
 
 	TryStartQuestsByEvent(NAME_None, EQuestStartCondition::ScenarioStart);
-	
+	StartFirstSequentialSubQuest();
+
 	OnScenarioStateChanged.Broadcast(CurScenario);
 }
 
@@ -130,6 +132,12 @@ void UScenarioSubsystem::CompleteQuest(FName QuestID)
 		return;
 	}
 
+	if (IsMainQuest(QuestID))
+	{
+		PRINTLOGW_JW(TEXT("CompleteQuest 무시: 메인 퀘스트는 필수 하위 퀘스트가 모두 완료됐을 때 자동 완료됩니다. ID: %s"), *QuestID.ToString());
+		return;
+	}
+
 	if (RuntimeData->QuestState != EScenarioState::InProgress)
 	{
 		PRINTLOGW_JW(TEXT("CompleteQuest 실패: 퀘스트가 진행 중(InProgress) 상태가 아닙니다. ID: %s (현재 상태: %d)"), *QuestID.ToString(), (int32)RuntimeData->QuestState);
@@ -145,6 +153,7 @@ void UScenarioSubsystem::CompleteQuest(FName QuestID)
 
 	// 완료된 퀘스트를 선행 조건으로 삼는 다음 퀘스트를 시작합니다.
 	TryStartQuestsByEvent(QuestID, EQuestStartCondition::QuestCompleted);
+	StartNextSequentialSubQuest(QuestID);
 
 	// 모든 퀘스트가 완료되었는지 검사
 	CheckAllQuestsCompleted();
@@ -187,6 +196,7 @@ void UScenarioSubsystem::TryStartQuestsByEvent(FName TargetID, EQuestStartCondit
 
 	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
 	{
+		TArray<FName> QuestIDsToStart;
 		for (const auto& Pair : ActiveQuests)
 		{
 			FName QuestID = Pair.Key;
@@ -199,15 +209,18 @@ void UScenarioSubsystem::TryStartQuestsByEvent(FName TargetID, EQuestStartCondit
 
 			if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 			{
-				const bool bTargetMatched = QuestData->StartTargetID.IsNone()
-					? TargetID.IsNone()
-					: QuestData->StartTargetID == TargetID;
+				const bool bTargetMatched = QuestData->StartTargetID.IsNone() ? TargetID.IsNone() : QuestData->StartTargetID == TargetID;
 
 				if (QuestData->StartCondition == EventCondition && bTargetMatched)
 				{
-					StartQuest(QuestID);
+					QuestIDsToStart.Add(QuestID);
 				}
 			}
+		}
+
+		for (FName QuestID : QuestIDsToStart)
+		{
+			StartQuest(QuestID);
 		}
 	}
 }
@@ -221,7 +234,8 @@ void UScenarioSubsystem::TryCompleteQuestsByEvent(FName TargetID, EQuestClearCon
 
 	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
 	{
-		// ActiveQuests를 순회하며 조건이 맞는 진행 중 퀘스트 찾기
+		// 완료 처리 중 다음 퀘스트 시작/시나리오 종료가 발생할 수 있으므로 먼저 대상만 수집합니다.
+		TArray<FName> QuestIDsToComplete;
 		for (const auto& Pair : ActiveQuests)
 		{
 			FName QuestID = Pair.Key;
@@ -234,11 +248,21 @@ void UScenarioSubsystem::TryCompleteQuestsByEvent(FName TargetID, EQuestClearCon
 
 			if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 			{
+				if (QuestData->QuestType == EQuestType::MainQuest)
+				{
+					continue;
+				}
+
 				if (QuestData->ClearCondition == ClearCondition && QuestData->QuestTargetID == TargetID)
 				{
-					CompleteQuest(QuestID);
+					QuestIDsToComplete.Add(QuestID);
 				}
 			}
+		}
+
+		for (FName QuestID : QuestIDsToComplete)
+		{
+			CompleteQuest(QuestID);
 		}
 	}
 }
@@ -299,41 +323,210 @@ void UScenarioSubsystem::CheckAllQuestsCompleted()
 		return;
 	}
 
-	bool bAllCompleted = true;
-	if (UDataManager* DataManager = GetGameInstance()->GetSubsystem<UDataManager>())
+	if (AreRequiredChildQuestsCompleted())
 	{
-		for (const auto& Pair : ActiveQuests)
+		CompleteMainQuestsAndEndScenario();
+	}
+}
+
+const FScenarioTableRow* UScenarioSubsystem::GetCurrentScenarioData() const
+{
+	if (CurScenario == EScenarioType::None)
+	{
+		return nullptr;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		return nullptr;
+	}
+
+	const FString EnumName = StaticEnum<EScenarioType>()->GetNameStringByValue(static_cast<int64>(CurScenario));
+	return DataManager->GetScenarioData(FName(*EnumName));
+}
+
+bool UScenarioSubsystem::StartFirstSequentialSubQuest()
+{
+	const FScenarioTableRow* ScenarioData = GetCurrentScenarioData();
+	if (!ScenarioData)
+	{
+		return false;
+	}
+
+	for (FName QuestID : ScenarioData->RequiredQuestIDs)
+	{
+		if (!IsSequentialSubQuest(QuestID))
 		{
-			const FQuestRuntimeData& RuntimeData = Pair.Value;
-			const FQuestTableRow* QuestData = DataManager->GetQuestData(Pair.Key);
+			continue;
+		}
 
-			if (QuestData && !QuestData->bRequiredForScenarioEnd)
-			{
-				continue;
-			}
+		const FQuestRuntimeData* RuntimeData = ActiveQuests.Find(QuestID);
+		if (RuntimeData && RuntimeData->QuestState == EScenarioState::NotStarted)
+		{
+			StartQuest(QuestID);
+			return true;
+		}
 
-			if (RuntimeData.QuestState != EScenarioState::Completed)
+		return false;
+	}
+
+	return false;
+}
+
+bool UScenarioSubsystem::StartNextSequentialSubQuest(FName CompletedQuestID)
+{
+	if (CompletedQuestID.IsNone())
+	{
+		return false;
+	}
+
+	const FScenarioTableRow* ScenarioData = GetCurrentScenarioData();
+	if (!ScenarioData)
+	{
+		return false;
+	}
+
+	bool bFoundCompletedQuest = false;
+
+	for (FName QuestID : ScenarioData->RequiredQuestIDs)
+	{
+		if (!bFoundCompletedQuest)
+		{
+			bFoundCompletedQuest = QuestID == CompletedQuestID;
+			continue;
+		}
+
+		if (!IsSequentialSubQuest(QuestID))
+		{
+			continue;
+		}
+
+		const FQuestRuntimeData* RuntimeData = ActiveQuests.Find(QuestID);
+		if (RuntimeData && RuntimeData->QuestState == EScenarioState::NotStarted)
+		{
+			StartQuest(QuestID);
+			return true;
+		}
+
+		return false;
+	}
+
+	return false;
+}
+
+bool UScenarioSubsystem::IsSequentialSubQuest(FName QuestID) const
+{
+	if (QuestID.IsNone())
+	{
+		return false;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		return false;
+	}
+
+	if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
+	{
+		return QuestData->QuestType == EQuestType::SubQuest;
+	}
+
+	return false;
+}
+
+bool UScenarioSubsystem::IsMainQuest(FName QuestID) const
+{
+	if (const UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (const UDataManager* DataManager = GameInstance->GetSubsystem<UDataManager>())
+		{
+			if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 			{
-				bAllCompleted = false;
-				break;
+				return QuestData->QuestType == EQuestType::MainQuest;
 			}
 		}
 	}
-	else
+
+	return false;
+}
+
+bool UScenarioSubsystem::AreRequiredChildQuestsCompleted() const
+{
+	const UGameInstance* GameInstance = GetGameInstance();
+	if (!GameInstance)
 	{
-		for (const auto& Pair : ActiveQuests)
+		return false;
+	}
+
+	const UDataManager* DataManager = GameInstance->GetSubsystem<UDataManager>();
+	if (!DataManager)
+	{
+		return false;
+	}
+
+	bool bHasRequiredChildQuest = false;
+
+	for (const auto& Pair : ActiveQuests)
+	{
+		const FQuestRuntimeData& RuntimeData = Pair.Value;
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(Pair.Key);
+		if (!QuestData)
 		{
-			if (Pair.Value.QuestState != EScenarioState::Completed)
-			{
-				bAllCompleted = false;
-				break;
-			}
+			continue;
+		}
+
+		if (QuestData->QuestType == EQuestType::MainQuest || !QuestData->bRequiredForScenarioEnd)
+		{
+			continue;
+		}
+
+		bHasRequiredChildQuest = true;
+		if (RuntimeData.QuestState != EScenarioState::Completed)
+		{
+			return false;
 		}
 	}
 
-	if (bAllCompleted)
+	return bHasRequiredChildQuest;
+}
+
+void UScenarioSubsystem::CompleteMainQuestsAndEndScenario()
+{
+	UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
 	{
-		PRINTLOGW_JW(TEXT("모든 퀘스트 완료! 현재 시나리오 종료."));
-		EndScenario(true);
+		return;
 	}
+
+	bool bCompletedMainQuest = false;
+
+	for (auto& Pair : ActiveQuests)
+	{
+		FQuestRuntimeData& RuntimeData = Pair.Value;
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(Pair.Key);
+		if (!QuestData || QuestData->QuestType != EQuestType::MainQuest)
+		{
+			continue;
+		}
+
+		if (RuntimeData.QuestState != EScenarioState::Completed)
+		{
+			RuntimeData.QuestState = EScenarioState::Completed;
+			bCompletedMainQuest = true;
+			PRINTLOGW_JW(TEXT("메인 퀘스트 완료!: %s (필수 하위 퀘스트 모두 완료)"), *Pair.Key.ToString());
+			OnQuestCompleted.Broadcast(Pair.Key);
+		}
+	}
+
+	if (!bCompletedMainQuest)
+	{
+		PRINTLOGW_JW(TEXT("필수 하위 퀘스트는 모두 완료됐지만 완료 처리할 메인 퀘스트가 없습니다."));
+	}
+
+	PRINTLOGW_JW(TEXT("필수 하위 퀘스트 완료로 현재 시나리오 종료."));
+	EndScenario(true);
 }

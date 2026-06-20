@@ -52,6 +52,36 @@ enum class EScenarioState : uint8
 };
 
 // ========================
+// 퀘스트 진행 범위 정책
+// ========================
+UENUM(BlueprintType)
+enum class EQuestProgressScope : uint8
+{
+	Personal				UMETA(DisplayName = "Personal"),
+	Shared					UMETA(DisplayName = "Shared")
+};
+
+// ========================
+// 시나리오 종료 정책
+// ========================
+UENUM(BlueprintType)
+enum class EScenarioEndPolicy : uint8
+{
+	AllPlayersCompleted		UMETA(DisplayName = "All Players Completed"),
+	SharedQuestCompleted	UMETA(DisplayName = "Shared Quest Completed"),
+	AnyPlayerCompleted		UMETA(DisplayName = "Any Player Completed")
+};
+
+// ========================
+// 퀘스트/시나리오 런타임 알림 Delegate
+// ========================
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMurphyScenarioStateChanged, EScenarioType, NewScenario);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMurphyScenarioEnded, EScenarioType, EndedScenario, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMurphyQuestCompleted, FName, CompletedQuestID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnMurphyQuestStarted, FName, QuestID, FText, QuestTitle, FText, QuestDescription);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMurphyQuestStateChanged);
+
+// ========================
 // 퀘스트 타입 Enum
 // ========================
 UENUM(BlueprintType)
@@ -73,6 +103,7 @@ enum class EQuestStartCondition : uint8
 	QuestCompleted			UMETA(DisplayName = "Quest Completed"),
 	CheckItem				UMETA(DisplayName = "Check Item"),
 	ReachLocation			UMETA(DisplayName = "ReachLocation"),
+	TriggerToNPC			UMETA(DisplayName = "Trigger To NPC"),
 	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
 	GetItem					UMETA(DisplayName = "Get Item"),
 	UseItem					UMETA(DisplayName = "Use Item")
@@ -85,9 +116,9 @@ UENUM(BlueprintType)
 enum class EQuestClearCondition : uint8
 {
 	None					UMETA(DisplayName = "None"),
-	CheckItem				UMETA(DisplayName = "Check Item"),
 	ReachLocation			UMETA(DisplayName = "ReachLocation"),
 	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
+	CheckItem				UMETA(DisplayName = "Check Item"),
 	GetItem					UMETA(DisplayName = "Get Item"),
 	UseItem					UMETA(DisplayName = "Use Item")
 };
@@ -103,7 +134,7 @@ struct FScenarioTableRow : public FTableRowBase
 
 	/** 코드 매핑용 시나리오 Enum */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
-	EScenarioType ScenarioType;
+	EScenarioType ScenarioType = EScenarioType::None;
 
 	/** 표시용 시나리오 이름 (임시, 기획 변경 시 수정) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
@@ -112,6 +143,14 @@ struct FScenarioTableRow : public FTableRowBase
 	/** 이 시나리오에서 클리어해야 할 퀘스트 ID 목록 (CSV Row Name 기준) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
 	TArray<FName> RequiredQuestIDs;
+
+	/** 개인 진행/공유 진행 중 어떤 저장소를 사용할지 결정합니다. */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
+	EQuestProgressScope QuestProgressScope = EQuestProgressScope::Personal;
+
+	/** 시나리오 종료 조건을 데이터로 결정합니다. */
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Scenario")
+	EScenarioEndPolicy ScenarioEndPolicy = EScenarioEndPolicy::AllPlayersCompleted;
 	
 	// 	UPROPERTY(BlueprintReadWrite, Category="Murphy|Scenario")
 	// 	EScenarioState ScenarioState = EScenarioState::None;

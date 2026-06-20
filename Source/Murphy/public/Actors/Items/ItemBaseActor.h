@@ -10,6 +10,7 @@
 class UBoxComponent;
 class UWidgetComponent;
 class AMurphyPlayer;
+class UQuestEventNotifyComponent;
 
 /**
  * 게임 월드에 배치되는 획득 가능한 아이템 액터 Base 클래스
@@ -37,6 +38,12 @@ public:
 	 */
 	virtual void Interact(AMurphyPlayer* Player) override;
 
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Item")
+	bool GetItem(AMurphyPlayer* Player);
+
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Item")
+	void ConfigureQuestItem(FName InItemID, FName InQuestTargetID);
+
 protected:
 	// === Components ===
 	/** 플레이어 접근 인식을 위한 콜리전 */
@@ -52,15 +59,15 @@ protected:
 	TObjectPtr<UWidgetComponent> InteractUIWidget;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Components")
 	TSubclassOf<UUserWidget> InteractUIClass;
+
+	/** 아이템 획득 결과를 퀘스트 서버 RPC로 전달하는 공통 컴포넌트 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Components")
+	TObjectPtr<UQuestEventNotifyComponent> QuestEventNotifier;
 	
 	// === 에디터 설정 ===
 	/** 아이템 고유 ID (DataManager 로드용) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
 	FName ItemID;
-
-	/** 퀘스트 CSV의 QuestTargetID 컬럼값과 일치시킬 ID */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
-	FName QuestTargetID;
 
 	/** 상호작용 가능한 시야각 임계값 (도 단위, 기본 60도) */
 	UPROPERTY(EditAnywhere, Category = "Murphy|Item", meta = (ClampMin = "0.0", ClampMax = "180.0"))
@@ -85,5 +92,8 @@ private:
 	UFUNCTION()
 	void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComp,
 		AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	FName ResolveQuestTargetID() const;
+	void SyncQuestEventTarget();
 };
 

@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerState.h"
 #include "MurphyPlayerState.generated.h"
 
+struct FQuestRuntimeEvent;
+
 /**
  * 모든 레벨에서 공통으로 사용하는 PlayerState
  */
@@ -21,6 +23,15 @@ public:
 protected:
 	UFUNCTION()
 	void OnRep_SessionRoomState();
+
+	UFUNCTION()
+	void OnRep_PersonalScenario();
+
+	UFUNCTION()
+	void OnRep_PersonalActiveQuests(TArray<FQuestRuntimeData> OldPersonalActiveQuests);
+
+	UFUNCTION()
+	void OnRep_CompletedPersonalScenarios();
 	
 public:
 	// AI 대화 결과 저장용 변수
@@ -52,6 +63,56 @@ public:
 	// 룸 상태 복제 시 위젯 갱신용 델리게이트
 	FSimpleMulticastDelegate OnSessionRoomStateChanged;	
 #pragma endregion 
+
+#pragma region Personal quest state
+public:
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	EScenarioType GetPersonalScenario() const { return PersonalScenario; }
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	const TArray<FQuestRuntimeData>& GetPersonalActiveQuests() const { return PersonalActiveQuests; }
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	bool HasCompletedPersonalScenario(EScenarioType ScenarioType) const;
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	bool IsCurrentPersonalScenarioCompleted() const;
+
+	void StartPersonalScenario(EScenarioType NewScenario, const FScenarioTableRow* ScenarioData);
+	void ClearPersonalScenario();
+	void NotifyPersonalQuestEvent(FName TargetID, EQuestStartCondition EventCondition);
+	void NotifyPersonalQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition);
+	void NotifyPersonalQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+
+	// 이 PlayerState를 소유한 클라이언트에게만 개인 퀘스트 토스트를 띄울 때 사용합니다.
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
+	FOnMurphyQuestStarted OnPersonalQuestStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
+	FOnMurphyQuestCompleted OnPersonalQuestCompleted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
+	FOnMurphyQuestStateChanged OnPersonalQuestStateChanged;
+
+private:
+	// 서버 즉시 실행과 클라이언트 RepNotify 양쪽에서 같은 퀘스트 알림을 발생시키기 위한 helper입니다.
+	void BroadcastQuestRuntimeEvents(const TArray<FQuestRuntimeEvent>& Events);
+	void BroadcastQuestDeltaEvents(const TArray<FQuestRuntimeData>& OldActiveQuests);
+	void BroadcastQuestStarted(FName QuestID);
+	void MarkCurrentPersonalScenarioCompleted();
+
+	// 개인 진행 시나리오에서 현재 플레이어가 진행 중인 시나리오입니다.
+	UPROPERTY(ReplicatedUsing = OnRep_PersonalScenario, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	EScenarioType PersonalScenario = EScenarioType::None;
+
+	// 개인 퀘스트 진행도입니다. TMap 복제 이슈를 피하기 위해 QuestID를 가진 배열로 관리합니다.
+	UPROPERTY(ReplicatedUsing = OnRep_PersonalActiveQuests, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	TArray<FQuestRuntimeData> PersonalActiveQuests;
+
+	// GameState가 AllPlayersCompleted 정책을 판단할 때 참조하는 개인 시나리오 완료 목록입니다.
+	UPROPERTY(ReplicatedUsing = OnRep_CompletedPersonalScenarios, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	TArray<EScenarioType> CompletedPersonalScenarios;
+#pragma endregion
 
 public:
 	// 입국심사서에 입력한 이름 저장

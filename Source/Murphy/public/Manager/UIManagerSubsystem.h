@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/GameDataTypes.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "UI/Base/CommonPopupWidget.h"   // FUIPopupDesc
 #include "Data/UILayerTypes.h"             // EUILayer
@@ -14,6 +15,8 @@ class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
 class UScenarioSubsystem;
+class AMurphyGameStateBase;
+class AMurphyPlayerState;
 enum class EScenarioType : uint8;
 
 UCLASS()
@@ -31,6 +34,9 @@ public:
 	void ShowToast(const FText& Message, float LifeTime = 0.f);
 	void ShowLevelEnterToast(const FText& LevelName, float LifeTime = 0.f);
 	void ShowQuestToast(const FText& Title, const FText& Content, float LifeTime = 0.f);
+
+	// 로컬 PlayerController가 준비된 뒤 PlayerState/GameState 퀘스트 복제 이벤트를 구독합니다.
+	void BindQuestStateSources();
 
 
 	// ── 레이어 배치 ──
@@ -63,6 +69,8 @@ private:
 	
 	UFUNCTION()
 	void HandleQuestStarted(FName QuestID, FText QuestTitle, FText QuestDescription);
+
+	void ReplayActiveQuestStarts(const TArray<FQuestRuntimeData>& ActiveQuests);
 	
 private:
 	UPROPERTY()
@@ -76,4 +84,10 @@ private:
 	
 	UPROPERTY()
 	TSubclassOf<UQuestToastPopupWidget> CachedQuestToastClass;
+
+	UPROPERTY()
+	TObjectPtr<AMurphyPlayerState> BoundPlayerState;
+
+	UPROPERTY()
+	TObjectPtr<AMurphyGameStateBase> BoundGameState;
 };

@@ -9,6 +9,9 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "Framework/MurphyGameStateBase.h"
+#include "Framework/MurphyPlayerState.h"
+#include "Manager/DataManager.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "UI/LevelEnterToastPopupWidget.h"
 #include "UI/QuestToastPopupWidget.h"
@@ -31,6 +34,7 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
             UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>();
             if (ScenarioSS)
             {
+                // 기존 로컬 ScenarioSubsystem 기반 테스트 UI가 바로 끊기지 않도록 유지하는 호환 구독입니다.
                 ScenarioSS->OnScenarioStateChanged.AddDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
                 ScenarioSS->OnQuestStarted.AddDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
             }
@@ -41,6 +45,19 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UUIManagerSubsystem::Deinitialize()
 {
     FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
+
+    if (BoundPlayerState)
+    {
+        BoundPlayerState->OnPersonalQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+        BoundPlayerState = nullptr;
+    }
+
+    if (BoundGameState)
+    {
+        BoundGameState->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+        BoundGameState->OnSharedQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+        BoundGameState = nullptr;
+    }
 
     if (ULocalPlayer* LP = GetLocalPlayer())
     {
@@ -67,6 +84,54 @@ APlayerController* UUIManagerSubsystem::GetOwningController() const
     }
 
     return LP->GetPlayerController(LP->GetWorld());
+}
+
+void UUIManagerSubsystem::BindQuestStateSources()
+{
+    APlayerController* PC = GetOwningController();
+    if (!PC)
+    {
+        return;
+    }
+
+    AMurphyPlayerState* CurrentPlayerState = PC->GetPlayerState<AMurphyPlayerState>();
+    if (BoundPlayerState != CurrentPlayerState)
+    {
+        // SeamlessTravel/PlayerState 재복제 시 이전 PS delegate가 남지 않도록 먼저 해제합니다.
+        if (BoundPlayerState)
+        {
+            BoundPlayerState->OnPersonalQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+        }
+
+        BoundPlayerState = CurrentPlayerState;
+        if (BoundPlayerState)
+        {
+            // 개인 퀘스트 토스트는 이 로컬 플레이어의 PlayerState에서만 받습니다.
+            BoundPlayerState->OnPersonalQuestStarted.AddDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+            ReplayActiveQuestStarts(BoundPlayerState->GetPersonalActiveQuests());
+        }
+    }
+
+    UWorld* World = PC->GetWorld();
+    AMurphyGameStateBase* CurrentGameState = World ? World->GetGameState<AMurphyGameStateBase>() : nullptr;
+    if (BoundGameState != CurrentGameState)
+    {
+        // 맵 전환으로 GameState가 바뀔 수 있으므로 기존 GameState delegate를 정리합니다.
+        if (BoundGameState)
+        {
+            BoundGameState->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+            BoundGameState->OnSharedQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+        }
+
+        BoundGameState = CurrentGameState;
+        if (BoundGameState)
+        {
+            // 공유 퀘스트 토스트는 모든 클라이언트가 같은 GameState 복제 결과로 받습니다.
+            BoundGameState->OnScenarioStateChanged.AddDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
+            BoundGameState->OnSharedQuestStarted.AddDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
+            ReplayActiveQuestStarts(BoundGameState->GetSharedActiveQuests());
+        }
+    }
 }
 
 TSubclassOf<UCommonPopupWidget> UUIManagerSubsystem::GetPopupClass()
@@ -149,7 +214,7 @@ void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)
 
     if (bShowToast)
     {
-        ShowQuestToast(Title, Content);
+        // ShowQuestToast(Title, Content);
     }
 }
 
@@ -161,6 +226,43 @@ void UUIManagerSubsystem::HandleQuestStarted(FName QuestID, FText QuestTitle, FT
         : QuestTitle;
 
     ShowQuestToast(DisplayTitle, QuestDescription, 5);
+}
+
+void UUIManagerSubsystem::ReplayActiveQuestStarts(const TArray<FQuestRuntimeData>& ActiveQuests)
+{
+    if (ActiveQuests.IsEmpty())
+    {
+        return;
+    }
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    UGameInstance* GI = LP ? LP->GetGameInstance() : nullptr;
+    UDataManager* DataManager = GI ? GI->GetSubsystem<UDataManager>() : nullptr;
+    if (!DataManager)
+    {
+        return;
+    }
+
+    for (const FQuestRuntimeData& RuntimeData : ActiveQuests)
+    {
+        if (RuntimeData.QuestState != EScenarioState::InProgress)
+        {
+            continue;
+        }
+
+        const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
+        if (!QuestData || !QuestData->bShowToastOnStart)
+        {
+            continue;
+        }
+
+        if (QuestData->QuestType != EQuestType::SubQuest && QuestData->QuestType != EQuestType::ToastQuest)
+        {
+            continue;
+        }
+
+        HandleQuestStarted(RuntimeData.QuestID, QuestData->QuestTitle, QuestData->QuestDescription);
+    }
 }
 
 void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
@@ -188,6 +290,7 @@ void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
     
     LoadedWorld->GetTimerManager().SetTimerForNextTick([this, ToastText]()
     {
+        BindQuestStateSources();
         ShowLevelEnterToast(ToastText);
     });
 }

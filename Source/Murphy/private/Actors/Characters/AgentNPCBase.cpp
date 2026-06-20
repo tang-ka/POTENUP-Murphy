@@ -6,6 +6,7 @@
 #include "Murphy.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/QuestEventNotifyComponent.h"
 #include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
@@ -14,7 +15,6 @@
 #include "UObject/UnrealType.h"
 #include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
 #include "Manager/DataManager.h"
-#include "Manager/ScenarioSubsystem.h"
 #include "UI/AgentEmojiUI.h"
 #include "Kismet/GameplayStatics.h"
 #include "Settings/MurphyNetSettings.h"
@@ -47,6 +47,8 @@ AAgentNPCBase::AAgentNPCBase()
 	TypingAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("TypingAudioComp"));
 	TypingAudioComp->SetupAttachment(GetMesh());
 	TypingAudioComp->bAutoActivate = false;
+
+	QuestEventNotifier = CreateDefaultSubobject<UQuestEventNotifyComponent>(TEXT("QuestEventNotifier"));
 }
 
 void AAgentNPCBase::BeginPlay()
@@ -72,6 +74,11 @@ void AAgentNPCBase::BeginPlay()
 	if (!NPCName.IsNone()) EmojiUI->SetNPCName(NPCName.ToString());
 	
 	if (QuestTargetID.IsNone()) PRINTLOGE_JW(TEXT("!!!!Quest ID 를 지정해주세요!!!!")); 
+	if (QuestEventNotifier && !QuestTargetID.IsNone())
+	{
+		// 기존 NPC BP가 가진 QuestTargetID 값을 공통 퀘스트 통보 컴포넌트에 동기화합니다.
+		QuestEventNotifier->SetQuestTargetID(QuestTargetID);
+	}
 
 	if (IsValid(TypingSound)) TypingAudioComp->SetSound(TypingSound);
 
@@ -222,9 +229,11 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 
 			if (!QuestTargetID.IsNone())
 			{
-				if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+				// NPC 접근은 대화 완료가 아니라 "대화 시작 조건"만 만족한 것으로 서버에 알립니다.
+				if (QuestEventNotifier)
 				{
-					ScenarioSubsystem->NotifyQuestStartEvent(QuestTargetID, EQuestStartCondition::TalkToNPC);
+					QuestEventNotifier->SetQuestTargetID(QuestTargetID);
+					QuestEventNotifier->NotifyQuestStart(OtherPawn, EQuestStartCondition::TalkToNPC);
 				}
 			}
 			
@@ -270,6 +279,16 @@ void AAgentNPCBase::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedCo
 	// 플레이어가 박스 밖으로 나가면 즉시 시선을 거둡니다.
 	bIsLookingAtPlayer = false;
 	CurrentInteractPlayer = nullptr;
+}
+
+void AAgentNPCBase::SetQuestTargetID(FName InQuestTargetID)
+{
+	QuestTargetID = InQuestTargetID;
+
+	if (QuestEventNotifier)
+	{
+		QuestEventNotifier->SetQuestTargetID(QuestTargetID);
+	}
 }
 
 // 서버 문자열을 엔진 Enum으로 변환
@@ -530,13 +549,22 @@ void AAgentNPCBase::OnVoiceFinished()
 			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 		
-		if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+		AActor* QuestInstigator = CurrentInteractPlayer;
+		if (!IsValid(QuestInstigator))
 		{
-			// ScenarioSubsystem->EndScenario(true);
-			ScenarioSubsystem->NotifyQuestConditionMet(QuestTargetID, EQuestClearCondition::TalkToNPC);
+			// 대화 중 플레이어 포인터가 정리된 예외 상황을 대비한 로컬 컨트롤러 폴백입니다.
+			QuestInstigator = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
 		}
-		 bIsLookingAtPlayer = false; 
-		 CurrentInteractPlayer = nullptr;
+
+		if (QuestEventNotifier && IsValid(QuestInstigator) && !QuestTargetID.IsNone())
+		{
+			// AI 대화가 최종 종료된 뒤에만 TalkToNPC 완료 조건을 서버로 보냅니다.
+			QuestEventNotifier->SetQuestTargetID(QuestTargetID);
+			QuestEventNotifier->NotifyQuestComplete(QuestInstigator, EQuestClearCondition::TalkToNPC);
+		}
+
+		bIsLookingAtPlayer = false;
+		CurrentInteractPlayer = nullptr;
 				
 		EndConversation();
 		return;

@@ -4,8 +4,8 @@
 #include "Actors/Characters/MurphyPlayer.h"
 
 #include "Components/BoxComponent.h"
+#include "Components/QuestEventNotifyComponent.h"
 #include "Components/WidgetComponent.h"
-#include "Manager/ScenarioSubsystem.h"
 #include "UI/HUD/BagPopupWidget.h"
 #include "UI/HUD/MainHUD.h"
 #include "Kismet/GameplayStatics.h"
@@ -27,11 +27,15 @@ AItemBaseActor::AItemBaseActor()
 	InteractUIWidget->SetupAttachment(RootComponent);
 	InteractUIWidget->SetWidgetSpace(EWidgetSpace::Screen);
 	InteractUIWidget->SetVisibility(false);
+
+	QuestEventNotifier = CreateDefaultSubobject<UQuestEventNotifyComponent>(TEXT("QuestEventNotifier"));
 }
 
 void AItemBaseActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SyncQuestEventTarget();
 	
 	if (InteractUIWidget && InteractUIClass)
 	{
@@ -51,14 +55,43 @@ void AItemBaseActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void AItemBaseActor::ConfigureQuestItem(FName InItemID, FName InQuestTargetID)
+{
+	ItemID = InItemID;
+
+	if (QuestEventNotifier)
+	{
+		QuestEventNotifier->SetQuestTargetID(InQuestTargetID.IsNone() ? ItemID : InQuestTargetID);
+	}
+}
+
 void AItemBaseActor::Interact(AMurphyPlayer* Player)
 {
-	if (!IsValid(Player))
+	// 1. 가방에 아이템 추가 (DataManager 연동)
+	if (GetItem(Player) == false)
 	{
 		return;
 	}
 
-	// 1. 가방에 아이템 추가 (DataManager 연동)
+	// 2. 서버에 GetItem 퀘스트 완료 통보
+	SyncQuestEventTarget();
+	if (QuestEventNotifier && !ResolveQuestTargetID().IsNone())
+	{
+		QuestEventNotifier->NotifyQuestComplete(Player, EQuestClearCondition::GetItem);
+	}
+
+	// 3. 아이템 획득 처리 - 월드에서 숨김
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+}
+
+bool AItemBaseActor::GetItem(AMurphyPlayer* Player)
+{
+	if (!IsValid(Player))
+	{
+		return false;
+	}
+
 	if (UGameInstance* GI = UGameplayStatics::GetGameInstance(this))
 	{
 		if (UDataManager* DataManager = GI->GetSubsystem<UDataManager>())
@@ -76,23 +109,12 @@ void AItemBaseActor::Interact(AMurphyPlayer* Player)
 			else
 			{
 				PRINTLOGW_JW(TEXT("[ItemBaseActor] DataManager에서 아이템 정보를 찾을 수 없습니다: %s"), *ItemID.ToString());
-			}
-		}
-
-		// 2. ScenarioSubsystem에 GetItem 퀘스트 완료 통보
-		if (UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>())
-		{
-			const FName EventTargetID = QuestTargetID.IsNone() ? ItemID : QuestTargetID;
-			if (!EventTargetID.IsNone())
-			{
-				ScenarioSS->NotifyQuestConditionMet(EventTargetID, EQuestClearCondition::GetItem);
+				return false;
 			}
 		}
 	}
 
-	// 3. 아이템 획득 처리 - 월드에서 숨김
-	SetActorHiddenInGame(true);
-	SetActorEnableCollision(false);
+	return true;
 }
 
 bool AItemBaseActor::IsInPlayerSight(const AMurphyPlayer* Player) const
@@ -138,5 +160,23 @@ void AItemBaseActor::OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedC
 		{
 			InteractUIWidget->SetVisibility(false);
 		}
+	}
+}
+
+FName AItemBaseActor::ResolveQuestTargetID() const
+{
+	if (QuestEventNotifier && !QuestEventNotifier->GetQuestTargetID().IsNone())
+	{
+		return QuestEventNotifier->GetQuestTargetID();
+	}
+
+	return ItemID;
+}
+
+void AItemBaseActor::SyncQuestEventTarget()
+{
+	if (QuestEventNotifier)
+	{
+		QuestEventNotifier->SetQuestTargetID(ResolveQuestTargetID());
 	}
 }

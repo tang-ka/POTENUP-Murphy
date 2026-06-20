@@ -3,12 +3,20 @@
 #include "Framework/Prologue/PrologueGameMode.h"
 
 #include "Murphy.h"
+#include "Framework/MurphyPlayerController.h"
+#include "Framework/MurphyPlayerState.h"
+#include "Framework/Prologue/PrologueGameState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "Manager/LevelStreamingSubsystem.h"
 
 APrologueGameMode::APrologueGameMode()
 {
+	// 입국심사/수화물 시나리오에서 개인/공유 퀘스트를 라우팅하려면 공통 Murphy GameState가 필요합니다.
+	GameStateClass = APrologueGameState::StaticClass();
+	PlayerControllerClass = AMurphyPlayerController::StaticClass();
+	PlayerStateClass = AMurphyPlayerState::StaticClass();
+
 	// 이후 씬: 3인칭 Focus 기본
 	ChatViewMode = EChatViewMode::ThirdPersonFocus;
 }

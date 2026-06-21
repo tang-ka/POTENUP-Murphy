@@ -41,7 +41,7 @@ void UBagPopupWidget::AddItem(const FItemTableRow& Item)
 		return;
 	}
 
-	UItemWidget* NewItemWidget = CreateWidget<UItemWidget>(GetWorld(), ItemWidgetClass);
+	UItemWidget* NewItemWidget = CreateWidget<UItemWidget>(GetOwningPlayer(), ItemWidgetClass);
 	if (!IsValid(NewItemWidget))
 	{
 		return;

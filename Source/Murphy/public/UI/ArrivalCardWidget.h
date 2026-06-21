@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/EditableText.h"
 #include "ArrivalCardWidget.generated.h"
 
+class UEditableText;
 class UTextBlock;
 /**
  * 
@@ -17,12 +19,38 @@ class MURPHY_API UArrivalCardWidget : public UUserWidget
 	
 	
 private:
+	// Name
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UEditableText> etxt_Surname;
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UEditableText> etxt_Givenname;
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UTextBlock> txt_SurnameDisplay;
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UTextBlock> txt_GivennameDisplay;
+	
+	// Random Situations
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UTextBlock> txt_VisitLocation;
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UTextBlock> txt_CustomsItem;
 	
-public:
+protected:
 	virtual void NativeConstruct() override;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = "Murphy|CardData")
+	void SetReadOnlyData(const FText& InSurname, const FText& InGivenname);
+	
+	FText GetSurnameInput() const { return etxt_Surname ? etxt_Surname->GetText() : FText::GetEmpty(); }
+	FText GetGivennameInput() const { return etxt_Givenname ? etxt_Givenname->GetText() : FText::GetEmpty(); }
+	
+private:
+	// 텍스트 입력 검사 함수
+	UFUNCTION()
+	void OnSurnameTextChanged(const FText& Text);
+	
+	UFUNCTION()
+	void OnGivennameTextChanged(const FText& Text);
 	
 };

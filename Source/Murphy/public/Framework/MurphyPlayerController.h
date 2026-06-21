@@ -6,20 +6,27 @@
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
 #include "Data/CinematicTypes.h"
+#include "Data/GameDataTypes.h"
 #include "Data/STTDataTypes.h"
 #include "MurphyPlayerController.generated.h"
 
 class AAgentNPCBase;
 class UInputAction;
+class UQuestEventNotifyComponent;
 
 UCLASS()
 class MURPHY_API AMurphyPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
+public:
+	AMurphyPlayerController();
+
 protected:
 	virtual void BeginPlay() override;
-	
+	virtual void OnRep_PlayerState() override;
+	virtual void SetupInputComponent() override;
+
 	// === 통합 테스트 커맨드 ===
 	UFUNCTION(Exec)
 	void Test_StartScenario(int32 ScenarioIndex);
@@ -34,11 +41,43 @@ public:
 	void SetActiveNPC(AAgentNPCBase* NewNPC);
 	AAgentNPCBase* GetTargetNPC() const { return TargetNPC; }
 
+	// UI처럼 ActorComponent를 직접 소유하지 않는 호출자가 퀘스트 완료 조건을 통보하는 로컬 진입점입니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Quest")
+	bool NotifyQuestConditionFromLocal(FName TargetID, EQuestClearCondition Condition);
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	UQuestEventNotifyComponent* GetQuestEventNotifier() const { return QuestEventNotifier; }
+
 	// SubLevel_Immigration을 언로드하고 SubLevel_BaggageClaim으로 전환 (로컬 클라이언트 전용)
 	UFUNCTION(BlueprintCallable, Category="Level Streaming")
 	void TransitionToBaggageClaim();
 
+	// 퀘스트 시작 조건만 서버로 전달합니다. NPC 접근처럼 완료와 분리해야 할 때 사용합니다.
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyQuestStartEvent(FName TargetID, EQuestStartCondition StartCondition);
+
+	// 퀘스트 완료 조건을 서버로 전달합니다. 서버 GameState가 개인/공유 정책에 따라 라우팅합니다.
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+
 private:
+	void BindLocalQuestStateSources();
+	void HandleAdvanceSubQuestTestKey();
+	bool AdvanceCurrentSubQuestForTest();
+	bool ResolveCurrentSubQuestForTest(
+		const TArray<FName>& QuestOrder,
+		const TArray<FQuestRuntimeData>& ActiveQuests,
+		FName& OutQuestID,
+		FName& OutTargetID,
+		EQuestClearCondition& OutClearCondition) const;
+	bool ResolveCurrentSubQuestForTest(
+		const TArray<FName>& QuestOrder,
+		const TMap<FName, FQuestRuntimeData>& ActiveQuests,
+		FName& OutQuestID) const;
+
+	UFUNCTION(Server, Reliable)
+	void ServerAdvanceCurrentSubQuestForTest();
+
 	// 녹음 완료 델리게이트 바인딩 함수
 	UFUNCTION()
 	void OnAudioRecordingFinished(const FString& SavedFilePath);
@@ -76,6 +115,12 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestReposition(const FName& SubLevelName);
 
+	UFUNCTION(Server, Reliable)
+	void ServerStartScenarioForTest(EScenarioType NewScenario);
+
+	UFUNCTION(Server, Reliable)
+	void ServerEndScenarioForTest(bool bSuccess);
+
 	// Airplane 등 진입 시 서버가 발급한 PlayId로 로컬에서 시네마틱 재생.
 	UFUNCTION(Client, Reliable)
 	void Client_PlayCinematic(const FCinematicPlayRequest& Request, int32 PlayId);
@@ -83,4 +128,8 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<AAgentNPCBase> TargetNPC;
+
+	// 가방 UI 등 비Actor 호출부도 같은 퀘스트 통보 경로를 쓰도록 PlayerController가 소유합니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UQuestEventNotifyComponent> QuestEventNotifier;
 };

@@ -12,7 +12,7 @@ class UItemDetailWidget;
 
 /**
  * 가방(BagPopupWidget) 내 개별 아이템 슬롯 위젯
- * 클릭 시 bIsUsable 여부에 따라 즉시 사용(A) 또는 상세 팝업(B) 분기
+ * 클릭 시 상세 팝업을 열어 CheckItem을 통보하고, 사용 버튼으로 UseItem을 통보합니다.
  */
 UCLASS()
 class MURPHY_API UItemWidget : public UUserWidget
@@ -28,9 +28,13 @@ public:
 	 */
 	void InitItem(const FItemTableRow& Info);
 	
-	/** 아이템 버튼 클릭 시 호출 (A/B 분기 처리) */
+	/** 아이템 버튼 클릭 시 상세 팝업을 엽니다. */
 	UFUNCTION()
 	void OnItemButtonClicked();
+
+	/** UI 버튼 경로에서 아이템 사용과 퀘스트 통보를 함께 처리합니다. */
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Item")
+	void UseItemFromUI();
 	
 	/**
 	 * 아이템 사용 처리 (즉시 사용 경로 A, 팝업 버튼 경로 B 공용)
@@ -62,6 +66,6 @@ private:
 	/** 상세 팝업 표시 (B 경로) */
 	void ShowDetailPopup();
 
-	/** Bag 아이템 조작을 퀘스트 시스템에 통보합니다. */
+	/** Bag 아이템 조작을 PlayerController의 QuestEventNotifier에 통보합니다. */
 	void NotifyQuestCondition(EQuestClearCondition Condition) const;
 };

@@ -88,6 +88,16 @@ private:
 	// 모든 활성 퀘스트가 완료되었는지 검사합니다.
 	void CheckAllQuestsCompleted();
 
+	const FScenarioTableRow* GetCurrentScenarioData() const;
+	bool StartFirstSequentialSubQuest();
+	bool StartNextSequentialSubQuest(FName CompletedQuestID);
+	bool IsSequentialSubQuest(FName QuestID) const;
+
+	// 메인 퀘스트는 하위 필수 퀘스트 완료 결과로만 완료 처리합니다.
+	bool IsMainQuest(FName QuestID) const;
+	bool AreRequiredChildQuestsCompleted() const;
+	void CompleteMainQuestsAndEndScenario();
+
 	UPROPERTY()
 	EScenarioType CurScenario = EScenarioType::None;
 

@@ -8,9 +8,12 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 
+#include "Components/QuestEventNotifyComponent.h"
+#include "Components/InputComponent.h"
 #include "Json.h"
 #include "JsonObjectConverter.h"
 #include "HttpModule.h"
+#include "InputCoreTypes.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
@@ -18,12 +21,20 @@
 
 #include "Murphy.h"
 #include "Manager/CinematicManagerSubsystem.h"
+#include "Manager/DataManager.h"
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/AIBridgeSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
+#include "Framework/MurphyGameStateBase.h"
+#include "Framework/MurphyPlayerState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
+
+AMurphyPlayerController::AMurphyPlayerController()
+{
+	QuestEventNotifier = CreateDefaultSubobject<UQuestEventNotifyComponent>(TEXT("QuestEventNotifier"));
+}
 
 void AMurphyPlayerController::BeginPlay()
 {
@@ -41,7 +52,202 @@ void AMurphyPlayerController::BeginPlay()
 	if (IsLocalController())
 	{
 		SubscribeLevelEnterEvents();
+		BindLocalQuestStateSources();
 	}
+}
+
+void AMurphyPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (!InputComponent)
+	{
+		return;
+	}
+
+	FInputKeyBinding& AdvanceSubQuestBinding = InputComponent->BindKey(
+		EKeys::N,
+		IE_Pressed,
+		this,
+		&AMurphyPlayerController::HandleAdvanceSubQuestTestKey);
+	AdvanceSubQuestBinding.bConsumeInput = false;
+}
+
+void AMurphyPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (IsLocalController())
+	{
+		BindLocalQuestStateSources();
+	}
+}
+
+void AMurphyPlayerController::HandleAdvanceSubQuestTestKey()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		ServerAdvanceCurrentSubQuestForTest_Implementation();
+	}
+	else
+	{
+		ServerAdvanceCurrentSubQuestForTest();
+	}
+}
+
+void AMurphyPlayerController::ServerAdvanceCurrentSubQuestForTest_Implementation()
+{
+	if (!AdvanceCurrentSubQuestForTest())
+	{
+		PRINTLOGW_JW(TEXT("[Test] N 키 서브퀘스트 넘기기 실패: 진행 중인 서브퀘스트를 찾지 못했습니다."));
+	}
+}
+
+bool AMurphyPlayerController::AdvanceCurrentSubQuestForTest()
+{
+	AMurphyGameStateBase* MurphyGameState = GetWorld() ? GetWorld()->GetGameState<AMurphyGameStateBase>() : nullptr;
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+
+	if (MurphyGameState && MurphyPlayerState && MurphyGameState->IsInScenario())
+	{
+		const FScenarioTableRow* ScenarioData = MurphyGameState->GetCurrentScenarioData();
+		if (!ScenarioData)
+		{
+			return false;
+		}
+
+		const TArray<FQuestRuntimeData>& ActiveQuests = ScenarioData->QuestProgressScope == EQuestProgressScope::Shared
+			? MurphyGameState->GetSharedActiveQuests()
+			: MurphyPlayerState->GetPersonalActiveQuests();
+
+		FName QuestID;
+		FName TargetID;
+		EQuestClearCondition ClearCondition = EQuestClearCondition::None;
+		if (!ResolveCurrentSubQuestForTest(ScenarioData->RequiredQuestIDs, ActiveQuests, QuestID, TargetID, ClearCondition))
+		{
+			return false;
+		}
+
+		if (TargetID.IsNone() || ClearCondition == EQuestClearCondition::None)
+		{
+			PRINTLOGW_JW(TEXT("[Test] N 키 서브퀘스트 넘기기 실패: 완료 조건/대상 ID가 비어 있습니다. QuestID: %s"), *QuestID.ToString());
+			return false;
+		}
+
+		PRINTLOGW_JW(TEXT("[Test] N 키로 현재 서브퀘스트 완료 처리: %s"), *QuestID.ToString());
+		MurphyGameState->NotifyQuestConditionMet(MurphyPlayerState, TargetID, ClearCondition);
+		return true;
+	}
+
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance() ? GetGameInstance()->GetSubsystem<UScenarioSubsystem>() : nullptr)
+	{
+		if (!ScenarioSubsystem->IsInScenario())
+		{
+			return false;
+		}
+
+		const UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+		if (!DataManager)
+		{
+			return false;
+		}
+
+		const FString EnumName = StaticEnum<EScenarioType>()->GetNameStringByValue(static_cast<int64>(ScenarioSubsystem->GetCurScenario()));
+		const FScenarioTableRow* ScenarioData = DataManager->GetScenarioData(FName(*EnumName));
+		if (!ScenarioData)
+		{
+			return false;
+		}
+
+		FName QuestID;
+		if (!ResolveCurrentSubQuestForTest(ScenarioData->RequiredQuestIDs, ScenarioSubsystem->GetActiveQuests(), QuestID))
+		{
+			return false;
+		}
+
+		PRINTLOGW_JW(TEXT("[Test] N 키로 현재 서브퀘스트 완료 처리(ScenarioSubsystem): %s"), *QuestID.ToString());
+		ScenarioSubsystem->CompleteQuest(QuestID);
+		return true;
+	}
+
+	return false;
+}
+
+bool AMurphyPlayerController::ResolveCurrentSubQuestForTest(
+	const TArray<FName>& QuestOrder,
+	const TArray<FQuestRuntimeData>& ActiveQuests,
+	FName& OutQuestID,
+	FName& OutTargetID,
+	EQuestClearCondition& OutClearCondition) const
+{
+	const UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		return false;
+	}
+
+	for (FName QuestID : QuestOrder)
+	{
+		const FQuestRuntimeData* RuntimeData = ActiveQuests.FindByPredicate([QuestID](const FQuestRuntimeData& Candidate)
+		{
+			return Candidate.QuestID == QuestID;
+		});
+
+		if (!RuntimeData || RuntimeData->QuestState != EScenarioState::InProgress)
+		{
+			continue;
+		}
+
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID);
+		if (!QuestData || QuestData->QuestType != EQuestType::SubQuest)
+		{
+			continue;
+		}
+
+		OutQuestID = QuestID;
+		OutTargetID = QuestData->QuestTargetID;
+		OutClearCondition = QuestData->ClearCondition;
+		return true;
+	}
+
+	return false;
+}
+
+bool AMurphyPlayerController::ResolveCurrentSubQuestForTest(
+	const TArray<FName>& QuestOrder,
+	const TMap<FName, FQuestRuntimeData>& ActiveQuests,
+	FName& OutQuestID) const
+{
+	const UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		return false;
+	}
+
+	for (FName QuestID : QuestOrder)
+	{
+		const FQuestRuntimeData* RuntimeData = ActiveQuests.Find(QuestID);
+		if (!RuntimeData || RuntimeData->QuestState != EScenarioState::InProgress)
+		{
+			continue;
+		}
+
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID);
+		if (!QuestData || QuestData->QuestType != EQuestType::SubQuest)
+		{
+			continue;
+		}
+
+		OutQuestID = QuestID;
+		return true;
+	}
+
+	return false;
 }
 
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
@@ -52,6 +258,96 @@ void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+	}
+}
+
+bool AMurphyPlayerController::NotifyQuestConditionFromLocal(FName TargetID, EQuestClearCondition Condition)
+{
+	if (TargetID.IsNone() || Condition == EQuestClearCondition::None)
+	{
+		return false;
+	}
+
+	if (QuestEventNotifier)
+	{
+		// UI는 ActorComponent를 직접 붙일 수 없으므로, PC가 소유한 통보 컴포넌트를 재사용합니다.
+		QuestEventNotifier->SetQuestTargetID(TargetID);
+		return QuestEventNotifier->NotifyQuestComplete(this, Condition);
+	}
+
+	if (!IsLocalController())
+	{
+		return false;
+	}
+
+	// 컴포넌트가 없는 예외 상황에서도 기존 퀘스트 흐름이 완전히 끊기지 않도록 최소 폴백을 둡니다.
+	ServerNotifyQuestConditionMet(TargetID, Condition);
+	return true;
+}
+
+void AMurphyPlayerController::ServerNotifyQuestStartEvent_Implementation(FName TargetID, EQuestStartCondition StartCondition)
+{
+	if (TargetID.IsNone() || StartCondition == EQuestStartCondition::None)
+	{
+		return;
+	}
+
+	AMurphyGameStateBase* MurphyGameState = GetWorld() ? GetWorld()->GetGameState<AMurphyGameStateBase>() : nullptr;
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (MurphyGameState && MurphyPlayerState)
+	{
+		// 최종 저장소 선택은 GameState가 ScenarioData 정책을 보고 결정합니다.
+		MurphyGameState->NotifyQuestStartEvent(MurphyPlayerState, TargetID, StartCondition);
+		return;
+	}
+
+	// 아직 MurphyGameStateBase를 쓰지 않는 맵에서도 기존 테스트가 끊기지 않도록 남겨둔 호환 경로입니다.
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance() ? GetGameInstance()->GetSubsystem<UScenarioSubsystem>() : nullptr)
+	{
+		ScenarioSubsystem->NotifyQuestStartEvent(TargetID, StartCondition);
+	}
+}
+
+void AMurphyPlayerController::ServerNotifyQuestConditionMet_Implementation(FName TargetID, EQuestClearCondition Condition)
+{
+	if (TargetID.IsNone() || Condition == EQuestClearCondition::None)
+	{
+		return;
+	}
+
+	AMurphyGameStateBase* MurphyGameState = GetWorld() ? GetWorld()->GetGameState<AMurphyGameStateBase>() : nullptr;
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (MurphyGameState && MurphyPlayerState)
+	{
+		// 클라이언트 액터/UI에서 발생한 퀘스트 완료 이벤트는 반드시 서버 GameState를 거쳐 처리합니다.
+		MurphyGameState->NotifyQuestConditionMet(MurphyPlayerState, TargetID, Condition);
+		return;
+	}
+
+	// 새 GameState가 없는 환경에서는 기존 ScenarioSubsystem 로직으로 폴백합니다.
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance() ? GetGameInstance()->GetSubsystem<UScenarioSubsystem>() : nullptr)
+	{
+		ScenarioSubsystem->NotifyQuestConditionMet(TargetID, Condition);
+	}
+}
+
+void AMurphyPlayerController::BindLocalQuestStateSources()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	if (UUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UUIManagerSubsystem>())
+	{
+		// PlayerState는 OnRep로 늦게 들어올 수 있으므로 BeginPlay와 OnRep_PlayerState 양쪽에서 재시도합니다.
+		UIManager->BindQuestStateSources();
 	}
 }
 
@@ -324,26 +620,67 @@ void AMurphyPlayerController::Server_RequestReposition_Implementation(const FNam
 		(*FoundStart)->GetActorRotation());
 }
 
+void AMurphyPlayerController::ServerStartScenarioForTest_Implementation(EScenarioType NewScenario)
+{
+	if (AMurphyGameStateBase* MurphyGameState = GetWorld() ? GetWorld()->GetGameState<AMurphyGameStateBase>() : nullptr)
+	{
+		// 테스트 명령도 서버 GameState를 우선 사용해 실제 멀티 흐름과 같은 경로를 탑니다.
+		MurphyGameState->StartScenario(NewScenario);
+		return;
+	}
+
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance() ? GetGameInstance()->GetSubsystem<UScenarioSubsystem>() : nullptr)
+	{
+		ScenarioSubsystem->StartScenario(NewScenario);
+	}
+}
+
+void AMurphyPlayerController::ServerEndScenarioForTest_Implementation(bool bSuccess)
+{
+	if (AMurphyGameStateBase* MurphyGameState = GetWorld() ? GetWorld()->GetGameState<AMurphyGameStateBase>() : nullptr)
+	{
+		MurphyGameState->EndScenario(bSuccess);
+		return;
+	}
+
+	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance() ? GetGameInstance()->GetSubsystem<UScenarioSubsystem>() : nullptr)
+	{
+		ScenarioSubsystem->EndScenario(bSuccess);
+	}
+}
+
 // ==============================================================================
 // === 테스트 커맨드 ===
 // ==============================================================================
 
 void AMurphyPlayerController::Test_StartScenario(int32 ScenarioIndex)
 {
-	if (UScenarioSubsystem* ScenarioSubsys = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+	const EScenarioType ScenarioType = static_cast<EScenarioType>(ScenarioIndex);
+
+	if (HasAuthority())
 	{
-		ScenarioSubsys->StartScenario(static_cast<EScenarioType>(ScenarioIndex));
-		PRINTLOGW_JW(TEXT("[Test] 시나리오 강제 시작: 인덱스 %d"), ScenarioIndex);
+		ServerStartScenarioForTest_Implementation(ScenarioType);
 	}
+	else
+	{
+		ServerStartScenarioForTest(ScenarioType);
+	}
+
+	PRINTLOGW_JW(TEXT("[Test] 시나리오 강제 시작 요청: 인덱스 %d"), ScenarioIndex);
 }
 
 void AMurphyPlayerController::Test_EndScenarioAndTravel(FName NextLevelKey)
 {
-	if (UScenarioSubsystem* ScenarioSubsystem = GetGameInstance()->GetSubsystem<UScenarioSubsystem>())
+	if (HasAuthority())
 	{
-		ScenarioSubsystem->EndScenario(true);
-		PRINTLOGW_JW(TEXT("[Test] 시나리오 성공 처리 완료"));
+		ServerEndScenarioForTest_Implementation(true);
 	}
+	else
+	{
+		ServerEndScenarioForTest(true);
+	}
+
+	PRINTLOGW_JW(TEXT("[Test] 시나리오 성공 처리 요청 완료"));
 	
 	if (ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>())
 	{

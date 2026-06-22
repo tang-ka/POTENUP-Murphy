@@ -270,5 +270,4 @@ public:
 	FString GetLastNpcMessage() const { return LastNpcMessage; }
 	FString GetNPCRole() const { return NPCRole; }
 	FAI_ScenarioState GetScenarioState() const { return CurrentScenarioState; }
-	
 };

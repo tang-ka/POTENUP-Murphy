@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 UPlayerViewComponent::UPlayerViewComponent()
@@ -164,7 +165,26 @@ void UPlayerViewComponent::ApplyFirstPersonTalk()
 	// 복귀 기준값을 아직 못 캐싱했다면 여기서 확보
 	CacheDefaultCameraTransform();
 
-	CameraBoom->AttachToComponent(Player->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, FName(TEXT("headSocket")));
+	// 메타휴먼은 Body/Face 등으로 컴포넌트가 분리되어 있으므로 이름으로 Body를 찾는다
+	USkeletalMeshComponent* BodyMesh = nullptr;
+	TArray<USkeletalMeshComponent*> SkeletalMeshes;
+	Player->GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	{
+		if (SkelMesh->GetName().Equals(TEXT("Body"), ESearchCase::IgnoreCase))
+		{
+			BodyMesh = SkelMesh;
+			break;
+		}
+	}
+
+	if (!BodyMesh)
+	{
+		PRINTLOG_SH(TEXT("[View] Body 스켈레탈 메시를 찾지 못함"));
+		return;
+	}
+
+	CameraBoom->AttachToComponent(BodyMesh, FAttachmentTransformRules::KeepRelativeTransform, FName(TEXT("headSocket")));
 	CameraBoom->TargetArmLength = 0.0f;
 	CameraBoom->SetRelativeLocation(FVector::ZeroVector);
 

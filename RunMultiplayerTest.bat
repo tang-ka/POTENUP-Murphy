@@ -35,14 +35,12 @@ if not exist "%EXE%" ( echo [ERROR] UnrealEditor.exe not found. & pause & exit /
 if not exist "%UPROJECT%" ( echo [ERROR] .uproject not found. & pause & exit /b 1 )
 
 echo Launching instance 1 (top-left)...
-start "" "%EXE%" "%UPROJECT%" /Game/Maps/Lv_Lobby -game -WINDOWED -ResX=%HW% -ResY=%HH% -WinX=0 -WinY=%MARGIN%
- -log
+start "" "%EXE%" "%UPROJECT%" /Game/Maps/Lv_Lobby -game -WINDOWED -ResX=%HW% -ResY=%HH% -WinX=0 -WinY=%MARGIN% -log
 
 timeout /t 3 /nobreak >nul
 
 echo Launching instance 2 (bottom-right)...
-start "" "%EXE%" "%UPROJECT%" /Game/Maps/Lv_Lobby -game -WINDOWED -ResX=%HW% -ResY=%HH% -WinX=%HW% -WinY=%MARGIN%
- -log
+start "" "%EXE%" "%UPROJECT%" /Game/Maps/Lv_Lobby -game -WINDOWED -ResX=%HW% -ResY=%HH% -WinX=%HW% -WinY=%MARGIN% -log
 
 echo.
 echo Done. If no windows appeared, read messages above.

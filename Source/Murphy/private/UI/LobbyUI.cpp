@@ -324,7 +324,18 @@ void ULobbyUI::OnCreateSessionButtonClicked()
 	Info.HostName    = Input_HostName    ? Input_HostName->GetText().ToString()    : TEXT("");
 	Info.MaxPlayers  = 2;
 	Info.bIsLAN      = true;
-
+	
+	// ========= Test용 기본값 설정 =========
+	if (Info.SessionName.IsEmpty())
+	{
+		Info.SessionName = TEXT("DefaultSession");
+	}
+	if (Info.HostName.IsEmpty())
+	{
+		Info.HostName = TEXT("HostPlayer");
+	}
+	// ======================================
+	
 	PRINTLOG_SH(TEXT("세션 생성 요청 — SessionName:%s, HostName:%s"), *Info.SessionName, *Info.HostName);
 	NetworkManager->CreateSession(Info);
 }

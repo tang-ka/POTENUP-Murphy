@@ -30,7 +30,7 @@ public:
 	
 	/** 호스트가 선택한 여행지 */
 	UPROPERTY(ReplicatedUsing = OnRep_SelectedDestination, VisibleAnywhere, BlueprintReadOnly, Category = "Session|State")
-	ETravelDestination SelectedDestination = ETravelDestination::None;
+	ETravelDestination SelectedDestination = ETravelDestination::NewYork;
 
 	// 여행지 복제 시 위젯 갱신용 델리게이트
 	FSimpleMulticastDelegate OnSelectedDestinationChanged;

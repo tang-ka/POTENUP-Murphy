@@ -12,12 +12,6 @@
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Online/OnlineSessionNames.h"
 
-namespace SessionKeys
-{
-	static const FName SessionName = FName(TEXT("SESSION_NAME"));
-	static const FName HostName = FName(TEXT("HOST_NAME"));
-}
-
 void UNetworkManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -68,32 +62,40 @@ void UNetworkManagerSubsystem::CreateSession(FSessionInfo Info)
 	SetSessionState(ESessionState::Creating);
 	
 	// 3. 세션 설정 구성
+	FName SubsystemName = IOnlineSubsystem::Get()->GetSubsystemName();
+	const bool bIsLAN = SubsystemName == "NULL";
+
 	FOnlineSessionSettings SessionSettings;
 	{
 		SessionSettings.bIsDedicated = false;
-		SessionSettings.bIsLANMatch = Info.bIsLAN;
+		SessionSettings.bIsLANMatch = bIsLAN;
 		SessionSettings.NumPublicConnections = Info.MaxPlayers;
 		SessionSettings.bShouldAdvertise = true;
 		SessionSettings.bUsesPresence = true;
 		SessionSettings.bUseLobbiesIfAvailable = true;
-		SessionSettings.bAllowJoinViaPresence = false;
-		SessionSettings.bAllowJoinInProgress = false;
+		SessionSettings.bAllowJoinViaPresence = true;
+		SessionSettings.bAllowJoinInProgress = true;
 		// SessionSettings.bUseLobbiesVoiceChatIfAvailable = true; // 나중에 음성채팅 추가시에 넣기
 		
 		SessionSettings.Set(
-			SessionKeys::SessionName, 
-			StringBase64Encode(Info.SessionName), 
+			SETTING_CUSTOM,
+			StringBase64Encode(Info.SessionName),
 			EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-		
+
 		SessionSettings.Set(
-			SessionKeys::HostName, 
-			StringBase64Encode(Info.HostName), 
+			FName(TEXT("HOSTNAME")),
+			StringBase64Encode(Info.HostName),
+			EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+		SessionSettings.Set(
+			SETTING_SESSION_TEMPLATE_NAME,
+			FString(TEXT("MURPHY_V0.1")),
 			EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	}
 	
 	FUniqueNetIdPtr netID = GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();
 	
-	PRINTLOG_SH(TEXT("세션 생성 시작 : %s"), *Info.ToString());
+	PRINTLOG_SH(TEXT("세션 생성 시작: %s, Subsystem=%s, bIsLAN=%d"), *Info.ToString(), *SubsystemName.ToString(), bIsLAN);
 	SessionInterface->CreateSession(*netID, NAME_GameSession, SessionSettings);
 }
 
@@ -126,16 +128,32 @@ void UNetworkManagerSubsystem::FindSessions(int32 MaxSearchResults, bool bIsLAN)
 	SetSessionState(ESessionState::Finding);
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
+
+	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	const FName SubsystemName = OnlineSubsystem ? OnlineSubsystem->GetSubsystemName() : NAME_None;
+	const bool bIsLANQuery = SubsystemName == FName("NULL");
+
 	SessionSearch->MaxSearchResults = MaxSearchResults;
-	SessionSearch->bIsLanQuery      = bIsLAN;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	SessionSearch->bIsLanQuery = bIsLANQuery;
+	if (bIsLANQuery)
+	{
+		SessionSearch->QuerySettings.Set(FName(TEXT("PRESENCESEARCH")), true, EOnlineComparisonOp::Equals);
+		PRINTLOG_SH(TEXT("세션 검색 모드: LAN"));
+	}
+	else
+	{
+		SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+		PRINTLOG_SH(TEXT("세션 검색 모드: Steam Lobby"));
+	}
+
+	SessionSearch->QuerySettings.Set(SETTING_SESSION_TEMPLATE_NAME, FString(TEXT("MURPHY_V0.1")), EOnlineComparisonOp::Equals);
 
 	OnFindSessionsCompleteHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(OnFindSessionsComplete);
 
 	FUniqueNetIdPtr NetID = GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();
 	SessionInterface->FindSessions(*NetID, SessionSearch.ToSharedRef());
 
-	PRINTLOG_SH(TEXT("세션 검색 시작: MaxResults=%d, bIsLAN=%d"), MaxSearchResults, bIsLAN);
+	PRINTLOG_SH(TEXT("세션 검색 시작: MaxResults=%d, RequestedLAN=%d, Subsystem=%s, bIsLAN=%d"), MaxSearchResults, bIsLAN, *SubsystemName.ToString(), bIsLANQuery);
 }
 
 void UNetworkManagerSubsystem::HandleFindSessionsComplete(bool bWasSuccessful)
@@ -207,6 +225,13 @@ void UNetworkManagerSubsystem::HandleJoinSessionComplete(FName SessionName, EOnJ
 	FString TravelURL;
 	if (SessionInterface->GetResolvedConnectString(SessionName, TravelURL))
 	{
+		if (TravelURL.EndsWith(TEXT(":0")))
+		{
+			TravelURL = TravelURL.LeftChop(2) + TEXT(":7777");
+		}
+
+		PRINTLOG_SH(TEXT("Join URL: %s"), *TravelURL);
+
 		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 		{
 			PC->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
@@ -244,8 +269,6 @@ void UNetworkManagerSubsystem::SetSessionState(ESessionState NewState)
 	            *UEnum::GetValueAsString(OldState), *UEnum::GetValueAsString(NewState));
 }
 
-
-
 void UNetworkManagerSubsystem::HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 {
 	SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(OnDestroySessionCompleteHandle);
@@ -259,6 +282,9 @@ void UNetworkManagerSubsystem::HandleDestroySessionComplete(FName SessionName, b
 
 	PRINTLOG_SH(TEXT("세션 삭제 완료: %s"), *SessionName.ToString());
 	SetSessionState(ESessionState::Idle);
+
+	// 세션 종료 후 로비 맵으로 복귀
+	UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/Lv_Lobby")));
 }
 
 FSessionInfo UNetworkManagerSubsystem::ExtractSessionInfo(const FOnlineSessionSearchResult& SearchResult)
@@ -266,17 +292,36 @@ FSessionInfo UNetworkManagerSubsystem::ExtractSessionInfo(const FOnlineSessionSe
 	FSessionInfo Info;
 
 	FString EncodedSessionName;
-	if (SearchResult.Session.SessionSettings.Get(SessionKeys::SessionName, EncodedSessionName))
+	if (SearchResult.Session.SessionSettings.Get(SETTING_CUSTOM, EncodedSessionName))
 	{
 		Info.SessionName = StringBase64Decode(EncodedSessionName);
+		PRINTLOG_SH(TEXT("SessionName 디코딩 성공: %s"), *Info.SessionName);
+	}
+	else
+	{
+		PRINTLOG_SH(TEXT("SessionName 디코딩 실패: SETTING_CUSTOM 없음"));
+	}
+
+	if (Info.SessionName.IsEmpty())
+	{
+		Info.SessionName = SearchResult.Session.GetSessionIdStr();
 	}
 
 	FString EncodedHostName;
-	if (SearchResult.Session.SessionSettings.Get(SessionKeys::HostName, EncodedHostName))
+	if (SearchResult.Session.SessionSettings.Get(FName(TEXT("HOSTNAME")), EncodedHostName))
 	{
 		Info.HostName = StringBase64Decode(EncodedHostName);
+		PRINTLOG_SH(TEXT("HostName 디코딩 성공: %s"), *Info.HostName);
+	}
+	else
+	{
+		PRINTLOG_SH(TEXT("HostName 디코딩 실패: HOSTNAME 없음"));
 	}
 
+	if (Info.HostName.IsEmpty())
+	{
+		Info.HostName = SearchResult.Session.OwningUserName;
+	}
 	Info.MaxPlayers = SearchResult.Session.SessionSettings.NumPublicConnections;
 	Info.bIsLAN     = SearchResult.Session.SessionSettings.bIsLANMatch;
 

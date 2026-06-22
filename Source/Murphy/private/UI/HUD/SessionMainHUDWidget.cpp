@@ -6,6 +6,8 @@
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
+#include "Engine/GameInstance.h"
+#include "Manager/NetworkManagerSubsystem.h"
 
 void USessionMainHUDWidget::NativeConstruct()
 {
@@ -29,6 +31,11 @@ void USessionMainHUDWidget::NativeConstruct()
 	if (Btn_Start)
 	{
 		Btn_Start->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnStartClicked);
+	}
+
+	if (Btn_Exit)
+	{
+		Btn_Exit->OnClicked.AddDynamic(this, &USessionMainHUDWidget::HandleBtnExitClicked);
 	}
 }
 
@@ -77,4 +84,25 @@ void USessionMainHUDWidget::HandleBtnStartClicked()
 {
 	PRINTLOG_SH(TEXT("Btn_Start Clicked"));
 	OnStartRequested.ExecuteIfBound();
+}
+
+void USessionMainHUDWidget::HandleBtnExitClicked()
+{
+	PRINTLOG_SH(TEXT("Btn_Exit Clicked"));
+
+	APlayerController* OwningPC = GetOwningPlayer();
+	if (!OwningPC)
+	{
+		PRINTLOG_SH(TEXT("HandleBtnExitClicked: OwningPlayer is null."));
+		return;
+	}
+
+	UNetworkManagerSubsystem* NetworkManager = OwningPC->GetGameInstance()->GetSubsystem<UNetworkManagerSubsystem>();
+	if (!NetworkManager)
+	{
+		PRINTLOG_SH(TEXT("HandleBtnExitClicked: NetworkManagerSubsystem is null."));
+		return;
+	}
+
+	NetworkManager->DestroySession();
 }

@@ -36,9 +36,9 @@ public:
 
 	virtual void OnRep_PlayerState() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 protected:
 	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 private:
 	/** PS가 준비된 시점에 HUD에 역할 반영 및 델리게이트 바인딩 */

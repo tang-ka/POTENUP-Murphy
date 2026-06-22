@@ -164,7 +164,7 @@ void UPlayerViewComponent::ApplyFirstPersonTalk()
 	// 복귀 기준값을 아직 못 캐싱했다면 여기서 확보
 	CacheDefaultCameraTransform();
 
-	CameraBoom->AttachToComponent(Player->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, FName(TEXT("first_person")));
+	CameraBoom->AttachToComponent(Player->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, FName(TEXT("headSocket")));
 	CameraBoom->TargetArmLength = 0.0f;
 	CameraBoom->SetRelativeLocation(FVector::ZeroVector);
 

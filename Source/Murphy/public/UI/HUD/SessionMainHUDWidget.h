@@ -63,6 +63,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Txt_Ready;
 #pragma endregion
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Exit;
 
 private:
 	bool bIsReady = false;
@@ -78,4 +81,7 @@ private:
 
 	UFUNCTION()
 	void HandleBtnStartClicked();
+
+	UFUNCTION()
+	void HandleBtnExitClicked();
 };

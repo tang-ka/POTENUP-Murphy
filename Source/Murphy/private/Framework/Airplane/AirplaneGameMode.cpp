@@ -4,12 +4,16 @@
 #include "Framework/Airplane/AirplaneGameMode.h"
 
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Actors/Characters/AgentNPCBase.h"
 #include "Framework/Airplane/AirplaneGameState.h"
 #include "Framework/MurphyPlayerController.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Murphy.h"
 #include "Data/CinematicTypes.h"
 #include "MediaSource.h"
+#include "Manager/CinematicManagerSubsystem.h"
+#include "Components/BoxComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 AAirplaneGameMode::AAirplaneGameMode()
 {
@@ -58,11 +62,44 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 		Request.Fade.FadeToBlackDuration = 0.f;
 
 		MurphyPC->Client_PlayCinematic(Request, 1);
+		
+		UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+		CinematicManager->OnCompleted.AddDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
 	}
 	else
 	{
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayerController 캐스팅 실패"));
 	}
 }
+
+void AAirplaneGameMode::HandleCinematicComplete(int32 PlayId)
+{
+	TArray<AActor*> FoundNPCs;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAgentNPCBase::StaticClass(), FoundNPCs);
+
+	for (AActor* Actor : FoundNPCs)
+	{
+		AAgentNPCBase* NPC = Cast<AAgentNPCBase>(Actor);
+		if (!NPC)
+		{
+			continue;
+		}
+
+		UBoxComponent* InteractionBox = NPC->FindComponentByClass<UBoxComponent>();
+		if (!InteractionBox)
+		{
+			PRINTLOG_SH(TEXT("[Airplane] %s의 InteractionBox를 찾지 못함"), *NPC->GetName());
+			continue;
+		}
+
+		FVector LocalLoc = InteractionBox->GetRelativeLocation();
+		LocalLoc.X *= -1.0f;
+		InteractionBox->SetRelativeLocation(LocalLoc);
+
+		PRINTLOG_SH(TEXT("[Airplane] %s InteractionBox X 반전 (%f)"), *NPC->GetName(), LocalLoc.X);
+	}
+}
+
+
 
 

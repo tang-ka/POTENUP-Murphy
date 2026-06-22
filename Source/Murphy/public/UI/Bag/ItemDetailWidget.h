@@ -52,6 +52,11 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Btn_Close;
 
+public:
+	/** 사용하기 버튼을 누르면 띄울 위젯 */ // 1. 임국심사서 -> ArrivalCardWidget, 2. 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<UUserWidget> UseWidget;
+	
 private:
 	/** 이 팝업을 띄운 ItemWidget - 사용 처리 위임 */
 	UPROPERTY()

@@ -4,13 +4,20 @@
 #include "Framework/Airplane/AirplaneGameMode.h"
 
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Framework/Airplane/AirplaneGameState.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Framework/MurphyPlayerState.h"
 #include "Murphy.h"
 #include "Data/CinematicTypes.h"
 #include "MediaSource.h"
 
 AAirplaneGameMode::AAirplaneGameMode()
 {
+	// 기내 시나리오도 멀티 퀘스트 정책을 쓰기 위해 공통 Murphy GameState/PlayerState를 기본값으로 고정합니다.
+	GameStateClass = AAirplaneGameState::StaticClass();
+	PlayerControllerClass = AMurphyPlayerController::StaticClass();
+	PlayerStateClass = AMurphyPlayerState::StaticClass();
+
 	// 기내 씬: 항상 1인칭 자유시점 고정
 	ChatViewMode = EChatViewMode::FirstPersonLocked;
 }

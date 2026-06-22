@@ -5,8 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
-#include "Kismet/GameplayStatics.h"
-#include "Manager/ScenarioSubsystem.h"
+#include "Framework/MurphyPlayerController.h"
 
 void UItemWidget::NativeConstruct()
 {
@@ -58,24 +57,25 @@ void UItemWidget::InitItem(const FItemTableRow& Info)
 
 void UItemWidget::OnItemButtonClicked()
 {
-	if (ItemData.bIsUsable)
+	ShowDetailPopup();
+}
+
+void UItemWidget::UseItemFromUI()
+{
+	if (!ItemData.bIsUsable)
 	{
-		// 즉시 사용
-		UseItem();
+		return;
 	}
-	else
-	{
-		// 상세 팝업 표시
-		ShowDetailPopup();
-	}
+
+	// 버튼 클릭으로 "사용"이 확정된 시점에 퀘스트를 먼저 통보해 BP 오버라이드 누락을 방지합니다.
+	NotifyQuestCondition(EQuestClearCondition::UseItem);
+	UseItem();
 }
 
 void UItemWidget::UseItem_Implementation()
 {
 	// todo 기본 구현 - 블루프린트에서 오버라이드하여 실제 사용 로직 추가
 	// 예: 사용 효과, 사운드, 이펙트 등
-
-	NotifyQuestCondition(EQuestClearCondition::UseItem);
 }
 
 void UItemWidget::ShowDetailPopup()
@@ -86,7 +86,7 @@ void UItemWidget::ShowDetailPopup()
 		return;
 	}
 
-	UItemDetailWidget* DetailWidget = CreateWidget<UItemDetailWidget>(GetWorld(), ItemDetailWidgetClass);
+	UItemDetailWidget* DetailWidget = CreateWidget<UItemDetailWidget>(GetOwningPlayer(), ItemDetailWidgetClass);
 	if (!IsValid(DetailWidget))
 	{
 		return;
@@ -105,11 +105,14 @@ void UItemWidget::NotifyQuestCondition(EQuestClearCondition Condition) const
 		return;
 	}
 
-	if (UGameInstance* GI = UGameplayStatics::GetGameInstance(this))
+	AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(GetOwningPlayer());
+	if (!IsValid(MurphyPC))
 	{
-		if (UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>())
-		{
-			ScenarioSS->NotifyQuestConditionMet(ItemData.ItemID, Condition);
-		}
+		return;
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[ItemWidget] 퀘스트 이벤트 !!"));
+
+	// 가방 UI는 직접 RPC를 호출하지 않고, PC가 소유한 QuestEventNotifier 경로를 재사용합니다.
+	MurphyPC->NotifyQuestConditionFromLocal(ItemData.ItemID, Condition);
 }

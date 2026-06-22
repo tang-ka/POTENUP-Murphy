@@ -5,15 +5,15 @@
 #include "GameFramework/Character.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
-#include "Manager/ScenarioSubsystem.h"
+#include "Data/GameDataTypes.h"
 #include "AgentNPCBase.generated.h"
 
 class UBoxComponent;
 class UAudioComponent;
 class UWidgetComponent;
 class USoundWave;
-class UScenarioSubsystem;
 class UAgentEmojiUI;
+class UQuestEventNotifyComponent;
 
 UCLASS()
 class MURPHY_API AAgentNPCBase : public ACharacter
@@ -61,6 +61,10 @@ protected:
 	// AI 응답 대기 중 재생할 타이핑 사운드 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Components")
 	TObjectPtr<UAudioComponent> TypingAudioComp;
+
+	// NPC 대화 시작/완료 결과를 퀘스트 서버 RPC로 전달하는 공통 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Components")
+	TObjectPtr<UQuestEventNotifyComponent> QuestEventNotifier;
 	
 	// AI 서버 응답을 대기하며 타이핑 애니메이션을 재생해야 하는지 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
@@ -164,6 +168,9 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category="AI|Info")
 	FName GetQuestTargetID() { return QuestTargetID; }
+
+	UFUNCTION(BlueprintCallable, Category="Murphy|Quest")
+	void SetQuestTargetID(FName InQuestTargetID);
 	
 protected:
 	// === Timer ===

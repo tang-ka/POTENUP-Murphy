@@ -73,7 +73,7 @@ void UItemDetailWidget::OnUseClicked()
 	// 사용 처리를 OwnerItemWidget에 위임
 	if (IsValid(OwnerItemWidget))
 	{
-		OwnerItemWidget->UseItem();
+		OwnerItemWidget->UseItemFromUI();
 	}
 
 	// 팝업 닫기

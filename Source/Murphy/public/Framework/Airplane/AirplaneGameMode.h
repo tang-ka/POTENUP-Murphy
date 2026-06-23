@@ -19,6 +19,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	UFUNCTION()
+	void HandleCinematicComplete(int32 PlayId);
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 };
 

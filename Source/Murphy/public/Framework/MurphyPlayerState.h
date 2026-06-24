@@ -80,9 +80,12 @@ public:
 
 	void StartPersonalScenario(EScenarioType NewScenario, const FScenarioTableRow* ScenarioData);
 	void ClearPersonalScenario();
-	void NotifyPersonalQuestEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyPersonalQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyPersonalQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+	void NotifyPersonalQuestStartEvent(FName TargetID, EQuestCondition EventCondition);
+	void NotifyPersonalQuestConditionMet(FName TargetID, EQuestCondition Condition);
+
+	// 현재 진행 중인 서브퀘스트의 PersonalActiveQuests 내 인덱스입니다. (INDEX_NONE = 없음)
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	int32 GetPersonalCurrentSubQuestIndex() const { return PersonalCurrentSubQuestIndex; }
 
 	// 이 PlayerState를 소유한 클라이언트에게만 개인 퀘스트 토스트를 띄울 때 사용합니다.
 	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
@@ -108,6 +111,10 @@ private:
 	// 개인 퀘스트 진행도입니다. TMap 복제 이슈를 피하기 위해 QuestID를 가진 배열로 관리합니다.
 	UPROPERTY(ReplicatedUsing = OnRep_PersonalActiveQuests, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
 	TArray<FQuestRuntimeData> PersonalActiveQuests;
+
+	// 현재 진행 중인 서브퀘스트의 PersonalActiveQuests 내 배열 인덱스입니다.
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	int32 PersonalCurrentSubQuestIndex = INDEX_NONE;
 
 	// GameState가 AllPlayersCompleted 정책을 판단할 때 참조하는 개인 시나리오 완료 목록입니다.
 	UPROPERTY(ReplicatedUsing = OnRep_CompletedPersonalScenarios, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))

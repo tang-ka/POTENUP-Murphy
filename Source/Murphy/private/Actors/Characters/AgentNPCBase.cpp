@@ -233,7 +233,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 				if (QuestEventNotifier)
 				{
 					QuestEventNotifier->SetQuestTargetID(QuestTargetID);
-					QuestEventNotifier->NotifyQuestStart(OtherPawn, EQuestStartCondition::TalkToNPC);
+					QuestEventNotifier->NotifyQuestStart(OtherPawn, EQuestCondition::TalkToNPC);
 				}
 			}
 			
@@ -560,7 +560,7 @@ void AAgentNPCBase::OnVoiceFinished()
 		{
 			// AI 대화가 최종 종료된 뒤에만 TalkToNPC 완료 조건을 서버로 보냅니다.
 			QuestEventNotifier->SetQuestTargetID(QuestTargetID);
-			QuestEventNotifier->NotifyQuestComplete(QuestInstigator, EQuestClearCondition::TalkToNPC);
+			QuestEventNotifier->NotifyQuestComplete(QuestInstigator, EQuestCondition::TalkToNPC);
 		}
 
 		bIsLookingAtPlayer = false;

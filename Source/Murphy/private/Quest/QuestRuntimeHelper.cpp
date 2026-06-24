@@ -1,8 +1,13 @@
 #include "Quest/QuestRuntimeHelper.h"
 
+#include "Murphy.h"
 #include "Manager/DataManager.h"
 
-void FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
+// ==============================================================================
+// === Public API ===
+// ==============================================================================
+
+int32 FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 	const UDataManager* DataManager,
 	const FScenarioTableRow* ScenarioData,
 	TArray<FQuestRuntimeData>& OutActiveQuests,
@@ -12,7 +17,7 @@ void FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 
 	if (!DataManager || !ScenarioData)
 	{
-		return;
+		return INDEX_NONE;
 	}
 
 	for (FName QuestID : ScenarioData->RequiredQuestIDs)
@@ -24,9 +29,8 @@ void FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 
 		FQuestRuntimeData NewQuestData;
 		NewQuestData.QuestID = QuestID;
-		NewQuestData.QuestState = EScenarioState::InProgress;
 
-		// 메인 퀘스트는 시나리오 목표로 항상 진행 중 상태를 유지하고, 서브/토스트 퀘스트는 시작 조건을 기다립니다.
+		// 메인 퀘스트는 항상 InProgress, 서브/토스트 퀘스트는 NotStarted로 초기화합니다.
 		if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
 		{
 			NewQuestData.QuestState = QuestData->QuestType == EQuestType::MainQuest
@@ -37,68 +41,167 @@ void FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 		OutActiveQuests.Add(NewQuestData);
 	}
 
-	// 시나리오 시작과 동시에 열려야 하는 퀘스트를 한 번 더 검사합니다.
-	TryStartQuestsByEvent(DataManager, OutActiveQuests, NAME_None, EQuestStartCondition::ScenarioStart, OutEvents);
+	// ScenarioStart 조건을 가진 퀘스트를 배열 순서대로 찾아 즉시 시작합니다.
+	// ScenarioStart 퀘스트는 항상 첫 번째 서브퀘스트이므로 인덱스 탐색 전에 처리합니다.
+	for (int32 Index = 0; Index < OutActiveQuests.Num(); ++Index)
+	{
+		FQuestRuntimeData& RuntimeData = OutActiveQuests[Index];
+		if (RuntimeData.QuestState != EScenarioState::NotStarted)
+		{
+			continue;
+		}
 
-	// 데이터에 시작 조건이 빠져 있어도 RequiredQuestIDs 순서상 첫 서브퀘스트는 시작합니다.
-	StartFirstSequentialSubQuest(DataManager, OutActiveQuests, OutEvents);
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
+		if (!QuestData || QuestData->QuestType == EQuestType::MainQuest)
+		{
+			continue;
+		}
+
+		if (QuestData->StartCondition == EQuestCondition::ScenarioStart)
+		{
+			StartQuestAtIndex(OutActiveQuests, Index, OutEvents);
+			// ScenarioStart 퀘스트가 첫 번째 서브퀘스트입니다.
+			return Index;
+		}
+	}
+
+	// ScenarioStart 퀘스트가 없으면 첫 번째 SubQuest를 찾아 반환합니다.
+	return FindNextSubQuestIndex(DataManager, OutActiveQuests, -1);
 }
 
-void FQuestRuntimeHelper::NotifyQuestEvent(
+void FQuestRuntimeHelper::ProcessQuestStartEvent(
 	const UDataManager* DataManager,
 	TArray<FQuestRuntimeData>& ActiveQuests,
+	int32& InOutCurrentSubQuestIndex,
 	FName TargetID,
-	EQuestStartCondition EventCondition,
+	EQuestCondition Condition,
+	TArray<FQuestRuntimeEvent>& OutEvents)
+{
+	if (!DataManager || Condition == EQuestCondition::None)
+	{
+		return;
+	}
+
+	if (!ActiveQuests.IsValidIndex(InOutCurrentSubQuestIndex))
+	{
+		return;
+	}
+
+	FQuestRuntimeData& CurrentQuest = ActiveQuests[InOutCurrentSubQuestIndex];
+
+	// 이미 진행 중이면 중복 시작을 무시합니다.
+	if (CurrentQuest.QuestState != EScenarioState::NotStarted)
+	{
+		return;
+	}
+
+	const FQuestTableRow* QuestData = DataManager->GetQuestData(CurrentQuest.QuestID);
+	if (!QuestData)
+	{
+		return;
+	}
+
+	// StartCondition과 StartTargetID(없으면 any) 매칭 확인
+	const bool bTargetMatched = QuestData->StartTargetID.IsNone()
+		? true
+		: QuestData->StartTargetID == TargetID;
+
+	if (QuestData->StartCondition == Condition && bTargetMatched)
+	{
+		StartQuestAtIndex(ActiveQuests, InOutCurrentSubQuestIndex, OutEvents);
+		PRINTLOG_JW(
+			TEXT("[QuestDebug] 시작 조건 처리됨. QuestID: %s, TargetID: %s, Condition: %d"),
+			*CurrentQuest.QuestID.ToString(),
+			*TargetID.ToString(),
+			static_cast<int32>(Condition));
+	}
+}
+
+void FQuestRuntimeHelper::ProcessQuestConditionMet(
+	const UDataManager* DataManager,
+	TArray<FQuestRuntimeData>& ActiveQuests,
+	int32& InOutCurrentSubQuestIndex,
+	FName TargetID,
+	EQuestCondition Condition,
 	TArray<FQuestRuntimeEvent>& OutEvents,
 	bool& bOutScenarioCompleted)
 {
 	bOutScenarioCompleted = false;
 
-	if (!DataManager || EventCondition == EQuestStartCondition::None)
+	if (!DataManager || Condition == EQuestCondition::None)
 	{
 		return;
 	}
 
-	EQuestClearCondition ClearCondition = EQuestClearCondition::None;
-	if (TryConvertStartConditionToClearCondition(EventCondition, ClearCondition))
+	if (!ActiveQuests.IsValidIndex(InOutCurrentSubQuestIndex))
 	{
-		// 일부 이벤트는 "조건 만족"과 "다음 시작 조건"을 동시에 의미하므로 완료 처리를 먼저 수행합니다.
-		TryCompleteQuestsByEvent(DataManager, ActiveQuests, TargetID, ClearCondition, OutEvents, bOutScenarioCompleted);
+		PRINTLOGW_JW(
+			TEXT("[QuestDebug] 완료 이벤트가 왔지만 유효한 서브퀘스트 인덱스가 없습니다. TargetID: %s, Condition: %d"),
+			*TargetID.ToString(),
+			static_cast<int32>(Condition));
+		return;
 	}
 
-	TryStartQuestsByEvent(DataManager, ActiveQuests, TargetID, EventCondition, OutEvents);
-}
+	FQuestRuntimeData& CurrentQuest = ActiveQuests[InOutCurrentSubQuestIndex];
 
-void FQuestRuntimeHelper::NotifyQuestStartEvent(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName TargetID,
-	EQuestStartCondition EventCondition,
-	TArray<FQuestRuntimeEvent>& OutEvents)
-{
-	if (!DataManager || EventCondition == EQuestStartCondition::None)
+	if (CurrentQuest.QuestState != EScenarioState::InProgress)
+	{
+		PRINTLOGW_JW(
+			TEXT("[QuestDebug] 현재 서브퀘스트가 InProgress 상태가 아닙니다. QuestID: %s, State: %d"),
+			*CurrentQuest.QuestID.ToString(),
+			static_cast<int32>(CurrentQuest.QuestState));
+		return;
+	}
+
+	const FQuestTableRow* QuestData = DataManager->GetQuestData(CurrentQuest.QuestID);
+	if (!QuestData)
 	{
 		return;
 	}
 
-	TryStartQuestsByEvent(DataManager, ActiveQuests, TargetID, EventCondition, OutEvents);
-}
+	// ClearCondition과 QuestTargetID 매칭 확인
+	if (QuestData->ClearCondition != Condition || QuestData->QuestTargetID != TargetID)
+	{
+		PRINTLOGW_JW(
+			TEXT("[QuestDebug] 완료 조건 불일치. QuestID: %s, Expected Condition: %d / TargetID: %s, Got Condition: %d / TargetID: %s"),
+			*CurrentQuest.QuestID.ToString(),
+			static_cast<int32>(QuestData->ClearCondition),
+			*QuestData->QuestTargetID.ToString(),
+			static_cast<int32>(Condition),
+			*TargetID.ToString());
+		return;
+	}
 
-void FQuestRuntimeHelper::NotifyQuestConditionMet(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName TargetID,
-	EQuestClearCondition ClearCondition,
-	TArray<FQuestRuntimeEvent>& OutEvents,
-	bool& bOutScenarioCompleted)
-{
-	NotifyQuestEvent(
-		DataManager,
-		ActiveQuests,
-		TargetID,
-		ConvertClearConditionToStartCondition(ClearCondition),
-		OutEvents,
-		bOutScenarioCompleted);
+	// 현재 인덱스 퀘스트 완료
+	CompleteQuestAtIndex(DataManager, ActiveQuests, InOutCurrentSubQuestIndex, OutEvents, bOutScenarioCompleted);
+
+	PRINTLOG_JW(
+		TEXT("[QuestDebug] 서브퀘스트 완료 처리됨. QuestID: %s, TargetID: %s, Condition: %d"),
+		*CurrentQuest.QuestID.ToString(),
+		*TargetID.ToString(),
+		static_cast<int32>(Condition));
+
+	if (bOutScenarioCompleted)
+	{
+		return;
+	}
+
+	// 다음 서브퀘스트로 인덱스 전진
+	const int32 NextIndex = FindNextSubQuestIndex(DataManager, ActiveQuests, InOutCurrentSubQuestIndex);
+	InOutCurrentSubQuestIndex = NextIndex;
+
+	if (NextIndex != INDEX_NONE)
+	{
+		StartQuestAtIndex(ActiveQuests, NextIndex, OutEvents);
+		PRINTLOG_JW(
+			TEXT("[QuestDebug] 다음 서브퀘스트 시작. QuestID: %s, Index: %d"),
+			*ActiveQuests[NextIndex].QuestID.ToString(),
+			NextIndex);
+	}
+	else
+	{
+		PRINTLOG_JW(TEXT("[QuestDebug] 모든 서브퀘스트 완료. 시나리오 종료 조건 충족."));
+	}
 }
 
 bool FQuestRuntimeHelper::AreRequiredChildQuestsCompleted(
@@ -165,53 +268,9 @@ bool FQuestRuntimeHelper::AreMainQuestsCompleted(
 	return bHasMainQuest;
 }
 
-EQuestStartCondition FQuestRuntimeHelper::ConvertClearConditionToStartCondition(EQuestClearCondition ClearCondition)
-{
-	switch (ClearCondition)
-	{
-	case EQuestClearCondition::CheckItem:
-		return EQuestStartCondition::CheckItem;
-	case EQuestClearCondition::ReachLocation:
-		return EQuestStartCondition::ReachLocation;
-	case EQuestClearCondition::TalkToNPC:
-		return EQuestStartCondition::TalkToNPC;
-	case EQuestClearCondition::GetItem:
-		return EQuestStartCondition::GetItem;
-	case EQuestClearCondition::UseItem:
-		return EQuestStartCondition::UseItem;
-	case EQuestClearCondition::None:
-	default:
-		return EQuestStartCondition::None;
-	}
-}
-
-bool FQuestRuntimeHelper::TryConvertStartConditionToClearCondition(EQuestStartCondition StartCondition, EQuestClearCondition& OutClearCondition)
-{
-	switch (StartCondition)
-	{
-	case EQuestStartCondition::CheckItem:
-		OutClearCondition = EQuestClearCondition::CheckItem;
-		return true;
-	case EQuestStartCondition::ReachLocation:
-		OutClearCondition = EQuestClearCondition::ReachLocation;
-		return true;
-	case EQuestStartCondition::TalkToNPC:
-		OutClearCondition = EQuestClearCondition::TalkToNPC;
-		return true;
-	case EQuestStartCondition::GetItem:
-		OutClearCondition = EQuestClearCondition::GetItem;
-		return true;
-	case EQuestStartCondition::UseItem:
-		OutClearCondition = EQuestClearCondition::UseItem;
-		return true;
-	case EQuestStartCondition::None:
-	case EQuestStartCondition::ScenarioStart:
-	case EQuestStartCondition::QuestCompleted:
-	default:
-		OutClearCondition = EQuestClearCondition::None;
-		return false;
-	}
-}
+// ==============================================================================
+// === Private helpers ===
+// ==============================================================================
 
 FQuestRuntimeData* FQuestRuntimeHelper::FindRuntimeQuest(TArray<FQuestRuntimeData>& ActiveQuests, FName QuestID)
 {
@@ -229,237 +288,95 @@ const FQuestRuntimeData* FQuestRuntimeHelper::FindRuntimeQuest(const TArray<FQue
 	});
 }
 
-void FQuestRuntimeHelper::TryStartQuestsByEvent(
-	const UDataManager* DataManager,
+bool FQuestRuntimeHelper::StartQuestAtIndex(
 	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName TargetID,
-	EQuestStartCondition EventCondition,
+	int32 Index,
 	TArray<FQuestRuntimeEvent>& OutEvents)
 {
-	if (!DataManager || EventCondition == EQuestStartCondition::None)
-	{
-		return;
-	}
-
-	// 순회 중 배열 상태를 바꾸지 않도록 먼저 시작 대상만 모읍니다.
-	TArray<FName> QuestIDsToStart;
-	for (const FQuestRuntimeData& RuntimeData : ActiveQuests)
-	{
-		if (RuntimeData.QuestState != EScenarioState::NotStarted)
-		{
-			continue;
-		}
-
-		const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
-		if (!QuestData)
-		{
-			continue;
-		}
-
-		const bool bTargetMatched = QuestData->StartTargetID.IsNone()
-			? TargetID.IsNone()
-			: QuestData->StartTargetID == TargetID;
-
-		if (QuestData->StartCondition == EventCondition && bTargetMatched)
-		{
-			QuestIDsToStart.Add(RuntimeData.QuestID);
-		}
-	}
-
-	for (FName QuestID : QuestIDsToStart)
-	{
-		StartQuest(DataManager, ActiveQuests, QuestID, OutEvents);
-	}
-}
-
-void FQuestRuntimeHelper::TryCompleteQuestsByEvent(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName TargetID,
-	EQuestClearCondition ClearCondition,
-	TArray<FQuestRuntimeEvent>& OutEvents,
-	bool& bOutScenarioCompleted)
-{
-	if (!DataManager || ClearCondition == EQuestClearCondition::None)
-	{
-		return;
-	}
-
-	// 완료 처리 중 다음 퀘스트가 시작될 수 있으므로 먼저 완료 대상만 수집합니다.
-	TArray<FName> QuestIDsToComplete;
-	for (const FQuestRuntimeData& RuntimeData : ActiveQuests)
-	{
-		if (RuntimeData.QuestState != EScenarioState::InProgress)
-		{
-			continue;
-		}
-
-		const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
-		if (!QuestData || QuestData->QuestType == EQuestType::MainQuest)
-		{
-			continue;
-		}
-
-		if (QuestData->ClearCondition == ClearCondition && QuestData->QuestTargetID == TargetID)
-		{
-			QuestIDsToComplete.Add(RuntimeData.QuestID);
-		}
-	}
-
-	for (FName QuestID : QuestIDsToComplete)
-	{
-		bool bQuestCompletedScenario = false;
-		const bool bCompletedScenario = CompleteQuest(DataManager, ActiveQuests, QuestID, OutEvents, bQuestCompletedScenario);
-		bOutScenarioCompleted = bOutScenarioCompleted || bQuestCompletedScenario || bCompletedScenario;
-	}
-}
-
-bool FQuestRuntimeHelper::StartQuest(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName QuestID,
-	TArray<FQuestRuntimeEvent>& OutEvents)
-{
-	if (!DataManager || QuestID.IsNone())
+	if (!ActiveQuests.IsValidIndex(Index))
 	{
 		return false;
 	}
 
-	FQuestRuntimeData* RuntimeData = FindRuntimeQuest(ActiveQuests, QuestID);
-	if (!RuntimeData || RuntimeData->QuestState != EScenarioState::NotStarted)
+	FQuestRuntimeData& RuntimeData = ActiveQuests[Index];
+	if (RuntimeData.QuestState != EScenarioState::NotStarted)
 	{
 		return false;
 	}
 
-	RuntimeData->QuestState = EScenarioState::InProgress;
+	RuntimeData.QuestState = EScenarioState::InProgress;
 
 	FQuestRuntimeEvent Event;
-	Event.QuestID = QuestID;
+	Event.QuestID = RuntimeData.QuestID;
 	Event.EventType = EQuestRuntimeEventType::Started;
 	OutEvents.Add(Event);
 
 	return true;
 }
 
-bool FQuestRuntimeHelper::CompleteQuest(
+bool FQuestRuntimeHelper::CompleteQuestAtIndex(
 	const UDataManager* DataManager,
 	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName QuestID,
+	int32 Index,
 	TArray<FQuestRuntimeEvent>& OutEvents,
 	bool& bOutScenarioCompleted)
 {
 	bOutScenarioCompleted = false;
 
-	if (!DataManager || QuestID.IsNone() || IsMainQuest(DataManager, QuestID))
+	if (!ActiveQuests.IsValidIndex(Index))
 	{
 		return false;
 	}
 
-	FQuestRuntimeData* RuntimeData = FindRuntimeQuest(ActiveQuests, QuestID);
-	if (!RuntimeData || RuntimeData->QuestState != EScenarioState::InProgress)
+	FQuestRuntimeData& RuntimeData = ActiveQuests[Index];
+	if (RuntimeData.QuestState != EScenarioState::InProgress)
 	{
 		return false;
 	}
 
-	RuntimeData->QuestState = EScenarioState::Completed;
+	RuntimeData.QuestState = EScenarioState::Completed;
 
 	FQuestRuntimeEvent CompletedEvent;
-	CompletedEvent.QuestID = QuestID;
+	CompletedEvent.QuestID = RuntimeData.QuestID;
 	CompletedEvent.EventType = EQuestRuntimeEventType::Completed;
 	OutEvents.Add(CompletedEvent);
 
-	// 완료된 퀘스트를 선행 조건으로 삼는 후속 퀘스트를 즉시 시작합니다.
-	TryStartQuestsByEvent(DataManager, ActiveQuests, QuestID, EQuestStartCondition::QuestCompleted, OutEvents);
-	StartNextSequentialSubQuest(DataManager, ActiveQuests, QuestID, OutEvents);
-
+	// 모든 필수 서브퀘스트가 끝나면 메인 퀘스트를 자동 완료합니다.
 	if (AreRequiredChildQuestsCompleted(DataManager, ActiveQuests))
 	{
-		// 메인 퀘스트는 외부 이벤트로 직접 완료하지 않고, 필수 하위 퀘스트 완료 결과로만 자동 완료합니다.
 		CompleteMainQuests(DataManager, ActiveQuests, OutEvents);
 		bOutScenarioCompleted = true;
 	}
 
-	return bOutScenarioCompleted;
+	return true;
 }
 
-bool FQuestRuntimeHelper::StartFirstSequentialSubQuest(
+int32 FQuestRuntimeHelper::FindNextSubQuestIndex(
 	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	TArray<FQuestRuntimeEvent>& OutEvents)
+	const TArray<FQuestRuntimeData>& ActiveQuests,
+	int32 AfterIndex)
 {
 	if (!DataManager)
 	{
-		return false;
+		return INDEX_NONE;
 	}
 
-	for (const FQuestRuntimeData& RuntimeData : ActiveQuests)
+	for (int32 Index = AfterIndex + 1; Index < ActiveQuests.Num(); ++Index)
 	{
-		if (!IsSequentialSubQuest(DataManager, RuntimeData.QuestID))
+		const FQuestRuntimeData& RuntimeData = ActiveQuests[Index];
+		if (RuntimeData.QuestState != EScenarioState::NotStarted)
 		{
 			continue;
 		}
 
-		if (RuntimeData.QuestState == EScenarioState::NotStarted)
+		const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
+		if (QuestData && QuestData->QuestType == EQuestType::SubQuest)
 		{
-			return StartQuest(DataManager, ActiveQuests, RuntimeData.QuestID, OutEvents);
+			return Index;
 		}
-
-		return false;
 	}
 
-	return false;
-}
-
-bool FQuestRuntimeHelper::StartNextSequentialSubQuest(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	FName CompletedQuestID,
-	TArray<FQuestRuntimeEvent>& OutEvents)
-{
-	if (!DataManager || CompletedQuestID.IsNone())
-	{
-		return false;
-	}
-
-	bool bFoundCompletedQuest = false;
-
-	for (const FQuestRuntimeData& RuntimeData : ActiveQuests)
-	{
-		if (!bFoundCompletedQuest)
-		{
-			bFoundCompletedQuest = RuntimeData.QuestID == CompletedQuestID;
-			continue;
-		}
-
-		if (!IsSequentialSubQuest(DataManager, RuntimeData.QuestID))
-		{
-			continue;
-		}
-
-		if (RuntimeData.QuestState == EScenarioState::NotStarted)
-		{
-			return StartQuest(DataManager, ActiveQuests, RuntimeData.QuestID, OutEvents);
-		}
-
-		return false;
-	}
-
-	return false;
-}
-
-bool FQuestRuntimeHelper::IsSequentialSubQuest(const UDataManager* DataManager, FName QuestID)
-{
-	if (!DataManager || QuestID.IsNone())
-	{
-		return false;
-	}
-
-	if (const FQuestTableRow* QuestData = DataManager->GetQuestData(QuestID))
-	{
-		return QuestData->QuestType == EQuestType::SubQuest;
-	}
-
-	return false;
+	return INDEX_NONE;
 }
 
 bool FQuestRuntimeHelper::IsMainQuest(const UDataManager* DataManager, FName QuestID)

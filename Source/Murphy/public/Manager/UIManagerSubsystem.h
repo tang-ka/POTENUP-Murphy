@@ -14,7 +14,6 @@ class UQuestToastPopupWidget;
 class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
-class UScenarioSubsystem;
 class AMurphyGameStateBase;
 class AMurphyPlayerState;
 enum class EScenarioType : uint8;

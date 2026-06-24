@@ -40,10 +40,18 @@ void APrologueGameMode::BeginPlay()
 	{
 		ImmigrationLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnImmigrationLevelShown);
 	}
+
+	ULevelStreaming* BaggageClaimLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_BaggageClaim"));
+	if (BaggageClaimLevel)
+	{
+		BaggageClaimLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnBaggageClaimLevelShown);
+	}
 }
 
 void APrologueGameMode::OnImmigrationLevelShown()
 {
+	StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+
 	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
 	if (!LevelSubsystem)
 	{
@@ -83,8 +91,21 @@ void APrologueGameMode::OnImmigrationLevelShown()
 		APawn* Pawn = PC->GetPawn();
 		if (!Pawn) continue;
 
-		Pawn->SetActorLocationAndRotation(
+		Pawn->SetActorLocationAndRotation( 
 			(*FoundStart)->GetActorLocation(),
 			(*FoundStart)->GetActorRotation());
+	}
+}
+
+void APrologueGameMode::OnBaggageClaimLevelShown()
+{
+	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);
+}
+
+void APrologueGameMode::StartScenarioIfNeeded(EScenarioType ScenarioType)
+{
+	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
+	{
+		PrologueGameState->StartScenario(ScenarioType);
 	}
 }

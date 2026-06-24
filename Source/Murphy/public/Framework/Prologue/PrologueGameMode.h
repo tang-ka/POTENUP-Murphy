@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/GameDataTypes.h"
 #include "Framework/MurphyGameModeBase.h"
 #include "PrologueGameMode.generated.h"
 
@@ -21,4 +22,9 @@ private:
 	// 서버에서 Immigration 레벨이 보이면 모든 PC에 Pawn 스폰
 	UFUNCTION()
 	void OnImmigrationLevelShown();
+
+	UFUNCTION()
+	void OnBaggageClaimLevelShown();
+
+	void StartScenarioIfNeeded(EScenarioType ScenarioType);
 };

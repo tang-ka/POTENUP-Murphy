@@ -5,6 +5,7 @@
 #include "Murphy.h"
 #include "Actors/Characters/MurphyPlayer.h"
 #include "Components/QuestEventNotifyComponent.h"
+#include "Manager/DataManager.h"
 
 #include "Components/BoxComponent.h"
 
@@ -62,6 +63,31 @@ void ATriggerBaseActor::OnTriggerBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		return;
 	}
 
+	WarnIfQuestTargetLooksLikeQuestID(QuestEventNotifier->GetQuestTargetID());
+
 	// 트리거는 장소 감지만 담당하고, 서버 퀘스트 통보는 공통 컴포넌트가 처리합니다.
-	QuestEventNotifier->NotifyQuestComplete(MurphyPlayer, EQuestClearCondition::ReachLocation);
+	QuestEventNotifier->NotifyQuestComplete(MurphyPlayer, EQuestCondition::ReachLocation);
+}
+
+void ATriggerBaseActor::WarnIfQuestTargetLooksLikeQuestID(FName QuestTargetID) const
+{
+	if (QuestTargetID.IsNone())
+	{
+		return;
+	}
+
+	const UGameInstance* GameInstance = GetGameInstance();
+	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		return;
+	}
+
+	if (DataManager->GetAllQuestRowNames().Contains(QuestTargetID))
+	{
+		PRINTLOGE_JW(
+			TEXT("[TriggerBaseActor] QuestTargetID가 퀘스트 RowName처럼 보입니다. Trigger에는 QuestID가 아니라 DT_Quest의 QuestTargetID 값을 넣어야 합니다. Owner: %s, 입력값: %s"),
+			*GetNameSafe(this),
+			*QuestTargetID.ToString());
+	}
 }

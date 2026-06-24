@@ -43,7 +43,7 @@ public:
 
 	// UI처럼 ActorComponent를 직접 소유하지 않는 호출자가 퀘스트 완료 조건을 통보하는 로컬 진입점입니다.
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Quest")
-	bool NotifyQuestConditionFromLocal(FName TargetID, EQuestClearCondition Condition);
+	bool NotifyQuestConditionFromLocal(FName TargetID, EQuestCondition Condition);
 
 	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
 	UQuestEventNotifyComponent* GetQuestEventNotifier() const { return QuestEventNotifier; }
@@ -54,27 +54,25 @@ public:
 
 	// 퀘스트 시작 조건만 서버로 전달합니다. NPC 접근처럼 완료와 분리해야 할 때 사용합니다.
 	UFUNCTION(Server, Reliable)
-	void ServerNotifyQuestStartEvent(FName TargetID, EQuestStartCondition StartCondition);
+	void ServerNotifyQuestStartEvent(FName TargetID, EQuestCondition StartCondition);
 
 	// 퀘스트 완료 조건을 서버로 전달합니다. 서버 GameState가 개인/공유 정책에 따라 라우팅합니다.
 	UFUNCTION(Server, Reliable)
-	void ServerNotifyQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+	void ServerNotifyQuestConditionMet(FName TargetID, EQuestCondition Condition);
 
 private:
 	void BindLocalQuestStateSources();
-	void HandleAdvanceSubQuestTestKey();
-	bool AdvanceCurrentSubQuestForTest();
-	bool ResolveCurrentSubQuestForTest(
-		const TArray<FName>& QuestOrder,
-		const TArray<FQuestRuntimeData>& ActiveQuests,
-		FName& OutQuestID,
-		FName& OutTargetID,
-		EQuestClearCondition& OutClearCondition) const;
-	bool ResolveCurrentSubQuestForTest(
-		const TArray<FName>& QuestOrder,
-		const TMap<FName, FQuestRuntimeData>& ActiveQuests,
-		FName& OutQuestID) const;
 
+	//. 테스트 전용: N 키 입력을 받아 현재 진행 중인 서브퀘스트를 서버에서 강제 완료합니다.
+	void HandleAdvanceSubQuestTestKey();
+
+	//. 테스트 전용: 현재 시나리오의 진행 저장소를 찾아 현재 서브퀘스트 완료 이벤트를 발생시킵니다.
+	bool AdvanceCurrentSubQuestForTest();
+
+	//. GameState/PlayerState의 TArray 저장소에서 RequiredQuestIDs 순서상 현재 진행 중인 SubQuest를 찾습니다.
+	bool ResolveCurrentSubQuestForTest(const TArray<FName>& QuestOrder, const TArray<FQuestRuntimeData>& ActiveQuests, FName& OutQuestID, FName& OutTargetID, EQuestCondition& OutClearCondition) const;
+
+	//. 테스트 전용: 클라이언트 키 입력으로 서버 권한 퀘스트 상태를 변경하기 위한 RPC입니다.
 	UFUNCTION(Server, Reliable)
 	void ServerAdvanceCurrentSubQuestForTest();
 

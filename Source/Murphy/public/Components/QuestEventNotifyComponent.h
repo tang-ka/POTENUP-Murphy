@@ -26,10 +26,10 @@ public:
 	FName GetQuestTargetID() const { return QuestTargetID; }
 
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Quest")
-	bool NotifyQuestStart(AActor* InstigatorActor, EQuestStartCondition ConditionOverride = EQuestStartCondition::None) const;
+	bool NotifyQuestStart(AActor* InstigatorActor, EQuestCondition ConditionOverride = EQuestCondition::None) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Quest")
-	bool NotifyQuestComplete(AActor* InstigatorActor, EQuestClearCondition ConditionOverride = EQuestClearCondition::None) const;
+	bool NotifyQuestComplete(AActor* InstigatorActor, EQuestCondition ConditionOverride = EQuestCondition::None) const;
 
 protected:
 	/** 퀘스트 CSV의 QuestTargetID 컬럼값과 일치시킬 ID */
@@ -38,11 +38,11 @@ protected:
 
 	/** ConditionOverride가 None일 때 사용할 기본 시작 조건 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Quest")
-	EQuestStartCondition DefaultStartCondition = EQuestStartCondition::None;
+	EQuestCondition DefaultStartCondition = EQuestCondition::None;
 
 	/** ConditionOverride가 None일 때 사용할 기본 완료 조건 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Quest")
-	EQuestClearCondition DefaultClearCondition = EQuestClearCondition::None;
+	EQuestCondition DefaultClearCondition = EQuestCondition::None;
 
 private:
 	AMurphyPlayerController* ResolveMurphyPlayerController(AActor* InstigatorActor) const;

@@ -126,27 +126,27 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	
 	bool bShouldLookAtPlayer = bIsLookingAtPlayer; 
 
-	// NPC가 몽타주(문서 보기 등)를 재생 중인지 검사
-	if (bIsLookingAtPlayer)
-	{
-		TArray<USkeletalMeshComponent*> SkeletalMeshes;
-		GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
-		for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
-		{
-			if (SkelMesh->GetName().Equals(TEXT("Body"), ESearchCase::IgnoreCase))
-			{
-				if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
-				{
-					// 몽타주 재생 중이라면 ➔ "지금 바쁘니까 시선 꺼!"
-					if (AnimInst->IsAnyMontagePlaying())
-					{
-						bShouldLookAtPlayer = false; 
-					}
-				}
-				break;
-			}
-		}
-	}
+	// NPC가 몽타주(문서 보기 등)를 재생 중인지 검사 *임시 지금은 잠시 꺼두기
+	// if (bIsLookingAtPlayer)
+	// {
+	// 	TArray<USkeletalMeshComponent*> SkeletalMeshes;
+	// 	GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+	// 	for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
+	// 	{
+	// 		if (SkelMesh->GetName().Equals(TEXT("Body"), ESearchCase::IgnoreCase))
+	// 		{
+	// 			if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
+	// 			{
+	// 				// 몽타주 재생 중이라면 ➔ "지금 바쁘니까 시선 꺼!"
+	// 				if (AnimInst->IsAnyMontagePlaying())
+	// 				{
+	// 					bShouldLookAtPlayer = false; 
+	// 				}
+	// 			}
+	// 			break;
+	// 		}
+	// 	}
+	// }
 
 	// 계산된 결과를 ABP가 읽어갈 수 있도록 멤버 변수에 저장
 	bEnableIK = bShouldLookAtPlayer;

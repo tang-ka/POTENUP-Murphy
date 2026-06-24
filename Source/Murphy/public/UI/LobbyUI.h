@@ -119,7 +119,7 @@ protected:
 
 private:
 	void HandleFindSessionsComplete(bool bWasSuccessful, const TArray<FOnlineSessionSearchResult>& Results);
-	void OnSessionSelected(USessionInfoWidget* SelectedWidget);
+	void OnSessionSelected(USessionInfoWidget* SelectedWidget, bool bIsChecked);
 	void ClearSessionList();
 
 private:

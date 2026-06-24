@@ -53,7 +53,11 @@ void USessionInfoWidget::HandleCheckStateChanged(bool bIsChecked)
 	if (bIsChecked)
 	{
 		PRINTLOG_SH(TEXT("SessionInfoWidget 선택됨 — Index:%d"), SessionIndex);
-		OnSessionInfoSelected.ExecuteIfBound(this);
 	}
+	else
+	{
+		PRINTLOG_SH(TEXT("SessionInfoWidget 해제됨 — Index:%d"), SessionIndex);
+	}
+	OnSessionInfoSelected.ExecuteIfBound(this, bIsChecked);
 }
 

@@ -30,9 +30,14 @@ public:
 	FOnCategorySelected OnCategorySelected;
 
 	void SetCategoryData(FName InCategoryName, const FText& InDisplayName);
+	void SetSelected(bool bSelected);
+	bool IsCategorySelected() const;
 
 private:
 	FName CategoryName;
+	bool bIsUpdatingSelection = false;
+
+	void UpdateTextColor(bool bIsSelected);
 
 	UFUNCTION()
 	void OnCategoryChanged(bool bIsChecked);

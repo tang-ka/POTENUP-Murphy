@@ -7,6 +7,7 @@
 #include "Data/TranslateTypes.h"
 #include "TranslateAppScreenWidget.generated.h"
 
+class UScrollBox;
 class UHorizontalBox;
 class UVerticalBox;
 class UImage;
@@ -28,6 +29,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UHorizontalBox> HB_ScenarioCategory;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UScrollBox> Scroll_Dialog;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UVerticalBox> VB_Dialog;
 
@@ -77,7 +81,9 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UUserWidget>> ActiveDialogWidgets;
 
-	TSet<FName> CategoryButtonNameSet;
+	UPROPERTY()
+	TMap<FName, TObjectPtr<UScenarioCategoryButtonWidget>> CategoryButtonMap;
+
 	FName CurrentCategory;
 
 	UUserWidget* AcquireDialogWidget(const FDialogEntry& Entry);
@@ -88,6 +94,7 @@ private:
 	void HideActiveDialogWidgets();
 	void RefreshDialog(FName InCategoryName);
 	void SyncExistingCategories();
+	void UpdateCategoryButtonSelection(FName InSelectedCategoryName);
 
 	UFUNCTION()
 	void OnCategoryButtonSelected(FName InCategoryName);

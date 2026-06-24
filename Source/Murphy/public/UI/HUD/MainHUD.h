@@ -45,6 +45,7 @@ public:
 
 	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
 
+#pragma region Test
 	/** 외부 진입점: 대화 추가 */
 	void AddTranslateDialog(FName InCategoryName, const FDialogEntry& Entry);
 
@@ -53,10 +54,23 @@ public:
 
 	/** 외부 진입점: 연결 상태 */
 	void SetTranslateConnecting(bool bIsConnecting);
+#pragma endregion
+
+	/** 대화 시작: 활성 카테고리 캐싱 + 카테고리 등록 */
+	void BeginTranslateConversation(FName InCategoryName, const FText& InDisplayName);
+
+	/** Agent 대사 블록 추가 (활성 카테고리에) */
+	void AddAgentDialog(const FString& InSpeaker, const FString& InText);
+
+	/** User 대사 블록 추가 (활성 카테고리에) */
+	void AddUserDialog(const FString& InText);
 
 private:
 	UPROPERTY()
 	TObjectPtr<UTranslateDialogManager> DialogManager;
+
+	// BeginTranslateConversation에서 설정되는 현재 진행 중인 대화의 카테고리
+	FName ActiveTranslateCategory;
 
 	UFUNCTION()
 	void HandlePhoneToggled(bool bIsPhoneOpen);

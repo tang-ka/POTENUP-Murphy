@@ -10,6 +10,8 @@
 #include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Actors/Characters/MurphyPlayer.h"
+#include "UI/HUD/MainHUD.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UnrealType.h"
@@ -249,9 +251,19 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 			{
 				VoiceComp->SetSound(PassportSound);
 				VoiceComp->Play();
-				
+
 				float SoundDuration = PassportSound->GetDuration();
 				GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+
+				// 캐싱 음성 재생 = 대화 시작 -> 카테고리 생성 + 첫 Agent 대사
+				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(OtherPawn))
+				{
+					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+					{
+						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						MainHUD->AddAgentDialog(NPCName.ToString(), LastNpcMessage);
+					}
+				}
 			}
 			
 			// 3 오버랩 직후에는 기본 이모지로 초기화
@@ -482,6 +494,11 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 		// 성공 로그는 콘솔창이 지저분해지지 않게 딱 한 줄만 깔끔하게 남깁니다.
 		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 재생 -> %s"), *EmotionMontage->GetName());
 	}
+}
+
+FName AAgentNPCBase::GetScenarioCategoryName() const
+{
+	return FName(*StaticEnum<EScenarioType>()->GetNameStringByValue((int64)NPCScenarioType));
 }
 
 bool AAgentNPCBase::TryStartConversation()

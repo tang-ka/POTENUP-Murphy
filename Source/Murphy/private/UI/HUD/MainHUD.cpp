@@ -105,6 +105,51 @@ void UMainHUD::AddTranslateCategory(FName InCategoryName, const FText& DisplayNa
 	DialogManager->RegisterCategory(InCategoryName, DisplayName);
 }
 
+void UMainHUD::BeginTranslateConversation(FName InCategoryName, const FText& InDisplayName)
+{
+	if (!DialogManager)
+	{
+		return;
+	}
+
+	ActiveTranslateCategory = InCategoryName;
+	DialogManager->RegisterCategory(InCategoryName, InDisplayName); // 중복 자동 무시
+	PRINTLOG_SH(TEXT("Translate Conversation Begin: %s"), *InCategoryName.ToString());
+}
+
+void UMainHUD::AddAgentDialog(const FString& InSpeaker, const FString& InText)
+{
+	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	{
+		PRINTLOG_SH(TEXT("AddAgentDialog skipped: no active category"));
+		return;
+	}
+
+	FDialogEntry Entry;
+	Entry.Type = EDialogType::Agent;
+	Entry.Name = FText::FromString(InSpeaker);
+	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
+	Entry.Content = FText::FromString(InText);
+
+	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+}
+
+void UMainHUD::AddUserDialog(const FString& InText)
+{
+	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	{
+		PRINTLOG_SH(TEXT("AddUserDialog skipped: no active category"));
+		return;
+	}
+
+	FDialogEntry Entry;
+	Entry.Type = EDialogType::User;
+	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
+	Entry.Content = FText::FromString(InText);
+
+	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+}
+
 void UMainHUD::SetTranslateConnecting(bool bIsConnecting)
 {
 	if (UTranslateAppScreenWidget* Screen = GetTranslateScreen())

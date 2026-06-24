@@ -3,6 +3,7 @@
 
 #include "Actors/Characters/MurphyPlayer.h"
 #include "Actors/Characters/AgentNPCBase.h"
+#include "UI/HUD/MainHUD.h"
 
 #include "VoiceChat/VoiceRecorderComponent.h"
 #include "EnhancedInputComponent.h"
@@ -258,6 +259,12 @@ void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+
+		// 대화 진입~이탈 동안 Translate 연결 표시등 ON/OFF
+		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+		{
+			MainHUD->SetTranslateConnecting(TargetNPC != nullptr);
+		}
 	}
 }
 
@@ -420,14 +427,20 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		PRINTLOGW_JW(TEXT("response.current_node_id: %s"), *ResponseData.current_node_id);
 		PRINTLOGW_JW(TEXT("response.next_action: %s"), *ResponseData.next_action);
 		PRINTLOGW_JW(TEXT("response.next_node_id: %s"), *ResponseData.next_node_id);
-		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text);
+		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text); // TODO
 		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *TargetNPC->GetCurrentNodeId());
 
 		// AI 응답이 도착해 대화가 끝나면 NPC점유 해제 및 상태 초기화
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 		{
+			// Agent 대사 블록 추가 (TTS 텍스트)
+			if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+			{
+				MainHUD->AddAgentDialog(ResponseData.npc.speaker, ResponseData.npc.text);
+			}
+
 			MurphyPlayer->EndChatWithNPC();
-			
+
 			// 마이크 UI 활성화
 			MurphyPlayer->SetMicUIState(true);
 		}
@@ -828,6 +841,12 @@ bool AMurphyPlayerController::SendRealtimeSTTTranscriptToAI(const FAIRequestData
 
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
+		// User 대사 블록 추가 (확정된 STT 텍스트)
+		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+		{
+			MainHUD->AddUserDialog(TrimmedFinalText);
+		}
+
 		MurphyPlayer->SetMicUIState(false);
 	}
 

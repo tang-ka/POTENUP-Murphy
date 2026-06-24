@@ -229,4 +229,16 @@ private:
 	bool bSTTSessionActive = false;
 
 	FAIRequestData CachedSTTTurnData;
+
+#if !(UE_BUILD_SHIPPING)
+	void DebugPopulateTranslateTestData();
+	void DebugAddIntroTranslateDialog();
+	void DebugAddMissionTranslateDialog();
+	void DebugAddResultTranslateDialog();
+	void DebugAddTranslateDialog(FName InCategoryName);
+	void DebugEnsureTranslateTestCategory(FName InCategoryName);
+
+	TMap<FName, int32> TranslateTestDialogCountMap;
+	bool bTranslateTestDataPopulated = false;
+#endif
 };

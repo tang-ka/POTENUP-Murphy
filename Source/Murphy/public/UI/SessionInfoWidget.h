@@ -9,7 +9,7 @@
 class UTextBlock;
 class UCheckBox;
 
-DECLARE_DELEGATE_OneParam(FOnSessionInfoSelected, USessionInfoWidget*);
+DECLARE_DELEGATE_TwoParams(FOnSessionInfoSelected, USessionInfoWidget*, bool);
 
 UCLASS()
 class MURPHY_API USessionInfoWidget : public UUserWidget

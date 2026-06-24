@@ -146,6 +146,9 @@ public:
 	// === Conversation ===
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	FString GetNPCName() const { return NPCName.ToString(); }
+
+	// NPCScenarioType을 Translate 카테고리 FName으로 변환
+	FName GetScenarioCategoryName() const;
 	
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	bool CanTalkWithPlayer() const { return !bIsTalkingWithPlayer; }

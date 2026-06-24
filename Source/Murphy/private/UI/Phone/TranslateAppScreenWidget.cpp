@@ -6,6 +6,7 @@
 #include "Components/Image.h"
 #include "Components/VerticalBox.h"
 #include "Murphy.h"
+#include "Components/ScrollBox.h"
 #include "UI/Phone/AgentDialogBlockWidget.h"
 #include "UI/Phone/ScenarioCategoryButtonWidget.h"
 #include "UI/Phone/TranslateDialogManager.h"
@@ -50,12 +51,9 @@ void UTranslateAppScreenWidget::HandleDialogAdded(FName InCategoryName, const FD
 
 void UTranslateAppScreenWidget::HandleCategoryAdded(FName InCategoryName, const FText& DisplayName)
 {
-	if (!CategoryButtonNameSet.Contains(InCategoryName))
+	if (!CategoryButtonMap.Contains(InCategoryName))
 	{
-		if (AddCategoryButton(InCategoryName, DisplayName))
-		{
-			CategoryButtonNameSet.Add(InCategoryName);
-		}
+		AddCategoryButton(InCategoryName, DisplayName);
 	}
 
 	if (CurrentCategory.IsNone())
@@ -170,12 +168,15 @@ UScenarioCategoryButtonWidget* UTranslateAppScreenWidget::AddCategoryButton(FNam
 	}
 
 	Button->SetCategoryData(InCategoryName, DisplayName);
+	Button->SetSelected(false);
 	Button->OnCategorySelected.AddDynamic(this, &UTranslateAppScreenWidget::OnCategoryButtonSelected);
 
 	if (HB_ScenarioCategory)
 	{
 		HB_ScenarioCategory->AddChild(Button);
 	}
+
+	CategoryButtonMap.Add(InCategoryName, Button);
 
 	return Button;
 }
@@ -245,6 +246,8 @@ void UTranslateAppScreenWidget::RefreshDialog(FName InCategoryName)
 			ActiveDialogWidgets.Add(DialogWidget);
 		}
 	}
+	
+	Scroll_Dialog->ScrollToEnd();
 
 	PRINTLOG_SH(TEXT("Dialog Refresh: Category=%s, Count=%d"), *InCategoryName.ToString(), Dialogs->Num());
 }
@@ -267,9 +270,21 @@ void UTranslateAppScreenWidget::SyncExistingCategories()
 	}
 }
 
+void UTranslateAppScreenWidget::UpdateCategoryButtonSelection(FName InSelectedCategoryName)
+{
+	for (const TPair<FName, TObjectPtr<UScenarioCategoryButtonWidget>>& CategoryButtonPair : CategoryButtonMap)
+	{
+		if (UScenarioCategoryButtonWidget* Button = CategoryButtonPair.Value)
+		{
+			Button->SetSelected(CategoryButtonPair.Key == InSelectedCategoryName);
+		}
+	}
+}
+
 void UTranslateAppScreenWidget::OnCategoryButtonSelected(FName InCategoryName)
 {
 	CurrentCategory = InCategoryName;
+	UpdateCategoryButtonSelection(InCategoryName);
 	RefreshDialog(InCategoryName);
 	PRINTLOG_SH(TEXT("Category Changed: %s"), *InCategoryName.ToString());
 }

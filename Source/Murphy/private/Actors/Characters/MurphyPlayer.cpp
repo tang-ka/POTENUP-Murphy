@@ -6,10 +6,12 @@
 #include "VoiceChat/VoiceRecorderComponent.h"
 #include "VoiceChat/STTWebSocketComponent.h"
 #include "Components/PlayerViewComponent.h"
+#include "Data/TranslateTypes.h"
 #include "GameFramework/SpringArmComponent.h"
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputCoreTypes.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 
@@ -162,6 +164,13 @@ void AMurphyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 				PlayerInput->BindAction(IA_STTStop, ETriggerEvent::Started, this, &AMurphyPlayer::STTRecordEnd);
 			}
 		}
+
+#if !(UE_BUILD_SHIPPING)
+		PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AMurphyPlayer::DebugPopulateTranslateTestData);
+		PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AMurphyPlayer::DebugAddIntroTranslateDialog);
+		PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &AMurphyPlayer::DebugAddMissionTranslateDialog);
+		PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &AMurphyPlayer::DebugAddResultTranslateDialog);
+#endif
 	}
 }
 
@@ -545,6 +554,113 @@ void AMurphyPlayer::OnSTTError(const FString& ErrorType, const FString& Message)
 		SetMicUIState(IsValid(PC->GetTargetNPC()));
 	}
 }
+
+#if !(UE_BUILD_SHIPPING)
+
+void AMurphyPlayer::DebugPopulateTranslateTestData()
+{
+	if (!MainHUDInstance)
+	{
+		PRINTLOG_SH(TEXT("[TranslateTest] MainHUD is null"));
+		return;
+	}
+
+	if (bTranslateTestDataPopulated)
+	{
+		PRINTLOG_SH(TEXT("[TranslateTest] Default data already populated"));
+		return;
+	}
+
+	DebugEnsureTranslateTestCategory(FName("Intro"));
+	DebugEnsureTranslateTestCategory(FName("Mission"));
+	DebugEnsureTranslateTestCategory(FName("Result"));
+
+	for (int32 Index = 0; Index < 3; ++Index)
+	{
+		DebugAddTranslateDialog(FName("Intro"));
+	}
+
+	for (int32 Index = 0; Index < 10; ++Index)
+	{
+		DebugAddTranslateDialog(FName("Mission"));
+	}
+
+	for (int32 Index = 0; Index < 2; ++Index)
+	{
+		DebugAddTranslateDialog(FName("Result"));
+	}
+
+	bTranslateTestDataPopulated = true;
+
+	PRINTLOG_SH(TEXT("[TranslateTest] Default data populated"));
+}
+
+void AMurphyPlayer::DebugAddIntroTranslateDialog()
+{
+	DebugAddTranslateDialog(FName("Intro"));
+}
+
+void AMurphyPlayer::DebugAddMissionTranslateDialog()
+{
+	DebugAddTranslateDialog(FName("Mission"));
+}
+
+void AMurphyPlayer::DebugAddResultTranslateDialog()
+{
+	DebugAddTranslateDialog(FName("Result"));
+}
+
+void AMurphyPlayer::DebugAddTranslateDialog(FName InCategoryName)
+{
+	if (!MainHUDInstance)
+	{
+		PRINTLOG_SH(TEXT("[TranslateTest] MainHUD is null"));
+		return;
+	}
+
+	DebugEnsureTranslateTestCategory(InCategoryName);
+
+	int32& DialogCount = TranslateTestDialogCountMap.FindOrAdd(InCategoryName);
+	const int32 DisplayIndex = DialogCount + 1;
+	const bool bUserDialog = DialogCount % 2 == 0;
+
+	FDialogEntry Entry;
+	Entry.Type = bUserDialog ? EDialogType::User : EDialogType::Agent;
+	Entry.Name = bUserDialog ? FText::GetEmpty() : FText::FromString(TEXT("Agent"));
+	Entry.Time = FText::FromString(TEXT("12:00"));
+	Entry.Content = FText::FromString(
+		FString::Printf(
+			TEXT("[%s] %s Dialog %d"),
+			*InCategoryName.ToString(),
+			bUserDialog ? TEXT("User") : TEXT("Agent"),
+			DisplayIndex
+		)
+	);
+
+	MainHUDInstance->AddTranslateDialog(InCategoryName, Entry);
+
+	++DialogCount;
+
+	PRINTLOG_SH(
+		TEXT("[TranslateTest] Add Dialog: Category=%s, Type=%s, Count=%d"),
+		*InCategoryName.ToString(),
+		bUserDialog ? TEXT("User") : TEXT("Agent"),
+		DialogCount
+	);
+}
+
+void AMurphyPlayer::DebugEnsureTranslateTestCategory(FName InCategoryName)
+{
+	if (!MainHUDInstance)
+	{
+		PRINTLOG_SH(TEXT("[TranslateTest] MainHUD is null"));
+		return;
+	}
+
+	MainHUDInstance->AddTranslateCategory(InCategoryName, FText::FromName(InCategoryName));
+}
+
+#endif
 
 void AMurphyPlayer::ToggleBagPressed()
 {

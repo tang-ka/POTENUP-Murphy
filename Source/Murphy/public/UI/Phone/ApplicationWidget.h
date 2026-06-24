@@ -39,6 +39,8 @@ public:
 
 	/** DataManager에서 받아온 Row 데이터와 동적 생성된 AppScreen을 할당 */
 	void SetAppData(const FPhoneAppRow& Row, UUserWidget* InAppScreen);
+	
+	FName GetAppName() const { return AppName; }
 
 private:
 	UFUNCTION()
@@ -49,4 +51,8 @@ private:
 
 	UFUNCTION()
 	void OnIconButtonUnhovered();
+	
+private:
+	// 앱 이름 (DataManager에서 받아온 Row의 Key)
+	FName AppName;
 };

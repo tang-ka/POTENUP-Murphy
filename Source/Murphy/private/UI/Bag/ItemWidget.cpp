@@ -68,7 +68,7 @@ void UItemWidget::UseItemFromUI()
 	}
 
 	// 버튼 클릭으로 "사용"이 확정된 시점에 퀘스트를 먼저 통보해 BP 오버라이드 누락을 방지합니다.
-	NotifyQuestCondition(EQuestClearCondition::UseItem);
+	NotifyQuestCondition(EQuestCondition::UseItem);
 	UseItem();
 }
 
@@ -95,10 +95,10 @@ void UItemWidget::ShowDetailPopup()
 	DetailWidget->InitDetail(ItemData, this);
 	DetailWidget->AddToViewport(10); // Z-Order: BagPopup보다 위에 표시
 	
-	NotifyQuestCondition(EQuestClearCondition::CheckItem);
+	NotifyQuestCondition(EQuestCondition::CheckItem);
 }
 
-void UItemWidget::NotifyQuestCondition(EQuestClearCondition Condition) const
+void UItemWidget::NotifyQuestCondition(EQuestCondition Condition) const
 {
 	if (ItemData.ItemID.IsNone())
 	{

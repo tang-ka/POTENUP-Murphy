@@ -11,6 +11,7 @@ void AMurphyGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 	DOREPLIFETIME(AMurphyGameStateBase, CurrentScenario);
 	DOREPLIFETIME(AMurphyGameStateBase, SharedActiveQuests);
+	DOREPLIFETIME(AMurphyGameStateBase, SharedCurrentSubQuestIndex);
 	DOREPLIFETIME(AMurphyGameStateBase, ScenarioCompletedPlayers);
 }
 
@@ -56,6 +57,7 @@ void AMurphyGameStateBase::EndScenario(bool bSuccess)
 	// 서버 상태를 먼저 비우고 delegate를 쏴야 클라이언트 UI가 종료 상태를 일관되게 받습니다.
 	CurrentScenario = EScenarioType::None;
 	SharedActiveQuests.Empty();
+	SharedCurrentSubQuestIndex = INDEX_NONE;
 	ScenarioCompletedPlayers.Empty();
 	ClearPersonalScenarioForAllPlayers();
 
@@ -82,34 +84,7 @@ const FScenarioTableRow* AMurphyGameStateBase::GetCurrentScenarioData() const
 	return DataManager->GetScenarioData(FName(*EnumName));
 }
 
-void AMurphyGameStateBase::NotifyQuestEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestStartCondition EventCondition)
-{
-	if (!HasAuthority() || !IsValid(SourcePlayerState) || CurrentScenario == EScenarioType::None)
-	{
-		return;
-	}
-
-	const FScenarioTableRow* ScenarioData = GetCurrentScenarioData();
-	if (!ScenarioData)
-	{
-		return;
-	}
-
-	if (ScenarioData->QuestProgressScope == EQuestProgressScope::Shared)
-	{
-		NotifySharedQuestEvent(TargetID, EventCondition);
-	}
-	else
-	{
-		// 개인 퀘스트는 이벤트를 보낸 플레이어의 PlayerState만 갱신합니다.
-		SourcePlayerState->NotifyPersonalQuestEvent(TargetID, EventCondition);
-		CheckPersonalScenarioCompletion(SourcePlayerState);
-	}
-
-	TryEndScenarioByPolicy();
-}
-
-void AMurphyGameStateBase::NotifyQuestStartEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestStartCondition EventCondition)
+void AMurphyGameStateBase::NotifyQuestStartEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestCondition EventCondition)
 {
 	if (!HasAuthority() || !IsValid(SourcePlayerState) || CurrentScenario == EScenarioType::None)
 	{
@@ -132,7 +107,7 @@ void AMurphyGameStateBase::NotifyQuestStartEvent(AMurphyPlayerState* SourcePlaye
 	}
 }
 
-void AMurphyGameStateBase::NotifyQuestConditionMet(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestClearCondition Condition)
+void AMurphyGameStateBase::NotifyQuestConditionMet(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestCondition Condition)
 {
 	if (!HasAuthority() || !IsValid(SourcePlayerState) || CurrentScenario == EScenarioType::None)
 	{
@@ -251,8 +226,9 @@ void AMurphyGameStateBase::StartSharedScenario(const FScenarioTableRow* Scenario
 	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
 
 	// 공유 퀘스트는 플레이어별 복사본을 만들지 않고 GameState의 단일 배열만 사용합니다.
+	SharedCurrentSubQuestIndex = INDEX_NONE;
 	TArray<FQuestRuntimeEvent> Events;
-	FQuestRuntimeHelper::BuildScenarioRuntimeQuests(DataManager, ScenarioData, SharedActiveQuests, Events);
+	SharedCurrentSubQuestIndex = FQuestRuntimeHelper::BuildScenarioRuntimeQuests(DataManager, ScenarioData, SharedActiveQuests, Events);
 	BroadcastQuestRuntimeEvents(Events);
 }
 
@@ -272,39 +248,26 @@ void AMurphyGameStateBase::ClearPersonalScenarioForAllPlayers()
 	}
 }
 
-void AMurphyGameStateBase::NotifySharedQuestEvent(FName TargetID, EQuestStartCondition EventCondition)
+void AMurphyGameStateBase::NotifySharedQuestStartEvent(FName TargetID, EQuestCondition EventCondition)
+{
+	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
+
+	TArray<FQuestRuntimeEvent> Events;
+	FQuestRuntimeHelper::ProcessQuestStartEvent(DataManager, SharedActiveQuests, SharedCurrentSubQuestIndex, TargetID, EventCondition, Events);
+
+	BroadcastQuestRuntimeEvents(Events);
+	OnSharedQuestStateChanged.Broadcast();
+}
+
+void AMurphyGameStateBase::NotifySharedQuestConditionMet(FName TargetID, EQuestCondition Condition)
 {
 	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
 	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
 
 	TArray<FQuestRuntimeEvent> Events;
 	bool bScenarioCompleted = false;
-	FQuestRuntimeHelper::NotifyQuestEvent(DataManager, SharedActiveQuests, TargetID, EventCondition, Events, bScenarioCompleted);
-
-	BroadcastQuestRuntimeEvents(Events);
-	OnSharedQuestStateChanged.Broadcast();
-}
-
-void AMurphyGameStateBase::NotifySharedQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition)
-{
-	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
-	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
-
-	TArray<FQuestRuntimeEvent> Events;
-	FQuestRuntimeHelper::NotifyQuestStartEvent(DataManager, SharedActiveQuests, TargetID, EventCondition, Events);
-
-	BroadcastQuestRuntimeEvents(Events);
-	OnSharedQuestStateChanged.Broadcast();
-}
-
-void AMurphyGameStateBase::NotifySharedQuestConditionMet(FName TargetID, EQuestClearCondition Condition)
-{
-	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
-	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
-
-	TArray<FQuestRuntimeEvent> Events;
-	bool bScenarioCompleted = false;
-	FQuestRuntimeHelper::NotifyQuestConditionMet(DataManager, SharedActiveQuests, TargetID, Condition, Events, bScenarioCompleted);
+	FQuestRuntimeHelper::ProcessQuestConditionMet(DataManager, SharedActiveQuests, SharedCurrentSubQuestIndex, TargetID, Condition, Events, bScenarioCompleted);
 
 	BroadcastQuestRuntimeEvents(Events);
 	OnSharedQuestStateChanged.Broadcast();

@@ -35,6 +35,11 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
+	if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
+	{
+		AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
+	}
+
 	if (NewPlayer == nullptr)
 	{
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: NewPlayer is null"));

@@ -156,7 +156,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	void EndConversation();
 
-protected:
+	
+public:
 	// === Quest === 
 	// Quest ID (NPC_ImmigrationOfficer, NPC_ServiceDesk, NPC_CustomsOfficer ... 상속받아 만들어진 액터에게 부여)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Murphy|Quest")

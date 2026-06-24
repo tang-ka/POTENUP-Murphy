@@ -19,6 +19,7 @@ void AMurphyPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 
 	DOREPLIFETIME(AMurphyPlayerState, PersonalScenario);
 	DOREPLIFETIME(AMurphyPlayerState, PersonalActiveQuests);
+	DOREPLIFETIME(AMurphyPlayerState, PersonalCurrentSubQuestIndex);
 	DOREPLIFETIME(AMurphyPlayerState, CompletedPersonalScenarios);
 }
 
@@ -33,6 +34,7 @@ void AMurphyPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPS->bIsHost = bIsHost;
 		NewPS->PersonalScenario = PersonalScenario;
 		NewPS->PersonalActiveQuests = PersonalActiveQuests;
+		NewPS->PersonalCurrentSubQuestIndex = PersonalCurrentSubQuestIndex;
 		NewPS->CompletedPersonalScenarios = CompletedPersonalScenarios;
 	}
 }
@@ -78,13 +80,14 @@ void AMurphyPlayerState::StartPersonalScenario(EScenarioType NewScenario, const 
 
 	PersonalScenario = NewScenario;
 	PersonalActiveQuests.Empty();
+	PersonalCurrentSubQuestIndex = INDEX_NONE;
 
 	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
 	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
 
 	// 개인 시나리오는 각 PlayerState가 자기만의 런타임 퀘스트 배열을 갖습니다.
 	TArray<FQuestRuntimeEvent> Events;
-	FQuestRuntimeHelper::BuildScenarioRuntimeQuests(DataManager, ScenarioData, PersonalActiveQuests, Events);
+	PersonalCurrentSubQuestIndex = FQuestRuntimeHelper::BuildScenarioRuntimeQuests(DataManager, ScenarioData, PersonalActiveQuests, Events);
 	BroadcastQuestRuntimeEvents(Events);
 	OnPersonalQuestStateChanged.Broadcast();
 }
@@ -98,10 +101,28 @@ void AMurphyPlayerState::ClearPersonalScenario()
 
 	PersonalScenario = EScenarioType::None;
 	PersonalActiveQuests.Empty();
+	PersonalCurrentSubQuestIndex = INDEX_NONE;
 	OnPersonalQuestStateChanged.Broadcast();
 }
 
-void AMurphyPlayerState::NotifyPersonalQuestEvent(FName TargetID, EQuestStartCondition EventCondition)
+void AMurphyPlayerState::NotifyPersonalQuestStartEvent(FName TargetID, EQuestCondition EventCondition)
+{
+	if (!HasAuthority() || PersonalScenario == EScenarioType::None)
+	{
+		return;
+	}
+
+	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
+
+	TArray<FQuestRuntimeEvent> Events;
+	FQuestRuntimeHelper::ProcessQuestStartEvent(DataManager, PersonalActiveQuests, PersonalCurrentSubQuestIndex, TargetID, EventCondition, Events);
+
+	BroadcastQuestRuntimeEvents(Events);
+	OnPersonalQuestStateChanged.Broadcast();
+}
+
+void AMurphyPlayerState::NotifyPersonalQuestConditionMet(FName TargetID, EQuestCondition Condition)
 {
 	if (!HasAuthority() || PersonalScenario == EScenarioType::None)
 	{
@@ -113,48 +134,7 @@ void AMurphyPlayerState::NotifyPersonalQuestEvent(FName TargetID, EQuestStartCon
 
 	TArray<FQuestRuntimeEvent> Events;
 	bool bScenarioCompleted = false;
-	FQuestRuntimeHelper::NotifyQuestEvent(DataManager, PersonalActiveQuests, TargetID, EventCondition, Events, bScenarioCompleted);
-
-	if (bScenarioCompleted)
-	{
-		// GameState가 모든 플레이어 완료 여부를 판단할 수 있도록 개인 완료 기록을 남깁니다.
-		MarkCurrentPersonalScenarioCompleted();
-	}
-
-	BroadcastQuestRuntimeEvents(Events);
-	OnPersonalQuestStateChanged.Broadcast();
-}
-
-void AMurphyPlayerState::NotifyPersonalQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition)
-{
-	if (!HasAuthority() || PersonalScenario == EScenarioType::None)
-	{
-		return;
-	}
-
-	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
-	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
-
-	TArray<FQuestRuntimeEvent> Events;
-	FQuestRuntimeHelper::NotifyQuestStartEvent(DataManager, PersonalActiveQuests, TargetID, EventCondition, Events);
-
-	BroadcastQuestRuntimeEvents(Events);
-	OnPersonalQuestStateChanged.Broadcast();
-}
-
-void AMurphyPlayerState::NotifyPersonalQuestConditionMet(FName TargetID, EQuestClearCondition Condition)
-{
-	if (!HasAuthority() || PersonalScenario == EScenarioType::None)
-	{
-		return;
-	}
-
-	const UGameInstance* GameInstance = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
-	const UDataManager* DataManager = GameInstance ? GameInstance->GetSubsystem<UDataManager>() : nullptr;
-
-	TArray<FQuestRuntimeEvent> Events;
-	bool bScenarioCompleted = false;
-	FQuestRuntimeHelper::NotifyQuestConditionMet(DataManager, PersonalActiveQuests, TargetID, Condition, Events, bScenarioCompleted);
+	FQuestRuntimeHelper::ProcessQuestConditionMet(DataManager, PersonalActiveQuests, PersonalCurrentSubQuestIndex, TargetID, Condition, Events, bScenarioCompleted);
 
 	if (bScenarioCompleted)
 	{

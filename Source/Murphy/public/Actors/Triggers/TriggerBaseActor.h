@@ -41,6 +41,8 @@ public:
 	void SetQuestTargetID(FName InQuestTargetID);
 
 private:
+	void WarnIfQuestTargetLooksLikeQuestID(FName QuestTargetID) const;
+
 	/** 플레이어가 구역에 진입하면 QuestEventNotifier로 ReachLocation 퀘스트 완료 통보 */
 	UFUNCTION()
 	void OnTriggerBoxBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

@@ -30,6 +30,8 @@
 #include "Framework/MurphyPlayerState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/HUD/BagPopupWidget.h"
+#include "UI/HUD/MainHUD.h"
 
 AMurphyPlayerController::AMurphyPlayerController()
 {
@@ -280,6 +282,54 @@ void AMurphyPlayerController::BindLocalQuestStateSources()
 	}
 }
 
+void AMurphyPlayerController::EnsurePrologueRequiredItemsInBag()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn());
+	if (!IsValid(MurphyPlayer))
+	{
+		return;
+	}
+
+	UMainHUD* MainHUD = MurphyPlayer->GetMainHUD();
+	if (!IsValid(MainHUD))
+	{
+		return;
+	}
+
+	UBagPopupWidget* BagWidget = MainHUD->GetBagPopupWidget();
+	if (!IsValid(BagWidget))
+	{
+		return;
+	}
+
+	UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+	if (!IsValid(DataManager))
+	{
+		return;
+	}
+
+	static const FName ArrivalCardItemID(TEXT("Item_ArrivalCard"));
+	static const FName PassportItemID(TEXT("Item_Passport"));
+	const FName RequiredItemIDs[] = { ArrivalCardItemID, PassportItemID };
+
+	for (const FName& ItemID : RequiredItemIDs)
+	{
+		FItemTableRow* ItemInfo = DataManager->GetItemData(ItemID);
+		if (!ItemInfo)
+		{
+			PRINTLOGW_JW(TEXT("[PrologueItems] 기본 소지품 아이템 Row를 찾을 수 없습니다: %s"), *ItemID.ToString());
+			continue;
+		}
+
+		BagWidget->AddItemIfMissing(*ItemInfo);
+	}
+}
+
 void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFilePath)
 {
 	if (!IsValid(TargetNPC)) return;
@@ -339,10 +389,12 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 
 void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& ResponseData)
 {
-	if (IsValid(TargetNPC))
+	// 충돌체 비활성화 시 TargetNPC가 즉시 nullptr로 초기화되는 것을 막기 위해 로컬 변수에 저장
+	AAgentNPCBase* CurrentNPC = TargetNPC;
+	if (IsValid(CurrentNPC))
 	{
-		TargetNPC->ProcessDialogueResponse(ResponseData);
-		TargetNPC->UpdateSessionStateFromResponse(ResponseData);
+		CurrentNPC->ProcessDialogueResponse(ResponseData);
+		CurrentNPC->UpdateSessionStateFromResponse(ResponseData);
 		
 		// 필수 디버그 로그 추가 (응답 후)
 		PRINTLOGW_JW(TEXT("[Voice Test] --- AI Response After ---"));
@@ -350,7 +402,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		PRINTLOGW_JW(TEXT("response.next_action: %s"), *ResponseData.next_action);
 		PRINTLOGW_JW(TEXT("response.next_node_id: %s"), *ResponseData.next_node_id);
 		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text);
-		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *TargetNPC->GetCurrentNodeId());
+		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *CurrentNPC->GetCurrentNodeId());
 
 		// AI 응답이 도착해 대화가 끝나면 NPC점유 해제 및 상태 초기화
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
@@ -408,6 +460,8 @@ void AMurphyPlayerController::SubscribeLevelEnterEvents()
 
 void AMurphyPlayerController::OnImmigrationLevelShown()
 {
+	EnsurePrologueRequiredItemsInBag();
+
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)
 	{
@@ -478,7 +532,7 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 		return;
 	}
 
-	// 플레이어를 PlayerStart[0] 위치로 이동
+	EnsurePrologueRequiredItemsInBag();
 
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)

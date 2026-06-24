@@ -62,6 +62,7 @@ public:
 
 private:
 	void BindLocalQuestStateSources();
+	void EnsurePrologueRequiredItemsInBag();
 
 	//. 테스트 전용: N 키 입력을 받아 현재 진행 중인 서브퀘스트를 서버에서 강제 완료합니다.
 	void HandleAdvanceSubQuestTestKey();

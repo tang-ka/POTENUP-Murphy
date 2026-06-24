@@ -52,7 +52,8 @@ int32 FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 		}
 
 		const FQuestTableRow* QuestData = DataManager->GetQuestData(RuntimeData.QuestID);
-		if (!QuestData || QuestData->QuestType == EQuestType::MainQuest)
+		// if (!QuestData || QuestData->QuestType == EQuestType::MainQuest)
+		if (!QuestData || QuestData->QuestType != EQuestType::SubQuest)
 		{
 			continue;
 		}
@@ -65,8 +66,13 @@ int32 FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 		}
 	}
 
-	// ScenarioStart 퀘스트가 없으면 첫 번째 SubQuest를 찾아 반환합니다.
-	return FindNextSubQuestIndex(DataManager, OutActiveQuests, -1);
+	// ScenarioStart 퀘스트가 없으면 첫 번째 SubQuest를 찾아 자동 시작합니다.
+	const int32 FirstIndex = FindNextSubQuestIndex(DataManager, OutActiveQuests, -1);
+	if (FirstIndex != INDEX_NONE)
+	{
+		StartQuestAtIndex(OutActiveQuests, FirstIndex, OutEvents);
+	}
+	return FirstIndex;
 }
 
 void FQuestRuntimeHelper::ProcessQuestStartEvent(

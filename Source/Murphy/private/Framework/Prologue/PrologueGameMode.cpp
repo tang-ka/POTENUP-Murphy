@@ -91,7 +91,7 @@ void APrologueGameMode::OnImmigrationLevelShown()
 		APawn* Pawn = PC->GetPawn();
 		if (!Pawn) continue;
 
-		Pawn->SetActorLocationAndRotation( 
+		Pawn->SetActorLocationAndRotation(
 			(*FoundStart)->GetActorLocation(),
 			(*FoundStart)->GetActorRotation());
 	}

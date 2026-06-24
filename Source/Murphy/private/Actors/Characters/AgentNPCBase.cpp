@@ -10,6 +10,7 @@
 #include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Framework/MurphyPlayerState.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UnrealType.h"
@@ -785,14 +786,18 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 		CurrentNodeId = ResponseData.current_node_id;
 	}
 
+	PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 (Action: %s)"), *ResponseData.next_action);
+	
 	if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
 	{
 		CurrentNodeId = ResponseData.next_node_id;
 	}
 	
-	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
-	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록) [[ 추가해야하는것 COMPLETE_CHAPTER ]]
+	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
 	{
+		// todo [지모도] : 비행기에서 끝나는 액션을 받아와서 끝내기 
+		
 		if (IsValid(InteractionBox))
 		{
 			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);

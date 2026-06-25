@@ -46,5 +46,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 InteractionProblemSolvingScore = 0;
 	
-	
+	// 최종 추천 결과
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString FinalRecommendation;
+
+	// 표시용 랭크 이름
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString Rank;
+
+	// 최종 총평
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString OverallSummary;
+
+	// 게임 밖 피드백 한글 총평
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString OverallSummaryKr;
+
+	// 핵심 개선 가이드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString MainImprovement;
+
+	// 가장 잘 수행한 노드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString BestNode;
+
+	// 가장 약했던 노드
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString WeakestNode;
+
+	// 다음 플레이 추천 연습 문제
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString NextPracticePromptKr;
+
+	// 다음 플레이 추천 모범 답안
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	FString NextAnswerExample;
 };

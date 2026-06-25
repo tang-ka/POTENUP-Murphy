@@ -2,7 +2,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/AIResultDataTypes.h"
 #include "Data/GameDataTypes.h"
+#include "Data/PlayReportData.h"
 #include "GameFramework/PlayerState.h"
 #include "MurphyPlayerState.generated.h"
 
@@ -14,6 +16,7 @@ struct FQuestRuntimeEvent;
 
 // 데이터가 업데이트되었음을 UI에게 알림
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardDataUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayReportDataUpdated);
 
 UCLASS()
 class MURPHY_API AMurphyPlayerState : public APlayerState
@@ -49,9 +52,56 @@ public:
 	// 시나리오 성공 상태 저장 (필요 시 확장)
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Murphy|State")
 	bool bPassedCurrentScenario = false;
-	
+
+#pragma region Play report state
+public:
+	// 플레이 전체에서 공유할 AI 세션 ID를 가져오고, 없으면 새로 생성합니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|AI")
+	FString GetOrCreateAIPlaySessionId();
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|AI")
+	FString GetAIPlaySessionId() const { return AIPlaySessionId; }
+
+	UFUNCTION(BlueprintCallable, Category = "Murphy|AI")
+	void SetAIPlaySessionId(const FString& InSessionId);
+
+	// AI 최종 결과를 저장하고 UI 표시용 데이터로 변환합니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
+	void SaveAIResult(const FAIResultResponse& InResult);
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|PlayReport")
+	FAIResultResponse GetLastAIResult() const { return LastAIResult; }
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|PlayReport")
+	FPlayReportData GetLastPlayReportData() const { return LastPlayReportData; }
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|PlayReport")
+	bool HasPlayReportData() const { return bHasPlayReportData; }
+
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|PlayReport|Delegate")
+	FOnPlayReportDataUpdated OnPlayReportDataUpdated;
+
+private:
+	// AI 결과 원본을 기존 점수판 UI에서 쓰기 쉬운 데이터로 변환합니다.
+	FPlayReportData BuildPlayReportDataFromAIResult(const FAIResultResponse& InResult) const;
+
+	// 플레이 전체에서 공유하는 AI 세션 ID입니다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|AI", meta = (AllowPrivateAccess = "true"))
+	FString AIPlaySessionId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	FAIResultResponse LastAIResult;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	FPlayReportData LastPlayReportData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	bool bHasPlayReportData = false;
+#pragma endregion
+
 
 #pragma region Session room state
+public:
 	// 선택한 캐릭터 (Carry)
 	UPROPERTY(ReplicatedUsing = OnRep_SessionRoomState, VisibleAnywhere, BlueprintReadOnly, Category="Murphy|Session")
 	EPlayerCharacterType  SelectedCharacter = EPlayerCharacterType::None;

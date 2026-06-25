@@ -10,6 +10,7 @@
 #include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Framework/MurphyPlayerState.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UnrealType.h"
@@ -788,6 +789,25 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
 	{
 		CurrentNodeId = ResponseData.next_node_id;
+	}
+	
+	// TODO:지모도
+	// 🚨 [추가할 부분] 대화 중인 플레이어의 PlayerState를 가져와서 값을 직접 꽂아줍니다!
+	// (멀티플레이 환경이라면 현재 상호작용 중인 타겟 플레이어의 Controller를 가져오도록 수정해 주시면 됩니다. 아래는 기본 예시입니다.)
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (AMurphyPlayerState* PS = PC->GetPlayerState<AMurphyPlayerState>())
+		{
+			// 백엔드에서 받은 ID를 PlayerState에 저장
+			PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
+			PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
+            
+			// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
+			if (HasAuthority()) 
+			{
+				PS->OnRep_ArrivalData();
+			}
+		}
 	}
 	
 	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)

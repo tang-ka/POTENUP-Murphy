@@ -16,8 +16,7 @@ UCLASS()
 class MURPHY_API UArrivalCardWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
-	
+
 private:
 	// Name
 	UPROPERTY(meta =(BindWidget))
@@ -39,7 +38,7 @@ protected:
 	virtual void NativeConstruct() override;
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = "Murphy|CardData")
+	UFUNCTION(BlueprintCallable, Category = "Murphy|ArrivalCard")
 	void SetReadOnlyData(const FText& InSurname, const FText& InGivenname);
 	
 	FText GetSurnameInput() const { return etxt_Surname ? etxt_Surname->GetText() : FText::GetEmpty(); }
@@ -52,5 +51,9 @@ private:
 	
 	UFUNCTION()
 	void OnGivennameTextChanged(const FText& Text);
+	
+	// AI 데이터가 도착하면 화면을 갱신할 함수
+	UFUNCTION()
+	void UpdateUI();
 	
 };

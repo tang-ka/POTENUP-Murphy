@@ -34,4 +34,12 @@ public:
 	/** NPC 감정 DataTable (FAI_EmotionData 기반) */
 	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> EmotionDataTable;
+	
+	/** NPC 감정 DataTable (FCustomsLocationTextData 기반) */
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
+	TSoftObjectPtr<UDataTable> LocationDataTable;
+	
+	/** NPC 감정 DataTable (FCustomsItemTextData 기반) */
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
+	TSoftObjectPtr<UDataTable> CustomsItemDataTable;
 };

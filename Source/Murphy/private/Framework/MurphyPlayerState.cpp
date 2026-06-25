@@ -16,6 +16,8 @@ void AMurphyPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 	
 	DOREPLIFETIME(AMurphyPlayerState, SavedSurname);
 	DOREPLIFETIME(AMurphyPlayerState, SavedGivenname);
+	DOREPLIFETIME(AMurphyPlayerState, CurrentLocationID);
+	DOREPLIFETIME(AMurphyPlayerState, CurrentItemID);
 
 	DOREPLIFETIME(AMurphyPlayerState, PersonalScenario);
 	DOREPLIFETIME(AMurphyPlayerState, PersonalActiveQuests);
@@ -34,6 +36,10 @@ void AMurphyPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPS->PersonalScenario = PersonalScenario;
 		NewPS->PersonalActiveQuests = PersonalActiveQuests;
 		NewPS->CompletedPersonalScenarios = CompletedPersonalScenarios;
+		NewPS->SavedSurname = SavedSurname;
+		NewPS->SavedGivenname = SavedGivenname;
+		NewPS->CurrentLocationID = CurrentLocationID;
+		NewPS->CurrentItemID = CurrentItemID;
 	}
 }
 
@@ -249,3 +255,10 @@ void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSu
 	SavedGivenname = InGivenname;
 }
 
+void AMurphyPlayerState::OnRep_ArrivalData()
+{
+	if (OnArrivalDataUpdated.IsBound())
+	{
+		OnArrivalDataUpdated.Broadcast();
+	}
+}

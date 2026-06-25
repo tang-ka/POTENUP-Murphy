@@ -1,10 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "UI/ArrivalCardWidget.h"
+#include "UI/ArrivalCard/ArrivalCardWidget.h"
 
 #include "Components/EditableText.h"
 #include "Components/TextBlock.h"
+#include "Framework/MurphyPlayerState.h"
+#include "Manager/DataManager.h"
+#include "Data/RandomDataTypes.h"
 
 void UArrivalCardWidget::NativeConstruct()
 {
@@ -25,6 +28,15 @@ void UArrivalCardWidget::NativeConstruct()
 	if (etxt_Givenname)
 	{
 		etxt_Givenname->OnTextChanged.AddDynamic(this, &UArrivalCardWidget::OnGivennameTextChanged);
+	}
+	
+	if (AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>())
+	{
+		// PlayerState의 데이터가 바뀌면 내 UpdateUI 함수를 실행해라!
+		PS->OnArrivalDataUpdated.AddDynamic(this, &UArrivalCardWidget::UpdateUI);
+        
+		// 창이 처음 열렸을 때 이미 값이 도착해 있을 수 있으니 수동으로 1회 갱신
+		UpdateUI();
 	}
 }
 
@@ -95,5 +107,51 @@ void UArrivalCardWidget::OnGivennameTextChanged(const FText& Text)
 	if (!InputStr.Equals(FilteredStr, ESearchCase::CaseSensitive))
 	{
 		etxt_Givenname->SetText(FText::FromString(FilteredStr));
+	}
+}
+
+void UArrivalCardWidget::UpdateUI()
+{
+	// PlayerState와 DataManager를 가져옴
+	AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>();
+	UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+    
+	if (!PS || !DataManager) return;
+
+	FString LocID = PS->CurrentLocationID;
+	FString ItmID = PS->CurrentItemID;
+
+	// ----- [방문 장소 Row 확인 및 갱신] -----
+	if (!LocID.IsEmpty() && txt_VisitLocation)
+	{
+		if (FLocationTextData* FoundLoc = DataManager->GetLocationData(FName(*LocID)))
+		{
+			txt_VisitLocation->SetText(FText::FromString(FoundLoc->NameEN));
+            
+			// [성공] 화면에 초록색으로 띄움
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 장소: %s"), *FoundLoc->NameEN));
+		}
+		else
+		{
+			// [실패] 데이터 테이블에 해당 ID(RowName)가 없을 때 빨간색으로 띄움
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("[Row 실패] 장소 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *LocID));
+		}
+	}
+
+	// ----- [세관 신고 물품 Row 확인 및 갱신] -----
+	if (!ItmID.IsEmpty() && txt_CustomsItem)
+	{
+		if (FCustomsItemTextData* FoundItm = DataManager->GetCustomsItemData(FName(*ItmID)))
+		{
+			txt_CustomsItem->SetText(FText::FromString(FoundItm->NameEN));
+
+			// [성공] 화면에 초록색으로 띄움
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 물품: %s"), *FoundItm->NameEN));
+		}
+		else
+		{
+			// [실패] 데이터 테이블에 해당 ID(RowName)가 없을 때 빨간색으로 띄움
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("[Row 실패] 물품 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *ItmID));
+		}
 	}
 }

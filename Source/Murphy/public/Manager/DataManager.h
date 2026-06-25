@@ -6,6 +6,7 @@
 #include "Data/AIDataTypes.h"
 #include "Data/GameDataTypes.h"
 #include "Data/PhoneDataTypes.h"
+#include "Data/RandomDataTypes.h"
 #include "DataManager.generated.h"
 
 class UDataTable;
@@ -110,7 +111,33 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Emotion")
 	TArray<FName> GetAllEmotionRowNames() const;
 #pragma endregion
+	
+	// === 입국심사 장소 데이터 조회 ===
+#pragma region LocationData
+	/**
+	 * Row Name으로 장소 데이터를 반환합니다.
+	 * @param RowName CSV의 행 이름 (예: LOC_DOWNTOWN_HOTEL)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	FLocationTextData* GetLocationData(const FName& RowName) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Location")
+	TArray<FName> GetAllLocationRowNames() const;
+#pragma endregion
+
+	// === 입국심사 물품 데이터 조회 ===
+#pragma region CustomsItemData
+	/**
+	 * Row Name으로 입국심사 의심 물품 데이터를 반환합니다.
+	 * @param RowName CSV의 행 이름 (예: ITM_SUSPICIOUS_WATCH)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	FCustomsItemTextData* GetCustomsItemData(const FName& RowName) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|CustomsItem")
+	TArray<FName> GetAllCustomsItemRowNames() const;
+#pragma endregion
+	
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */
 	void LoadDataTables();
@@ -129,4 +156,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> EmotionDataTable;
+	
+	UPROPERTY()
+	TObjectPtr<UDataTable> LocationDataTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> CustomsItemDataTable;
 };

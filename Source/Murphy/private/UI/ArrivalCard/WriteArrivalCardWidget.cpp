@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "UI/WriteArrivalCardWidget.h"
+#include "UI/ArrivalCard/WriteArrivalCardWidget.h"
 
 #include "Components/Button.h"
 #include "Framework/MurphyPlayerState.h"
-#include "UI/ArrivalCardWidget.h"
+#include "UI/ArrivalCard/ArrivalCardWidget.h"
 
 void UWriteArrivalCardWidget::NativeConstruct()
 {

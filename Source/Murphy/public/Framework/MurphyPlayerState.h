@@ -2,7 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Data/AIResultDataTypes.h"
+#include "Data/AIDataTypes.h"
 #include "Data/GameDataTypes.h"
 #include "Data/PlayReportData.h"
 #include "GameFramework/PlayerState.h"

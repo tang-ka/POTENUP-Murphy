@@ -6,7 +6,6 @@
 #include "Interfaces/IHttpRequest.h" 
 #include "Interfaces/IHttpResponse.h"
 #include "Data/AIDataTypes.h"
-#include "Data/AIResultDataTypes.h"
 #include "AIBridgeSubsystem.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResponseReceived, const FString&, ResponseData);

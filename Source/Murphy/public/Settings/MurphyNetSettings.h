@@ -16,6 +16,7 @@ class MURPHY_API UMurphyNetSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
+
 public:
 	// AI 서버 호스트 (IP 또는 도메인)
 	UPROPERTY(Config, EditAnywhere, Category="Murphy|Net")

@@ -8,6 +8,7 @@
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
 #include "Manager/NetworkManagerSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 void USessionMainHUDWidget::NativeConstruct()
 {
@@ -104,5 +105,14 @@ void USessionMainHUDWidget::HandleBtnExitClicked()
 		return;
 	}
 
+	// 싱글플레이는 세션이 없으므로 로비로 직접 이동
+	if (NetworkManager->GetSessionState() != ESessionState::InSession)
+	{
+		PRINTLOG_SH(TEXT("HandleBtnExitClicked: 싱글플레이 — 로비로 직접 이동"));
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Lobby")));
+		return;
+	}
+
+	// 멀티플레이: 세션 종료 후 로비 복귀 (HandleDestroySessionComplete에서 처리)
 	NetworkManager->DestroySession();
 }

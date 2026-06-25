@@ -10,6 +10,7 @@
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResponseReceived, const FString&, ResponseData);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResponseDataReceived, const FAIResponseData&, ResponseData);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnAIResultReceived, const FAIResultResponse&, ResultData);
 
 UCLASS()
 class MURPHY_API UAIBridgeSubsystem : public UGameInstanceSubsystem
@@ -34,6 +35,10 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
 	void SendToAIWithTranscript(const FAIRequestData& RequestData, const FString& Transcript, FOnAIResponseDataReceived OnResponseDelegate);
+
+	// 게임 완료 후 AI 서버에서 최종 점수판 결과를 조회합니다.
+	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
+	void RequestAIResult(const FString& SessionId, FOnAIResultReceived OnResultDelegate);
 	
 	// 진행중인 요청(구독) 강제 취소
 	UFUNCTION(BlueprintCallable, Category="Murphy|Net")
@@ -46,8 +51,16 @@ public:
 private:
 	// HTTP 응답 콜백
 	void OnHttpResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
-	
 
+	// 최종 결과 조회 HTTP 응답 콜백
+	void OnAIResultHttpResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+
+	// 최종 결과 JSON을 구조체로 변환해 콜백을 실행합니다.
+	void HandleAIResultResponseStruct(const FString& ResponseData);
 
 	UPROPERTY()
-	FOnAIResponseDataReceived PendingStructResponseDelegate;};
+	FOnAIResponseDataReceived PendingStructResponseDelegate;
+
+	UPROPERTY()
+	FOnAIResultReceived PendingResultResponseDelegate;
+};

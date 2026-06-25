@@ -8,6 +8,7 @@
 #include "Animation/WidgetAnimation.h"
 #include "LobbyUI.generated.h"
 
+class UMurphyButton;
 class UOverlay;
 class UButton;
 class UCanvasPanel;
@@ -29,19 +30,19 @@ protected:
 protected:
 #pragma region LobbyUI
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UButton> Btn_SinglePlay;
+	TObjectPtr<UMurphyButton> Btn_SinglePlay;
 	
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UButton> Btn_MultiPlay;
+	TObjectPtr<UMurphyButton> Btn_MultiPlay;
 	
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UButton> Btn_Achievement;
+	TObjectPtr<UMurphyButton> Btn_Achievement;
 	
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UButton> Btn_Option;
+	TObjectPtr<UMurphyButton> Btn_Option;
 	
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> Btn_Quit;
+	TObjectPtr<UMurphyButton> Btn_Quit;
 #pragma endregion
 
 #pragma region SessionUI

@@ -85,18 +85,38 @@ void AMurphyPlayer::BeginPlay()
 		VoiceRecorderComp->OnAudioChunkReady.AddDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
 	}
 
-	// MainHUDClassInstance 생성
-	if (IsLocallyControlled() && MainHUDClass != nullptr)
+}
+
+void AMurphyPlayer::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// Possess 이후에 호출되므로 IsLocallyControlled()가 정상 동작함
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	// MainHUD 생성
+	if (MainHUDClass != nullptr && MainHUDInstance == nullptr)
 	{
 		MainHUDInstance = CreateWidget<UMainHUD>(GetWorld(), MainHUDClass);
 		if (MainHUDInstance != nullptr)
 		{
 			MainHUDInstance->AddToViewport();
+
+			// 캐릭터 빙의 시 마우스를 기본(게임 전용) 상태로 초기화
+			if (APlayerController* PC = Cast<APlayerController>(NewController))
+			{
+				PC->SetShowMouseCursor(false);
+				PC->SetInputMode(FInputModeGameOnly());
+				PRINTLOG_SH(TEXT("PossessedBy: 마우스 입력 모드 기본값(GameOnly) 초기화 완료"));
+			}
 		}
 	}
 
-	// SystemMenuInstance 생성
-	if (IsLocallyControlled() && SystemMenuClass != nullptr)
+	// SystemMenu 생성
+	if (SystemMenuClass != nullptr && SystemMenuInstance == nullptr)
 	{
 		SystemMenuInstance = CreateWidget<USystemMenuUI>(GetWorld(), SystemMenuClass);
 		if (SystemMenuInstance != nullptr)
@@ -105,6 +125,8 @@ void AMurphyPlayer::BeginPlay()
 			SystemMenuInstance->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
+
+	PRINTLOG_SH(TEXT("PossessedBy: MainHUD 및 SystemMenu 생성 완료"));
 }
 
 // void AMurphyPlayer::Tick(float DeltaSeconds)

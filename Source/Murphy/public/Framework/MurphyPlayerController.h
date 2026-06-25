@@ -21,10 +21,11 @@ class MURPHY_API AMurphyPlayerController : public APlayerController
 
 public:
 	AMurphyPlayerController();
+	
+	virtual void OnRep_PlayerState() override;
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void OnRep_PlayerState() override;
 	virtual void SetupInputComponent() override;
 
 	// === 통합 테스트 커맨드 ===

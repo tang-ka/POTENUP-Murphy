@@ -14,6 +14,7 @@
 #include "Manager/CinematicManagerSubsystem.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "UObject/ConstructorHelpers.h"
 
 AAirplaneGameMode::AAirplaneGameMode()
 {
@@ -24,6 +25,19 @@ AAirplaneGameMode::AAirplaneGameMode()
 
 	// 기내 씬: 항상 1인칭 자유시점 고정
 	ChatViewMode = EChatViewMode::FirstPersonLocked;
+
+	// 기내 전용 폰 BP를 캐릭터 선택값에 따라 스폰하도록 바인딩 (Boy=Player1, Girl=Player2)
+	static ConstructorHelpers::FClassFinder<APawn> BoyPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_LevelTest_Player1.BP_LevelTest_Player1_C"));
+	if (BoyPawnFinder.Succeeded())
+	{
+		BoyPawnClass = BoyPawnFinder.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<APawn> GirlPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_LevelTest_Player2.BP_LevelTest_Player2_C"));
+	if (GirlPawnFinder.Succeeded())
+	{
+		GirlPawnClass = GirlPawnFinder.Class;
+	}
 }
 
 void AAirplaneGameMode::BeginPlay()

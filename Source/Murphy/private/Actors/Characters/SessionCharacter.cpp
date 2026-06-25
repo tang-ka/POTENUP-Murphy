@@ -5,6 +5,7 @@
 
 #include "Murphy.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/ChildActorComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -33,6 +34,12 @@ ASessionCharacter::ASessionCharacter()
 	MeshComp->SetRelativeLocation(FVector(0.f, 0.f, -88.f));
 	MeshComp->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	MetaHumanActorComp = CreateDefaultSubobject<UChildActorComponent>(TEXT("MetaHumanActorComp"));
+	MetaHumanActorComp->SetupAttachment(CapsuleComp);
+	MetaHumanActorComp->SetRelativeLocation(MetaHumanRelativeLocation);
+	MetaHumanActorComp->SetRelativeRotation(MetaHumanRelativeRotation);
+	MetaHumanActorComp->SetRelativeScale3D(MetaHumanRelativeScale);
 
 	PlayerStateWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("PlayerStateWidgetComp"));
 	PlayerStateWidgetComp->SetupAttachment(CapsuleComp);
@@ -101,7 +108,8 @@ void ASessionCharacter::HandleSessionRoomStateChanged()
 
 void ASessionCharacter::RefreshVisuals()
 {
-	RefreshCharacterMesh();
+	MeshComp->SetSkeletalMesh(nullptr);
+	RefreshMetaHumanCharacter();
 	RefreshPlayerStateWidget();
 }
 
@@ -130,6 +138,57 @@ void ASessionCharacter::RefreshCharacterMesh()
 	MeshComp->SetSkeletalMesh(NewMesh);
 
 	PRINTLOG_SH(TEXT("캐릭터 메쉬 갱신 — %s"), *UEnum::GetValueAsString(OwningPlayerState->SelectedCharacter));
+}
+
+void ASessionCharacter::RefreshMetaHumanCharacter()
+{
+	if (!OwningPlayerState || !MetaHumanActorComp)
+	{
+		PRINTLOG_SH(TEXT("RefreshMetaHumanCharacter 실패 — OwningPlayerState 또는 MetaHumanActorComp가 유효하지 않습니다."));
+		return;
+	}
+
+	TSubclassOf<AActor> NewMetaHumanClass = ResolveMetaHumanClass();
+	if (!NewMetaHumanClass)
+	{
+		PRINTLOG_SH(TEXT("RefreshMetaHumanCharacter 실패 — MetaHumanClass가 설정되지 않았습니다. CharacterType: %s"), *UEnum::GetValueAsString(OwningPlayerState->SelectedCharacter));
+		return;
+	}
+
+	MetaHumanActorComp->SetRelativeLocation(MetaHumanRelativeLocation);
+	MetaHumanActorComp->SetRelativeRotation(MetaHumanRelativeRotation);
+	MetaHumanActorComp->SetRelativeScale3D(MetaHumanRelativeScale);
+
+	if (MetaHumanActorComp->GetChildActorClass() != NewMetaHumanClass)
+	{
+		MetaHumanActorComp->SetChildActorClass(NewMetaHumanClass);
+	}
+
+	PRINTLOG_SH(TEXT("메타휴먼 캐릭터 갱신 완료 — %s"), *UEnum::GetValueAsString(OwningPlayerState->SelectedCharacter));
+}
+
+TSubclassOf<AActor> ASessionCharacter::ResolveMetaHumanClass() const
+{
+	if (!OwningPlayerState)
+	{
+		return BoyMetaHumanClass;
+	}
+
+	switch (OwningPlayerState->SelectedCharacter)
+	{
+	case EPlayerCharacterType::BoyCharacter:
+	{
+		return BoyMetaHumanClass;
+	}
+	case EPlayerCharacterType::GirlCharacter:
+	{
+		return GirlMetaHumanClass;
+	}
+	default:
+	{
+		return BoyMetaHumanClass;
+	}
+	}
 }
 
 void ASessionCharacter::RefreshPlayerStateWidget()

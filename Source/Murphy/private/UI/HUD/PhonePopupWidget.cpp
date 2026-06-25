@@ -4,6 +4,8 @@
 #include "UI/HUD/PhonePopupWidget.h"
 
 #include "Components/Button.h"
+#include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Manager/DataManager.h"
 #include "Murphy.h"
@@ -38,6 +40,7 @@ void UPhonePopupWidget::NativeConstruct()
 	InitAppWidget(WBP_Translate,	  FName("Translate"));
 	InitAppWidget(WBP_Camera,      FName("Camera"));
 	InitAppWidget(WBP_Photos,      FName("Photos"));
+	SystemColorChanged(true);
 
 	PRINTLOG_SH(TEXT("PhonePopupWidget 초기화 완료"));
 }
@@ -153,6 +156,9 @@ void UPhonePopupWidget::HandleAppIconClicked(UApplicationWidget* ClickedApp)
 
 	PRINTLOG_SH(TEXT("앱 화면 전환: %s"), *ClickedApp->GetName());
 	ShowAppScreen(ClickedApp->AppScreen);
+
+	const bool bIsTranslateApp = ClickedApp->GetAppName() == FName("Translate");
+	SystemColorChanged(!bIsTranslateApp);
 }
 
 void UPhonePopupWidget::HandleCallClicked()
@@ -165,11 +171,15 @@ void UPhonePopupWidget::HandleCallClicked()
 
 	PRINTLOG_SH(TEXT("[Call] 전화 앱 화면 전환"));
 	ShowAppScreen(CallAppScreen);
+	SystemColorChanged(true);
 }
 
 void UPhonePopupWidget::ShowAppScreen(UUserWidget* TargetScreen)
 {
-	if (!AppScreenSwitcher || !TargetScreen) return;
+	if (!AppScreenSwitcher || !TargetScreen)
+	{
+		return;
+	}
 
 	AppScreenSwitcher->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	AppScreenSwitcher->SetActiveWidget(TargetScreen);
@@ -177,6 +187,36 @@ void UPhonePopupWidget::ShowAppScreen(UUserWidget* TargetScreen)
 	if (Btn_Home)
 	{
 		Btn_Home->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UPhonePopupWidget::SystemColorChanged(bool bIsLight)
+{
+	const FLinearColor SystemColor = bIsLight ? FLinearColor::White : FLinearColor(0.02f, 0.02f, 0.02f, 1.0f);
+
+	if (Txt_Time)
+	{
+		Txt_Time->SetColorAndOpacity(FSlateColor(SystemColor));
+	}
+
+	if (Img_Receive)
+	{
+		Img_Receive->SetColorAndOpacity(SystemColor);
+	}
+
+	if (Img_Wifi)
+	{
+		Img_Wifi->SetColorAndOpacity(SystemColor);
+	}
+
+	if (Img_Battery)
+	{
+		Img_Battery->SetColorAndOpacity(SystemColor);
+	}
+
+	if (Btn_Home)
+	{
+		Btn_Home->SetBackgroundColor(SystemColor);
 	}
 }
 
@@ -193,6 +233,8 @@ void UPhonePopupWidget::HandleHomeClicked()
 	{
 		Btn_Home->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
+	SystemColorChanged(true);
 }
 
 void UPhonePopupWidget::TogglePhone()

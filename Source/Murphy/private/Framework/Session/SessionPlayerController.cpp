@@ -5,8 +5,10 @@
 #include "Murphy.h"
 #include "Blueprint/UserWidget.h"
 #include "Framework/MurphyPlayerState.h"
+#include "Camera/CameraActor.h"
 #include "Framework/Session/SessionGameMode.h"
 #include "Framework/Session/SessionGameState.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/HUD/SessionMainHUDWidget.h"
 
 void ASessionPlayerController::BeginPlay()
@@ -17,6 +19,24 @@ void ASessionPlayerController::BeginPlay()
 	{
 		return;
 	}
+
+	// ── 고정 카메라 설정 ──────────────────────────────────────
+	if (FixedCameraClass)
+	{
+		TArray<AActor*> FoundActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), FixedCameraClass, FoundActors);
+
+		if (FoundActors.Num() > 0)
+		{
+			SetViewTargetWithBlend(FoundActors[0], 0.f);
+			PRINTLOG_SH(TEXT("고정 카메라 설정 완료 — %s"), *FoundActors[0]->GetName());
+		}
+		else
+		{
+			PRINTLOG_SH(TEXT("고정 카메라를 찾지 못했습니다. Class: %s"), *FixedCameraClass->GetName());
+		}
+	}
+	// ──────────────────────────────────────────────────────────
 
 	if (!SessionMainHUDClass)
 	{

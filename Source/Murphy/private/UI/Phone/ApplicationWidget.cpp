@@ -24,6 +24,7 @@ void UApplicationWidget::SetAppData(const FPhoneAppRow& Row, UUserWidget* InAppS
 	if (Txt_AppName)
 	{
 		Txt_AppName->SetText(Row.AppName);
+		AppName = FName(*Row.AppName.ToString());
 	}
 
 	// Btn_AppIcon의 Normal / Hovered / Pressed 브러시에 텍스처 할당

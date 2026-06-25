@@ -146,17 +146,20 @@ public:
 	// === Conversation ===
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	FString GetNPCName() const { return NPCName.ToString(); }
+
+	// NPCScenarioType을 Translate 카테고리 FName으로 변환
+	FName GetScenarioCategoryName() const;
 	
 	UFUNCTION(BlueprintPure, Category="AI|Chat")
 	bool CanTalkWithPlayer() const { return !bIsTalkingWithPlayer; }
 	
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	bool TryStartConversation();
-	
+
 	UFUNCTION(BlueprintCallable, Category="AI|Chat")
 	void EndConversation();
 
-protected:
+public:
 	// === Quest === 
 	// Quest ID (NPC_ImmigrationOfficer, NPC_ServiceDesk, NPC_CustomsOfficer ... 상속받아 만들어진 액터에게 부여)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Murphy|Quest")
@@ -256,7 +259,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI|Session State")
 	FAI_ScenarioState CurrentScenarioState;
-
+	
 public:
 	// === Session Methods ===
 	void InitializeSessionState();

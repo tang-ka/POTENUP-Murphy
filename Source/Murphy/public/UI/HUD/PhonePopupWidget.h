@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PhonePopupWidget.generated.h"
 
+class UImage;
 class UWidgetSwitcher;
 class UTextBlock;
 class UButton;
@@ -44,7 +45,16 @@ public:
 public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Txt_Time;
-
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> Img_Receive;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> Img_Wifi;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> Img_Battery;
+	
 	// UPROPERTY(meta = (BindWidget))
 	// TObjectPtr<UButton> Btn_Search;
 
@@ -90,6 +100,8 @@ private:
 	// AppScreenSwitcher 표시 + 지정된 화면으로 전환하는 공통 헬퍼
 	void ShowAppScreen(UUserWidget* TargetScreen);
 
+	void SystemColorChanged(bool bIsLight);
+	
 	// DataManager에서 생성한 Call 앱 화면
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CallAppScreen;

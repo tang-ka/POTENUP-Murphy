@@ -93,34 +93,19 @@ enum class EQuestType : uint8
 };
 
 // ========================
-// 퀘스트 시작 조건
+// 퀘스트 조건 (시작/완료 공용)
 // ========================
 UENUM(BlueprintType)
-enum class EQuestStartCondition : uint8
+enum class EQuestCondition : uint8
 {
 	None					UMETA(DisplayName = "None"),
-	ScenarioStart			UMETA(DisplayName = "Scenario Start"),
-	QuestCompleted			UMETA(DisplayName = "Quest Completed"),
-	CheckItem				UMETA(DisplayName = "Check Item"),
-	ReachLocation			UMETA(DisplayName = "ReachLocation"),
-	TriggerToNPC			UMETA(DisplayName = "Trigger To NPC"),
-	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
-	GetItem					UMETA(DisplayName = "Get Item"),
-	UseItem					UMETA(DisplayName = "Use Item")
-};
-
-// ========================
-// 퀘스트 완료 조건
-// ========================
-UENUM(BlueprintType)
-enum class EQuestClearCondition : uint8
-{
-	None					UMETA(DisplayName = "None"),
-	ReachLocation			UMETA(DisplayName = "ReachLocation"),
-	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),
-	CheckItem				UMETA(DisplayName = "Check Item"),
-	GetItem					UMETA(DisplayName = "Get Item"),
-	UseItem					UMETA(DisplayName = "Use Item")
+	ScenarioStart			UMETA(DisplayName = "Scenario Start"),    // 시작 전용
+	QuestCompleted			UMETA(DisplayName = "Quest Completed"),   // 시작 전용 (선형 모델에서 자동 처리)
+	TalkToNPC				UMETA(DisplayName = "Talk to NPC"),       // 시작/완료 공용
+	ReachLocation			UMETA(DisplayName = "ReachLocation"),     // 시작/완료 공용
+	CheckItem				UMETA(DisplayName = "Check Item"),        // 시작/완료 공용
+	GetItem					UMETA(DisplayName = "Get Item"),          // 시작/완료 공용
+	UseItem					UMETA(DisplayName = "Use Item")           // 시작/완료 공용
 };
 
 // ========================
@@ -183,7 +168,7 @@ struct FQuestTableRow : public FTableRowBase
 
 	/** 퀘스트가 시작되는 조건 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
-	EQuestStartCondition StartCondition = EQuestStartCondition::None;
+	EQuestCondition StartCondition = EQuestCondition::None;
 
 	/** 퀘스트 시작 조건 대상 ID (예: 선행 퀘스트 ID, NPC ID, 위치 ID, 아이템 ID 등) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
@@ -191,7 +176,7 @@ struct FQuestTableRow : public FTableRowBase
 
 	/** 퀘스트 완료 조건 */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")
-	EQuestClearCondition ClearCondition = EQuestClearCondition::None;
+	EQuestCondition ClearCondition = EQuestCondition::None;
 
 	/** 퀘스트 완료 대상 ID (예: 대화할 NPC ID, 획득할 아이템 ID, 도달할 위치 ID 등) */
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Murphy|Data|Quest")

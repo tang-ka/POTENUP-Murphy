@@ -67,5 +67,5 @@ private:
 	void ShowDetailPopup();
 
 	/** Bag 아이템 조작을 PlayerController의 QuestEventNotifier에 통보합니다. */
-	void NotifyQuestCondition(EQuestClearCondition Condition) const;
+	void NotifyQuestCondition(EQuestCondition Condition) const;
 };

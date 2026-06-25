@@ -262,3 +262,58 @@ TArray<FName> UDataManager::GetAllEmotionRowNames() const
 	return EmotionDataTable->GetRowNames();
 }
 
+FLocationTextData* UDataManager::GetLocationData(const FName& RowName) const
+{
+	if (!LocationDataTable)
+	{
+		PRINTLOG_HJ(TEXT("LocationDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+	
+	FLocationTextData* Row = LocationDataTable->FindRow<FLocationTextData>(RowName, TEXT("GetLocationData"));
+	if (!Row)
+	{
+		PRINTLOG_HJ(TEXT("장소 Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row; 
+}
+
+TArray<FName> UDataManager::GetAllLocationRowNames() const
+{
+	if (!LocationDataTable)
+	{
+		PRINTLOG_HJ(TEXT("LocationDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+	
+	return LocationDataTable->GetRowNames();
+}
+
+FCustomsItemTextData* UDataManager::GetCustomsItemData(const FName& RowName) const
+{
+	if (!CustomsItemDataTable)
+	{
+		PRINTLOGE_JW(TEXT("CustomsItemDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+	
+	FCustomsItemTextData* Row = CustomsItemDataTable->FindRow<FCustomsItemTextData>(RowName, TEXT("GetCustomsItemData"));
+	if (!Row)
+	{
+		PRINTLOG_HJ(TEXT("입국심사 물품 Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row;
+}
+
+TArray<FName> UDataManager::GetAllCustomsItemRowNames() const
+{
+	if (!CustomsItemDataTable)
+	{
+		PRINTLOG_HJ(TEXT("CustomsItemDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+	
+	return CustomsItemDataTable->GetRowNames();
+}

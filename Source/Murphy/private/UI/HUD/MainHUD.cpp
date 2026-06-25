@@ -1,19 +1,28 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "UI/HUD/MainHUD.h"
 
 #include "GameFramework/PlayerController.h"
+#include "Murphy.h"
 #include "UI/HUD/BagPopupWidget.h"
+#include "UI/HUD/CaptionWidget.h"
 #include "UI/HUD/MyMicWidget.h"
 #include "UI/HUD/PhonePopupWidget.h"
-#include "UI/HUD/CaptionWidget.h"
+#include "UI/Phone/ApplicationWidget.h"
+#include "UI/Phone/TranslateAppScreenWidget.h"
+#include "UI/Phone/TranslateDialogManager.h"
 
 void UMainHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// 폰 토글 델리게이트에 마우스 커서 핸들러 등록
+	DialogManager = NewObject<UTranslateDialogManager>(this);
+
+	if (UTranslateAppScreenWidget* Screen = GetTranslateScreen())
+	{
+		Screen->InitializeWithManager(DialogManager);
+	}
+
 	if (WBP_PhonePopup)
 	{
 		WBP_PhonePopup->OnPhoneToggled.AddDynamic(this, &UMainHUD::HandlePhoneToggled);
@@ -23,12 +32,15 @@ void UMainHUD::NativeConstruct()
 void UMainHUD::HandlePhoneToggled(bool bIsPhoneOpen)
 {
 	APlayerController* PC = GetOwningPlayer();
-	if (!PC) return;
+	if (!PC)
+	{
+		return;
+	}
 
 	if (bIsPhoneOpen)
 	{
-		// 폰이 열릴 때: 마우스 커서 표시 + UI 전용 입력 모드
 		PC->SetShowMouseCursor(true);
+
 		FInputModeGameAndUI InputMode;
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		InputMode.SetHideCursorDuringCapture(false);
@@ -36,7 +48,6 @@ void UMainHUD::HandlePhoneToggled(bool bIsPhoneOpen)
 	}
 	else
 	{
-		// 폰이 닫힐 때: 마우스 커서 숨김 + 게임 전용 입력 모드
 		PC->SetShowMouseCursor(false);
 		PC->SetInputMode(FInputModeGameOnly());
 	}
@@ -60,15 +71,99 @@ void UMainHUD::RequestTogglePhone()
 
 void UMainHUD::UpdateMicState(bool bIsRecording)
 {
-	if (WBP_MyMic != nullptr)
+	if (WBP_MyMic)
 	{
 		WBP_MyMic->SetRecordingState(bIsRecording);
 	}
 }
+
 void UMainHUD::UpdateCaption(const FString& CaptionText)
 {
-	if (WBP_PlayerCaption != nullptr)
+	if (WBP_PlayerCaption)
 	{
 		WBP_PlayerCaption->SetCaption(CaptionText);
 	}
+}
+
+void UMainHUD::AddTranslateDialog(FName InCategoryName, const FDialogEntry& Entry)
+{
+	if (!DialogManager)
+	{
+		return;
+	}
+
+	DialogManager->AddDialog(InCategoryName, Entry);
+}
+
+void UMainHUD::AddTranslateCategory(FName InCategoryName, const FText& DisplayName)
+{
+	if (!DialogManager)
+	{
+		return;
+	}
+
+	DialogManager->RegisterCategory(InCategoryName, DisplayName);
+}
+
+void UMainHUD::BeginTranslateConversation(FName InCategoryName, const FText& InDisplayName)
+{
+	if (!DialogManager)
+	{
+		return;
+	}
+
+	ActiveTranslateCategory = InCategoryName;
+	DialogManager->RegisterCategory(InCategoryName, InDisplayName); // 중복 자동 무시
+	PRINTLOG_SH(TEXT("Translate Conversation Begin: %s"), *InCategoryName.ToString());
+}
+
+void UMainHUD::AddAgentDialog(const FString& InSpeaker, const FString& InText)
+{
+	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	{
+		PRINTLOG_SH(TEXT("AddAgentDialog skipped: no active category"));
+		return;
+	}
+
+	FDialogEntry Entry;
+	Entry.Type = EDialogType::Agent;
+	Entry.Name = FText::FromString(InSpeaker);
+	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
+	Entry.Content = FText::FromString(InText);
+
+	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+}
+
+void UMainHUD::AddUserDialog(const FString& InText)
+{
+	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	{
+		PRINTLOG_SH(TEXT("AddUserDialog skipped: no active category"));
+		return;
+	}
+
+	FDialogEntry Entry;
+	Entry.Type = EDialogType::User;
+	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
+	Entry.Content = FText::FromString(InText);
+
+	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+}
+
+void UMainHUD::SetTranslateConnecting(bool bIsConnecting)
+{
+	if (UTranslateAppScreenWidget* Screen = GetTranslateScreen())
+	{
+		Screen->SetConnecting(bIsConnecting);
+	}
+}
+
+UTranslateAppScreenWidget* UMainHUD::GetTranslateScreen() const
+{
+	if (!WBP_PhonePopup || !WBP_PhonePopup->WBP_Translate)
+	{
+		return nullptr;
+	}
+
+	return Cast<UTranslateAppScreenWidget>(WBP_PhonePopup->WBP_Translate->AppScreen);
 }

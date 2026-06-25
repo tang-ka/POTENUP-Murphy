@@ -51,6 +51,41 @@ void UBagPopupWidget::AddItem(const FItemTableRow& Item)
 	Wbx_Items->AddChild(NewItemWidget);
 }
 
+bool UBagPopupWidget::HasItem(FName ItemID) const
+{
+	if (ItemID.IsNone() || !IsValid(Wbx_Items))
+	{
+		return false;
+	}
+
+	for (UWidget* ChildWidget : Wbx_Items->GetAllChildren())
+	{
+		const UItemWidget* ItemWidget = Cast<UItemWidget>(ChildWidget);
+		if (!IsValid(ItemWidget))
+		{
+			continue;
+		}
+
+		if (ItemWidget->GetItemInfo().ItemID == ItemID)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UBagPopupWidget::AddItemIfMissing(const FItemTableRow& Item)
+{
+	if (Item.ItemID.IsNone() || HasItem(Item.ItemID))
+	{
+		return false;
+	}
+
+	AddItem(Item);
+	return HasItem(Item.ItemID);
+}
+
 void UBagPopupWidget::SetMouseCursorEnabled(bool bEnabled)
 {
 	APlayerController* PC = GetOwningPlayer();

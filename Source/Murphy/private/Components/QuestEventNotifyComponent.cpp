@@ -15,17 +15,17 @@ void UQuestEventNotifyComponent::SetQuestTargetID(FName InQuestTargetID)
 	QuestTargetID = InQuestTargetID;
 }
 
-bool UQuestEventNotifyComponent::NotifyQuestStart(AActor* InstigatorActor, EQuestStartCondition ConditionOverride) const
+bool UQuestEventNotifyComponent::NotifyQuestStart(AActor* InstigatorActor, EQuestCondition ConditionOverride) const
 {
 	if (!HasValidQuestTarget())
 	{
 		return false;
 	}
 
-	const EQuestStartCondition StartCondition = ConditionOverride == EQuestStartCondition::None
+	const EQuestCondition StartCondition = ConditionOverride == EQuestCondition::None
 		? DefaultStartCondition
 		: ConditionOverride;
-	if (StartCondition == EQuestStartCondition::None)
+	if (StartCondition == EQuestCondition::None)
 	{
 		PRINTLOGW_JW(TEXT("[QuestEventNotifyComponent] 시작 조건이 설정되지 않았습니다. Owner: %s, TargetID: %s"),
 			*GetNameSafe(GetOwner()), *QuestTargetID.ToString());
@@ -42,17 +42,17 @@ bool UQuestEventNotifyComponent::NotifyQuestStart(AActor* InstigatorActor, EQues
 	return true;
 }
 
-bool UQuestEventNotifyComponent::NotifyQuestComplete(AActor* InstigatorActor, EQuestClearCondition ConditionOverride) const
+bool UQuestEventNotifyComponent::NotifyQuestComplete(AActor* InstigatorActor, EQuestCondition ConditionOverride) const
 {
 	if (!HasValidQuestTarget())
 	{
 		return false;
 	}
 
-	const EQuestClearCondition ClearCondition = ConditionOverride == EQuestClearCondition::None
+	const EQuestCondition ClearCondition = ConditionOverride == EQuestCondition::None
 		? DefaultClearCondition
 		: ConditionOverride;
-	if (ClearCondition == EQuestClearCondition::None)
+	if (ClearCondition == EQuestCondition::None)
 	{
 		PRINTLOGW_JW(TEXT("[QuestEventNotifyComponent] 완료 조건이 설정되지 않았습니다. Owner: %s, TargetID: %s"),
 			*GetNameSafe(GetOwner()), *QuestTargetID.ToString());

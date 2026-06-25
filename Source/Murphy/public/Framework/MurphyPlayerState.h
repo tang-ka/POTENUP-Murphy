@@ -11,6 +11,10 @@ struct FQuestRuntimeEvent;
 /**
  * 모든 레벨에서 공통으로 사용하는 PlayerState
  */
+
+// 데이터가 업데이트되었음을 UI에게 알림
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardDataUpdated);
+
 UCLASS()
 class MURPHY_API AMurphyPlayerState : public APlayerState
 {
@@ -80,9 +84,12 @@ public:
 
 	void StartPersonalScenario(EScenarioType NewScenario, const FScenarioTableRow* ScenarioData);
 	void ClearPersonalScenario();
-	void NotifyPersonalQuestEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyPersonalQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyPersonalQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+	void NotifyPersonalQuestStartEvent(FName TargetID, EQuestCondition EventCondition);
+	void NotifyPersonalQuestConditionMet(FName TargetID, EQuestCondition Condition);
+
+	// 현재 진행 중인 서브퀘스트의 PersonalActiveQuests 내 인덱스입니다. (INDEX_NONE = 없음)
+	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
+	int32 GetPersonalCurrentSubQuestIndex() const { return PersonalCurrentSubQuestIndex; }
 
 	// 이 PlayerState를 소유한 클라이언트에게만 개인 퀘스트 토스트를 띄울 때 사용합니다.
 	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
@@ -109,12 +116,18 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_PersonalActiveQuests, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
 	TArray<FQuestRuntimeData> PersonalActiveQuests;
 
+	// 현재 진행 중인 서브퀘스트의 PersonalActiveQuests 내 배열 인덱스입니다.
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	int32 PersonalCurrentSubQuestIndex = INDEX_NONE;
+
 	// GameState가 AllPlayersCompleted 정책을 판단할 때 참조하는 개인 시나리오 완료 목록입니다.
 	UPROPERTY(ReplicatedUsing = OnRep_CompletedPersonalScenarios, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
 	TArray<EScenarioType> CompletedPersonalScenarios;
 #pragma endregion
 
+#pragma region Arrival Card Data
 public:
+	// === Arrival Card ===
 	// 입국심사서에 입력한 이름 저장
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedSurname;
@@ -122,9 +135,25 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedGivenname;
 	
-	// 클라->서버 저장 요청
+	// AI가 배정한 장소 ID
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString CurrentLocationID;
+
+	// AI가 배정한 신고물품 ID
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString CurrentItemID;
+
+	// 클라->서버 이름 저장 요청
 	UFUNCTION(Server, Reliable)
 	void ServerSetArrivalData(const FString& InSurname, const FString& InGivenname);
+	
+	// 서버->클라 ID 데이터 도착하면 자동 실행
+	UFUNCTION()
+	void OnRep_ArrivalData();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|CardData|Delegate")
+	FOnCardDataUpdated OnArrivalDataUpdated;
+#pragma endregion Arrival Card Data
 	
 };
 

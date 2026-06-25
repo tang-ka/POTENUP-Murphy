@@ -9,6 +9,7 @@
 
 class AMurphyPlayerState;
 class UCapsuleComponent;
+class UChildActorComponent;
 class USkeletalMeshComponent;
 class USkeletalMesh;
 class UWidgetComponent;
@@ -52,6 +53,12 @@ private:
 	/** 현재 OwningPlayerState->SelectedCharacter 값에 맞는 메쉬로 갱신 */
 	void RefreshCharacterMesh();
 
+	/** 현재 OwningPlayerState->SelectedCharacter 값에 맞는 메타휴먼으로 갱신 */
+	void RefreshMetaHumanCharacter();
+
+	/** 현재 SelectedCharacter 값에 맞는 메타휴먼 BP 클래스를 반환 */
+	TSubclassOf<AActor> ResolveMetaHumanClass() const;
+
 	/** 닉네임 / 준비완료 표시 위젯 갱신 */
 	void RefreshPlayerStateWidget();
 
@@ -62,6 +69,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USkeletalMeshComponent> MeshComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UChildActorComponent> MetaHumanActorComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UWidgetComponent> PlayerStateWidgetComp;
@@ -78,5 +88,20 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session")
 	TObjectPtr<USkeletalMesh> GirlMesh;
+
+	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session|MetaHuman")
+	TSubclassOf<AActor> BoyMetaHumanClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session|MetaHuman")
+	TSubclassOf<AActor> GirlMetaHumanClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session|MetaHuman")
+	FVector MetaHumanRelativeLocation = FVector(0.f, 0.f, -88.f);
+
+	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session|MetaHuman")
+	FRotator MetaHumanRelativeRotation = FRotator(0.f, -90.f, 0.f);
+
+	UPROPERTY(EditDefaultsOnly, Category="Murphy|Session|MetaHuman")
+	FVector MetaHumanRelativeScale = FVector(1.f, 1.f, 1.f);
 #pragma endregion
 };

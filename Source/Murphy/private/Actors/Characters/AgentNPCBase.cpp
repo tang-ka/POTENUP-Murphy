@@ -10,6 +10,9 @@
 #include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Actors/Characters/MurphyPlayer.h"
+#include "UI/HUD/MainHUD.h"
+#include "Framework/MurphyPlayerState.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/UnrealType.h"
@@ -233,7 +236,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 				if (QuestEventNotifier)
 				{
 					QuestEventNotifier->SetQuestTargetID(QuestTargetID);
-					QuestEventNotifier->NotifyQuestStart(OtherPawn, EQuestStartCondition::TalkToNPC);
+					QuestEventNotifier->NotifyQuestStart(OtherPawn, EQuestCondition::TalkToNPC);
 				}
 			}
 			
@@ -249,9 +252,19 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 			{
 				VoiceComp->SetSound(PassportSound);
 				VoiceComp->Play();
-				
+
 				float SoundDuration = PassportSound->GetDuration();
 				GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+
+				// 캐싱 음성 재생 = 대화 시작 -> 카테고리 생성 + 첫 Agent 대사
+				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(OtherPawn))
+				{
+					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+					{
+						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						MainHUD->AddAgentDialog(NPCName.ToString(), LastNpcMessage);
+					}
+				}
 			}
 			
 			// 3 오버랩 직후에는 기본 이모지로 초기화
@@ -484,6 +497,11 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 	}
 }
 
+FName AAgentNPCBase::GetScenarioCategoryName() const
+{
+	return FName(*StaticEnum<EScenarioType>()->GetNameStringByValue((int64)NPCScenarioType));
+}
+
 bool AAgentNPCBase::TryStartConversation()
 {
 	if (bIsTalkingWithPlayer)
@@ -560,7 +578,7 @@ void AAgentNPCBase::OnVoiceFinished()
 		{
 			// AI 대화가 최종 종료된 뒤에만 TalkToNPC 완료 조건을 서버로 보냅니다.
 			QuestEventNotifier->SetQuestTargetID(QuestTargetID);
-			QuestEventNotifier->NotifyQuestComplete(QuestInstigator, EQuestClearCondition::TalkToNPC);
+			QuestEventNotifier->NotifyQuestComplete(QuestInstigator, EQuestCondition::TalkToNPC);
 		}
 
 		bIsLookingAtPlayer = false;
@@ -785,19 +803,44 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 		CurrentNodeId = ResponseData.current_node_id;
 	}
 
+	PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 (Action: %s)"), *ResponseData.next_action);
+	
 	if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
 	{
 		CurrentNodeId = ResponseData.next_node_id;
 	}
 	
-	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
-	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	// TODO:지모도
+	// 🚨 [추가할 부분] 대화 중인 플레이어의 PlayerState를 가져와서 값을 직접 꽂아줍니다!
+	// (멀티플레이 환경이라면 현재 상호작용 중인 타겟 플레이어의 Controller를 가져오도록 수정해 주시면 됩니다. 아래는 기본 예시입니다.)
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
 	{
-		if (IsValid(InteractionBox))
+		if (AMurphyPlayerState* PS = PC->GetPlayerState<AMurphyPlayerState>())
 		{
-			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
+			// 백엔드에서 받은 ID를 PlayerState에 저장
+			PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
+			PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
+		
+			// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
+			if (HasAuthority()) 
+			{
+				PS->OnRep_ArrivalData();
+			}
 		}
-		bIsScenarioCompleted = true;
+	}
+
+	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록) [[ 추가해야하는것 COMPLETE_CHAPTER ]]
+	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	{
+		{
+			// todo [지모도] : 비행기에서 끝나는 액션을 받아와서 끝내기 
+		
+			if (IsValid(InteractionBox))
+			{
+				InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
+			}
+			bIsScenarioCompleted = true;
+		}
 	}
 }

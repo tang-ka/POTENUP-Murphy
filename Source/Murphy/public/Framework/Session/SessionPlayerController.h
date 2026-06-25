@@ -8,6 +8,7 @@
 #include "SessionPlayerController.generated.h"
 
 class USessionMainHUDWidget;
+class ACameraActor;
 
 /**
  * Lv_Session(룸)에서 사용하는 PlayerController
@@ -48,6 +49,10 @@ private:
 	/** 에디터 BP에서 할당 */
 	UPROPERTY(EditDefaultsOnly, Category = "Murphy|UI")
 	TSubclassOf<USessionMainHUDWidget> SessionMainHUDClass;
+
+	/** 세션 룸 고정 카메라 클래스 (BP에서 할당) */
+	UPROPERTY(EditDefaultsOnly, Category = "Murphy|Session|Camera")
+	TSubclassOf<ACameraActor> FixedCameraClass;
 
 	UPROPERTY()
 	TObjectPtr<USessionMainHUDWidget> SessionMainHUDWidget;

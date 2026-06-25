@@ -374,6 +374,24 @@ struct FAI_StateDelta
 };
 
 USTRUCT(BlueprintType)
+struct FAI_CustomsUI_Data
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="배정된 방문 장소 ID (예: LOC_DOWNTOWN_HOTEL)"))
+	FString assigned_visit_location;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 장소를 의심하는 이유 (심사관 대사 생성 참고용)"))
+	FString visit_location_suspicion_reason;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="랜덤하게 소지한 밀수/의심 물품 ID (예: ITM_SUSPICIOUS_WATCH)"))
+	FString random_customs_item;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 물품을 의심하는 이유 (심사관 대사 생성 참고용)"))
+	FString random_customs_item_suspicion_reason;
+};
+
+USTRUCT(BlueprintType)
 struct FAI_EvaluationScores
 {
 	GENERATED_BODY()
@@ -494,10 +512,13 @@ struct FAIResponseData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="힌트/피드백 UI 표시 정보"))
 	FAI_UIFeedback ui;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="입국심사서 UI 갱신용 데이터"))
+	FAI_CustomsUI_Data customs_data;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="Unreal state에 적용할 변화량"))
 	FAI_StateDelta state_delta;
-
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="플레이어 답변 평가"))
 	FAI_Evaluation evaluation;
 
@@ -506,5 +527,7 @@ struct FAIResponseData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="개발/디버깅 정보"))
 	FAI_Debug debug;
+	
+	
 };
 

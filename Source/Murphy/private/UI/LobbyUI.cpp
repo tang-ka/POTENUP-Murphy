@@ -286,10 +286,20 @@ void ULobbyUI::HandleFindSessionsComplete(bool bWasSuccessful, const TArray<FOnl
 	PRINTLOG_SH(TEXT("세션 목록 갱신 완료 — %d개"), SessionWidgetList.Num());
 }
 
-void ULobbyUI::OnSessionSelected(USessionInfoWidget* SelectedWidget)
+void ULobbyUI::OnSessionSelected(USessionInfoWidget* SelectedWidget, bool bIsChecked)
 {
 	if (!SelectedWidget)
 	{
+		return;
+	}
+
+	if (!bIsChecked)
+	{
+		if (SelectedWidget->GetSessionIndex() == SelectedSessionIndex)
+		{
+			SelectedSessionIndex = INDEX_NONE;
+			PRINTLOG_SH(TEXT("세션 선택 취소 — Index:%d"), SelectedWidget->GetSessionIndex());
+		}
 		return;
 	}
 
@@ -298,7 +308,7 @@ void ULobbyUI::OnSessionSelected(USessionInfoWidget* SelectedWidget)
 	{
 		SessionWidgetList[SelectedSessionIndex]->SetChecked(false);
 	}
-	
+
 	SelectedSessionIndex = SelectedWidget->GetSessionIndex();
 	PRINTLOG_SH(TEXT("세션 선택 — Index:%d"), SelectedSessionIndex);
 }

@@ -5,7 +5,6 @@
 #include "GameFramework/PlayerController.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
-#include "Data/AIResultDataTypes.h"
 #include "Data/CinematicTypes.h"
 #include "Data/GameDataTypes.h"
 #include "Data/STTDataTypes.h"

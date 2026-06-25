@@ -11,6 +11,10 @@ struct FQuestRuntimeEvent;
 /**
  * 모든 레벨에서 공통으로 사용하는 PlayerState
  */
+
+// 데이터가 업데이트되었음을 UI에게 알림
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardDataUpdated);
+
 UCLASS()
 class MURPHY_API AMurphyPlayerState : public APlayerState
 {
@@ -121,7 +125,9 @@ private:
 	TArray<EScenarioType> CompletedPersonalScenarios;
 #pragma endregion
 
+#pragma region Arrival Card Data
 public:
+	// === Arrival Card ===
 	// 입국심사서에 입력한 이름 저장
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedSurname;
@@ -129,9 +135,25 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedGivenname;
 	
-	// 클라->서버 저장 요청
+	// AI가 배정한 장소 ID
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString CurrentLocationID;
+
+	// AI가 배정한 신고물품 ID
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
+	FString CurrentItemID;
+
+	// 클라->서버 이름 저장 요청
 	UFUNCTION(Server, Reliable)
 	void ServerSetArrivalData(const FString& InSurname, const FString& InGivenname);
+	
+	// 서버->클라 ID 데이터 도착하면 자동 실행
+	UFUNCTION()
+	void OnRep_ArrivalData();
+	
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|CardData|Delegate")
+	FOnCardDataUpdated OnArrivalDataUpdated;
+#pragma endregion Arrival Card Data
 	
 };
 

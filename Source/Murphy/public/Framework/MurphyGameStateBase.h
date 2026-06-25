@@ -37,9 +37,8 @@ public:
 	const FScenarioTableRow* GetCurrentScenarioData() const;
 
 	// PlayerController RPC가 도착하면 ScenarioData 정책에 따라 개인/공유 저장소로 라우팅합니다.
-	void NotifyQuestEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyQuestStartEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestStartCondition EventCondition);
-	void NotifyQuestConditionMet(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestClearCondition Condition);
+	void NotifyQuestStartEvent(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestCondition EventCondition);
+	void NotifyQuestConditionMet(AMurphyPlayerState* SourcePlayerState, FName TargetID, EQuestCondition Condition);
 
 	// 개인 진행 시나리오에서 해당 플레이어가 완료됐는지 확인하고 완료 목록에 반영합니다.
 	void CheckPersonalScenarioCompletion(AMurphyPlayerState* SourcePlayerState);
@@ -80,9 +79,8 @@ private:
 	void StartSharedScenario(const FScenarioTableRow* ScenarioData);
 	void ClearPersonalScenarioForAllPlayers();
 
-	void NotifySharedQuestEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifySharedQuestStartEvent(FName TargetID, EQuestStartCondition EventCondition);
-	void NotifySharedQuestConditionMet(FName TargetID, EQuestClearCondition Condition);
+	void NotifySharedQuestStartEvent(FName TargetID, EQuestCondition EventCondition);
+	void NotifySharedQuestConditionMet(FName TargetID, EQuestCondition Condition);
 
 	bool AreAllPlayersCompleted() const;
 	bool IsSharedScenarioCompleted() const;
@@ -100,6 +98,10 @@ private:
 	// 수화물 수취장처럼 모든 플레이어가 함께 진행하는 퀘스트 상태입니다.
 	UPROPERTY(ReplicatedUsing = OnRep_SharedActiveQuests, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
 	TArray<FQuestRuntimeData> SharedActiveQuests;
+
+	// 현재 진행 중인 공유 서브퀘스트의 SharedActiveQuests 내 배열 인덱스입니다.
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Quest", meta = (AllowPrivateAccess = "true"))
+	int32 SharedCurrentSubQuestIndex = INDEX_NONE;
 
 	// AllPlayersCompleted / AnyPlayerCompleted 정책 판단에 쓰는 개인 완료 플레이어 목록입니다.
 	UPROPERTY(ReplicatedUsing = OnRep_ScenarioCompletedPlayers, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Scenario", meta = (AllowPrivateAccess = "true"))

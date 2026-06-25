@@ -77,7 +77,7 @@ void AItemBaseActor::Interact(AMurphyPlayer* Player)
 	SyncQuestEventTarget();
 	if (QuestEventNotifier && !ResolveQuestTargetID().IsNone())
 	{
-		QuestEventNotifier->NotifyQuestComplete(Player, EQuestClearCondition::GetItem);
+		QuestEventNotifier->NotifyQuestComplete(Player, EQuestCondition::GetItem);
 	}
 
 	// 3. 아이템 획득 처리 - 월드에서 숨김

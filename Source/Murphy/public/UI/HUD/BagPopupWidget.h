@@ -46,6 +46,12 @@ public:
 	 */
 	void AddItem(const FItemTableRow& Item);
 
+	/** Bag UI에 해당 아이템이 이미 표시 중인지 확인합니다. */
+	bool HasItem(FName ItemID) const;
+
+	/** 이미 보유 중이면 추가하지 않고, 없을 때만 Bag UI에 추가합니다. */
+	bool AddItemIfMissing(const FItemTableRow& Item);
+
 private:
 	/** 마우스 커서 및 입력 모드 설정 */
 	void SetMouseCursorEnabled(bool bEnabled);

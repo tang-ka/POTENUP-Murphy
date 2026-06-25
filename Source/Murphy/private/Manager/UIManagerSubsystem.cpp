@@ -12,7 +12,6 @@
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Manager/DataManager.h"
-#include "Manager/ScenarioSubsystem.h"
 #include "UI/LevelEnterToastPopupWidget.h"
 #include "UI/QuestToastPopupWidget.h"
 
@@ -27,19 +26,6 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         &UUIManagerSubsystem::HandlePostLoadMapWithWorld
     );
     
-    if (ULocalPlayer* LP = GetLocalPlayer())
-    {
-        if (UGameInstance* GI = LP->GetGameInstance())
-        {
-            UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>();
-            if (ScenarioSS)
-            {
-                // 기존 로컬 ScenarioSubsystem 기반 테스트 UI가 바로 끊기지 않도록 유지하는 호환 구독입니다.
-                ScenarioSS->OnScenarioStateChanged.AddDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
-                ScenarioSS->OnQuestStarted.AddDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
-            }
-        }
-    }
 }
 
 void UUIManagerSubsystem::Deinitialize()
@@ -57,19 +43,6 @@ void UUIManagerSubsystem::Deinitialize()
         BoundGameState->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
         BoundGameState->OnSharedQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
         BoundGameState = nullptr;
-    }
-
-    if (ULocalPlayer* LP = GetLocalPlayer())
-    {
-        if (UGameInstance* GI = LP->GetGameInstance())
-        {
-            UScenarioSubsystem* ScenarioSS = GI->GetSubsystem<UScenarioSubsystem>();
-            if (ScenarioSS)
-            {
-                ScenarioSS->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
-                ScenarioSS->OnQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
-            }
-        }
     }
 
     Super::Deinitialize();

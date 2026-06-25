@@ -30,40 +30,37 @@ struct FQuestRuntimeEvent
 
 /**
  * PlayerState/GameState가 같은 퀘스트 계산 규칙을 쓰도록 분리한 순수 런타임 helper입니다.
+ * 퀘스트는 항상 RequiredQuestIDs 순서대로 순차 진행되므로 CurrentSubQuestIndex 기반 O(1) 탐색을 사용합니다.
  */
 class MURPHY_API FQuestRuntimeHelper
 {
 public:
-	// ScenarioData의 RequiredQuestIDs를 런타임 상태 배열로 변환합니다.
-	static void BuildScenarioRuntimeQuests(
+	// ScenarioData의 RequiredQuestIDs를 런타임 상태 배열로 변환하고, 첫 서브퀘스트의 인덱스를 반환합니다.
+	// 반환값: 첫 번째 InProgress 서브퀘스트의 배열 인덱스 (없으면 INDEX_NONE)
+	static int32 BuildScenarioRuntimeQuests(
 		const UDataManager* DataManager,
 		const FScenarioTableRow* ScenarioData,
 		TArray<FQuestRuntimeData>& OutActiveQuests,
 		TArray<FQuestRuntimeEvent>& OutEvents);
 
-	// 하나의 이벤트를 완료 조건과 시작 조건 양쪽에 적용합니다. 예: 아이템 획득은 완료이면서 다음 퀘스트 시작 조건이 될 수 있습니다.
-	static void NotifyQuestEvent(
+	// NPC 접근처럼 시작 조건만 처리할 때 사용합니다.
+	// 현재 인덱스 퀘스트의 StartCondition과 일치할 때만 InProgress로 전환합니다.
+	static void ProcessQuestStartEvent(
 		const UDataManager* DataManager,
 		TArray<FQuestRuntimeData>& ActiveQuests,
+		int32& InOutCurrentSubQuestIndex,
 		FName TargetID,
-		EQuestStartCondition EventCondition,
-		TArray<FQuestRuntimeEvent>& OutEvents,
-		bool& bOutScenarioCompleted);
-
-	// NPC 접근처럼 퀘스트 완료와 분리된 시작 이벤트만 처리할 때 사용합니다.
-	static void NotifyQuestStartEvent(
-		const UDataManager* DataManager,
-		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName TargetID,
-		EQuestStartCondition EventCondition,
+		EQuestCondition Condition,
 		TArray<FQuestRuntimeEvent>& OutEvents);
 
-	// Trigger, Item, NPC 대화 완료처럼 명확한 완료 조건을 처리할 때 사용합니다.
-	static void NotifyQuestConditionMet(
+	// Trigger, Item, NPC 대화 완료처럼 완료 조건을 처리할 때 사용합니다.
+	// 현재 인덱스 서브퀘스트를 완료하고 다음 서브퀘스트로 인덱스를 전진합니다.
+	static void ProcessQuestConditionMet(
 		const UDataManager* DataManager,
 		TArray<FQuestRuntimeData>& ActiveQuests,
+		int32& InOutCurrentSubQuestIndex,
 		FName TargetID,
-		EQuestClearCondition ClearCondition,
+		EQuestCondition Condition,
 		TArray<FQuestRuntimeEvent>& OutEvents,
 		bool& bOutScenarioCompleted);
 
@@ -77,54 +74,30 @@ public:
 		const UDataManager* DataManager,
 		const TArray<FQuestRuntimeData>& ActiveQuests);
 
-	static EQuestStartCondition ConvertClearConditionToStartCondition(EQuestClearCondition ClearCondition);
-	static bool TryConvertStartConditionToClearCondition(EQuestStartCondition StartCondition, EQuestClearCondition& OutClearCondition);
-
 private:
 	// TMap 복제 리스크를 피하기 위해 TArray를 쓰고, QuestID로 런타임 데이터를 찾습니다.
 	static FQuestRuntimeData* FindRuntimeQuest(TArray<FQuestRuntimeData>& ActiveQuests, FName QuestID);
 	static const FQuestRuntimeData* FindRuntimeQuest(const TArray<FQuestRuntimeData>& ActiveQuests, FName QuestID);
 
-	static void TryStartQuestsByEvent(
-		const UDataManager* DataManager,
+	// ActiveQuests[Index]를 InProgress로 전환합니다.
+	static bool StartQuestAtIndex(
 		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName TargetID,
-		EQuestStartCondition EventCondition,
+		int32 Index,
 		TArray<FQuestRuntimeEvent>& OutEvents);
 
-	static void TryCompleteQuestsByEvent(
+	// ActiveQuests[Index]를 Completed로 전환하고 이후 메인 퀘스트 자동 완료를 처리합니다.
+	static bool CompleteQuestAtIndex(
 		const UDataManager* DataManager,
 		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName TargetID,
-		EQuestClearCondition ClearCondition,
+		int32 Index,
 		TArray<FQuestRuntimeEvent>& OutEvents,
 		bool& bOutScenarioCompleted);
 
-	static bool StartQuest(
+	// Index 이후에서 다음 SubQuest의 배열 인덱스를 찾습니다. 없으면 INDEX_NONE.
+	static int32 FindNextSubQuestIndex(
 		const UDataManager* DataManager,
-		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName QuestID,
-		TArray<FQuestRuntimeEvent>& OutEvents);
-
-	static bool CompleteQuest(
-		const UDataManager* DataManager,
-		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName QuestID,
-		TArray<FQuestRuntimeEvent>& OutEvents,
-		bool& bOutScenarioCompleted);
-
-	static bool StartFirstSequentialSubQuest(
-		const UDataManager* DataManager,
-		TArray<FQuestRuntimeData>& ActiveQuests,
-		TArray<FQuestRuntimeEvent>& OutEvents);
-
-	static bool StartNextSequentialSubQuest(
-		const UDataManager* DataManager,
-		TArray<FQuestRuntimeData>& ActiveQuests,
-		FName CompletedQuestID,
-		TArray<FQuestRuntimeEvent>& OutEvents);
-
-	static bool IsSequentialSubQuest(const UDataManager* DataManager, FName QuestID);
+		const TArray<FQuestRuntimeData>& ActiveQuests,
+		int32 AfterIndex);
 
 	static bool IsMainQuest(const UDataManager* DataManager, FName QuestID);
 	static bool CompleteMainQuests(

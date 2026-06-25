@@ -10,6 +10,7 @@ class UQuestToastPopupWidget;
 class ULevelEnterToastPopupWidget;
 class UCommonPopupWidget;
 class UUserWidget;
+class UTransitionWidget;
 
 /**
  * UIManagerSubsystem이 사용하는 위젯 클래스와 레이어 설정을 에디터에서 관리하는 설정 클래스
@@ -37,7 +38,11 @@ public:
 	/** Quest 토스트(알림) 위젯 클래스 */
 	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
 	TSoftClassPtr<UQuestToastPopupWidget> QuestToastClass;
-	
+
+	/** 화면 페이드 트랜지션 위젯 클래스 */
+	UPROPERTY(Config, EditAnywhere, Category="Widget Classes")
+	TSoftClassPtr<UTransitionWidget> TransitionClass;
+
 	// ====== 토스트 기본값 ======
 
 	/** 토스트 메시지 기본 표시 시간 (초) */
@@ -49,5 +54,9 @@ public:
 	/** 기본 페이드 아웃/인 시간 (초) */
 	UPROPERTY(Config, EditAnywhere, Category="Fade", meta=(ClampMin="0.0", ClampMax="5.0"))
 	float DefaultFadeDuration = 0.5f;
+
+	/** 기본 페이드 색 */
+	UPROPERTY(Config, EditAnywhere, Category="Fade")
+	FLinearColor DefaultFadeColor = FLinearColor::Black;
 };
 

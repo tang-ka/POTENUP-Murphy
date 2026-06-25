@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Data/PlayReportData.h"
 #include "PlayReportMainWidget.generated.h"
 
 class UTextBlock;
@@ -29,25 +28,27 @@ protected:
 
 	// [하단 영역] 6개의 세부 평가 항목 위젯
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Comprehension;
+	TObjectPtr<UPlayReportItemWidget> item_TaskSuccess;		// 과업 성공
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Fluency;
+	TObjectPtr<UPlayReportItemWidget> item_Clarity;			// 명확성
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPlayReportItemWidget> item_Grammar;			// 문법
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_GrammarAccuracy;
+	TObjectPtr<UPlayReportItemWidget> item_Vocabulary;		// 어휘
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_VocabularyRange;
-
+	TObjectPtr<UPlayReportItemWidget> item_ProblemSolving;	// 문제 해결
+	
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Clarity;
+	TObjectPtr<UPlayReportItemWidget> item_Politeness;		// 공손함
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_ProblemSolving;
+
 
 public:
 	// 외부(게임모드 등)에서 데이터를 주입하여 UI를 갱신하는 함수
 	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
-	void DisplayReport(const FPlayReportData& ReportData);
+	void DisplayReport(const FAI_Evaluation& EvaluationData, int32 TotalScore, const FString& TierName);
 };

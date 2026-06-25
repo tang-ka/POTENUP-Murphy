@@ -49,9 +49,10 @@ void UPlayReportItemWidget::InitializeItem(const FString& Title, int32 Score)
 		{
 			float PercentValue = FMath::Clamp(Score / 100.0f, 0.0f, 1.0f);
 			
+			// 프로그레스 바 채우기
 			DynamicProgressMaterial->SetScalarParameterValue(FName("Progress"), PercentValue);
-			// DynamicProgressMaterial->SetScalarParameterValue(FName("PBColor"), );
-			
+			// 프로그레스 바 색상 변경
+			DynamicProgressMaterial->SetVectorParameterValue(FName("PBColor"), CurrentThemeColor);
 		}
 		
 	}

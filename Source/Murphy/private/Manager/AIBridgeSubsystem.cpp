@@ -144,12 +144,49 @@ void UAIBridgeSubsystem::SendToAIWithTranscript(const FAIRequestData& RequestDat
 	PRINTLOGW_JW(TEXT("[NetSub|STT] SendToAIWithTranscript 전송: transcript=\"%s\""), *Transcript);
 }
 
+void UAIBridgeSubsystem::RequestAIResult(const FString& SessionId, FOnAIResultReceived OnResultDelegate)
+{
+	PendingResultResponseDelegate = OnResultDelegate;
+
+	const FString TrimmedSessionId = SessionId.TrimStartAndEnd();
+	if (TrimmedSessionId.IsEmpty())
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] session_id가 비어 있어 최종 결과 조회를 중단합니다."));
+		HandleAIResultResponseStruct(TEXT(""));
+		return;
+	}
+
+	const UMurphyNetSettings* NetSettings = GetDefault<UMurphyNetSettings>();
+	if (!NetSettings)
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] MurphyNetSettings를 찾을 수 없어 최종 결과 조회를 중단합니다."));
+		HandleAIResultResponseStruct(TEXT(""));
+		return;
+	}
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(NetSettings->GetHttpBase() + FString::Printf(TEXT("/api/game/ai/result/%s"), *TrimmedSessionId));
+	Request->SetVerb(TEXT("GET"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetTimeout(120.f);
+	Request->OnProcessRequestComplete().BindUObject(this, &UAIBridgeSubsystem::OnAIResultHttpResponseReceived);
+	Request->ProcessRequest();
+
+	PRINTLOGW_JW(TEXT("[AIResult] 최종 결과 조회 요청: session_id=%s"), *TrimmedSessionId);
+}
+
 void UAIBridgeSubsystem::CancelPendingRequests()
 {
 	if (PendingStructResponseDelegate.IsBound())
 	{
 		PendingStructResponseDelegate.Unbind();
 		PRINTLOGW_JW(TEXT("보류 중인 Struct 요청이 취소됨(위임 해제됨)"));
+	}
+
+	if (PendingResultResponseDelegate.IsBound())
+	{
+		PendingResultResponseDelegate.Unbind();
+		PRINTLOGW_JW(TEXT("보류 중인 AI 결과 요청이 취소됨(위임 해제됨)"));
 	}
 }
 
@@ -189,4 +226,41 @@ void UAIBridgeSubsystem::OnHttpResponseReceived(FHttpRequestPtr Request, FHttpRe
 	
 	// 정상 응답이면 페이로드를 전달 (에러 시 빈 문자열 전달)
 	HandleServerResponseStruct(ResponseStr);
+}
+
+void UAIBridgeSubsystem::OnAIResultHttpResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+{
+	FString ResponseStr = TEXT("");
+	if (!bWasSuccessful || !Response.IsValid() || Response->GetResponseCode() != 200)
+	{
+		const FString ErrorMsg = Response.IsValid() ? Response->GetContentAsString() : TEXT("No Response");
+		PRINTLOGE_JW(TEXT("[AIResult] 서버 응답 오류 - 코드: %d, 사유: %s"), Response.IsValid() ? Response->GetResponseCode() : -1, *ErrorMsg);
+	}
+	else
+	{
+		ResponseStr = Response->GetContentAsString();
+	}
+
+	HandleAIResultResponseStruct(ResponseStr);
+}
+
+void UAIBridgeSubsystem::HandleAIResultResponseStruct(const FString& ResponseData)
+{
+	if (!PendingResultResponseDelegate.IsBound())
+	{
+		return;
+	}
+
+	FAIResultResponse OutStruct;
+	if (!ResponseData.IsEmpty())
+	{
+		const bool bSuccess = FJsonObjectConverter::JsonObjectStringToUStruct<FAIResultResponse>(ResponseData, &OutStruct, 0, 0);
+		if (!bSuccess)
+		{
+			PRINTLOGE_JW(TEXT("[AIResult] JSON 파싱 실패: %s"), *ResponseData);
+		}
+	}
+
+	PendingResultResponseDelegate.Execute(OutStruct);
+	PendingResultResponseDelegate.Unbind();
 }

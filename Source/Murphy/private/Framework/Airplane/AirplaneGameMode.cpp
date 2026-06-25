@@ -78,7 +78,9 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 		Request.CinematicId = TEXT("Airplane_Takeoff");
 		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
 		Request.bSkippable  = true;
-		Request.Fade.FadeToBlackDuration = 0.f;
+		Request.Fade.FadeToBlackDuration = 0.0f;
+		Request.Fade.MediaFadeInDuration = 2.f;
+		Request.Fade.FadeFromBlackDuration = 2.f;
 
 		MurphyPC->Client_PlayCinematic(Request, 1);
 		

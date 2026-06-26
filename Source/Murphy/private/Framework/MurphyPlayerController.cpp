@@ -56,6 +56,9 @@ void AMurphyPlayerController::BeginPlay()
 	{
 		SubscribeLevelEnterEvents();
 		BindLocalQuestStateSources();
+
+		const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
+		NotifyAIResultTriggerLevelEntered(FName(*CurrentLevelName));
 	}
 }
 
@@ -400,6 +403,8 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 	AAgentNPCBase* CurrentNPC = TargetNPC;
 	if (IsValid(CurrentNPC))
 	{
+		const FString ResultSessionId = GetOrCreateAIPlaySessionId();
+
 		CurrentNPC->ProcessDialogueResponse(ResponseData);
 		CurrentNPC->UpdateSessionStateFromResponse(ResponseData);
 		
@@ -425,7 +430,121 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 			// 마이크 UI 활성화
 			MurphyPlayer->SetMicUIState(true);
 		}
+
+		if (IsAIResultTriggerResponse(ResponseData))
+		{
+			RequestAIResultForSession(ResultSessionId);
+		}
 	}
+}
+
+void AMurphyPlayerController::OnAIResultReceived(const FAIResultResponse& ResultData)
+{
+	if (ResultData.session_id.IsEmpty() && ResultData.contract_version.IsEmpty())
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] 비어 있는 최종 결과 응답을 받아 저장하지 않습니다."));
+		return;
+	}
+
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (!MurphyPlayerState)
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] MurphyPlayerState가 없어 최종 결과를 저장하지 못했습니다."));
+		return;
+	}
+
+	MurphyPlayerState->SaveAIResult(ResultData);
+	PRINTLOGW_JW(TEXT("[AIResult] 최종 결과 저장 완료: session_id=%s, tier=%s, score=%d"),
+		*ResultData.session_id,
+		*ResultData.final_result.tier,
+		ResultData.final_result.final_score_100);
+}
+
+void AMurphyPlayerController::OnFinalScoreboardSignalResponse(const FAIResponseData& ResponseData)
+{
+	const FString ResultSessionId = ResponseData.session_id.IsEmpty()
+		? GetOrCreateAIPlaySessionId()
+		: ResponseData.session_id;
+
+	PRINTLOGW_JW(TEXT("[AIResult] 최종 점수판 신호 응답 수신: session_id=%s, next_node=%s, action=%s"),
+		*ResultSessionId,
+		*ResponseData.next_node_id,
+		*ResponseData.next_action);
+
+	RequestAIResultForSession(ResultSessionId);
+}
+
+FString AMurphyPlayerController::GetOrCreateAIPlaySessionId()
+{
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (!MurphyPlayerState)
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] MurphyPlayerState가 없어 AIPlaySessionId를 생성하지 못했습니다."));
+		return TEXT("");
+	}
+
+	return MurphyPlayerState->GetOrCreateAIPlaySessionId();
+}
+
+FAIRequestData AMurphyPlayerController::GenerateFinalScoreboardSignalRequestData()
+{
+	FAIRequestData RequestData = GenerateAIRequestData();
+
+	RequestData.request_id = FGuid::NewGuid().ToString();
+	RequestData.session.session_id = GetOrCreateAIPlaySessionId();
+	RequestData.session.current_node_id = FinalScoreboardNodeId;
+	RequestData.session.turn_index = FMath::Max(RequestData.session.turn_index, 1);
+
+	RequestData.npc.npc_id = TEXT("SYSTEM");
+	RequestData.npc.npc_role = TEXT("final_scoreboard");
+	RequestData.npc.last_npc_message = TEXT("");
+
+	RequestData.audio.duration_ms = 0;
+	RequestData.interaction.initiator = TEXT("system");
+	RequestData.interaction.interaction_type = TEXT("system");
+	RequestData.interaction.time_limit_s = 1;
+	RequestData.interaction.first_contact = false;
+	RequestData.interaction.system_event = TEXT("enter_final_scoreboard");
+	RequestData.client_allowed_next_nodes.Empty();
+
+	return RequestData;
+}
+
+bool AMurphyPlayerController::IsAIResultTriggerResponse(const FAIResponseData& ResponseData) const
+{
+	return ResponseData.next_node_id == FinalScoreboardNodeId
+		|| ResponseData.current_node_id == FinalScoreboardNodeId
+		|| ResponseData.next_action == FinalScoreboardNodeId;
+}
+
+bool AMurphyPlayerController::ShouldTriggerFinalScoreboardForLevel(FName EnteredLevelName) const
+{
+	return !FinalScoreboardTriggerLevelName.IsNone()
+		&& !EnteredLevelName.IsNone()
+		&& EnteredLevelName == FinalScoreboardTriggerLevelName;
+}
+
+void AMurphyPlayerController::RequestAIResultForSession(const FString& SessionId)
+{
+	const FString TrimmedSessionId = SessionId.TrimStartAndEnd();
+	if (TrimmedSessionId.IsEmpty())
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] session_id가 비어 있어 최종 결과 조회를 요청하지 않습니다."));
+		return;
+	}
+
+	UAIBridgeSubsystem* NetSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>()
+		: nullptr;
+	if (!NetSubsystem)
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] AIBridgeSubsystem을 찾을 수 없어 최종 결과 조회를 요청하지 못했습니다."));
+		return;
+	}
+
+	FOnAIResultReceived Callback;
+	Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResultReceived);
+	NetSubsystem->RequestAIResult(TrimmedSessionId, Callback);
 }
 
 void AMurphyPlayerController::SendTimeoutAudioToAI()
@@ -544,6 +663,8 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 	{
 		return;
 	}
+
+	NotifyAIResultTriggerLevelEntered(FName(TEXT("SubLevel_BaggageClaim")));
 
 	EnsurePrologueRequiredItemsInBag();
 
@@ -715,10 +836,12 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	RequestData.request_id = FGuid::NewGuid().ToString();
 	
 	RequestData.session.player_id = TEXT("player_001");
+	const FString PlaySessionId = GetOrCreateAIPlaySessionId();
 	
 	if (IsValid(TargetNPC))
 	{
-		RequestData.session.session_id = TargetNPC->GetCurrentSessionId();
+		RequestData.session.session_id = PlaySessionId.IsEmpty() ? TargetNPC->GetCurrentSessionId() : PlaySessionId;
+		TargetNPC->CurrentSessionId = RequestData.session.session_id;
 		RequestData.session.chapter_id = TargetNPC->GetChapterId();
 		RequestData.session.scene_id = TargetNPC->GetSceneId();
 		RequestData.session.current_node_id = TargetNPC->GetCurrentNodeId();
@@ -732,7 +855,7 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	}
 	else
 	{
-		RequestData.session.session_id = TEXT("session_fallback");
+		RequestData.session.session_id = PlaySessionId.IsEmpty() ? TEXT("session_fallback") : PlaySessionId;
 		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
 		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
 		RequestData.session.current_node_id = TEXT("IMM_002_PURPOSE");
@@ -839,4 +962,52 @@ bool AMurphyPlayerController::SendRealtimeSTTTranscriptToAI(const FAIRequestData
 
 	PRINTLOGW_JW(TEXT("[MurphyController|STT] final transcript /respond 전송: \"%s\""), *TrimmedFinalText);
 	return true;
+}
+
+void AMurphyPlayerController::NotifyAIResultTriggerLevelEntered(FName EnteredLevelName)
+{
+	if (!IsLocalController() || !ShouldTriggerFinalScoreboardForLevel(EnteredLevelName))
+	{
+		return;
+	}
+
+	TriggerFinalScoreboardSignal();
+}
+
+void AMurphyPlayerController::TriggerFinalScoreboardSignal()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (bFinalScoreboardSignalSent)
+	{
+		PRINTLOGW_JW(TEXT("[AIResult] 최종 점수판 신호가 이미 전송되어 중복 호출을 건너뜁니다."));
+		return;
+	}
+
+	UAIBridgeSubsystem* NetSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UAIBridgeSubsystem>()
+		: nullptr;
+	if (!NetSubsystem)
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] AIBridgeSubsystem을 찾을 수 없어 최종 점수판 신호를 보내지 못했습니다."));
+		return;
+	}
+
+	const FString SessionId = GetOrCreateAIPlaySessionId();
+	if (SessionId.IsEmpty())
+	{
+		PRINTLOGE_JW(TEXT("[AIResult] AIPlaySessionId가 비어 있어 최종 점수판 신호를 보내지 못했습니다."));
+		return;
+	}
+
+	bFinalScoreboardSignalSent = true;
+
+	FOnAIResponseDataReceived Callback;
+	Callback.BindDynamic(this, &AMurphyPlayerController::OnFinalScoreboardSignalResponse);
+	NetSubsystem->SendToAIWithTranscript(GenerateFinalScoreboardSignalRequestData(), FinalScoreboardNodeId, Callback);
+
+	PRINTLOGW_JW(TEXT("[AIResult] 최종 점수판 신호 전송: session_id=%s, node=%s"), *SessionId, *FinalScoreboardNodeId);
 }

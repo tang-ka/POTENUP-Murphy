@@ -30,23 +30,14 @@ TSharedRef<SWidget> UMurphyButton::RebuildWidget()
 
 void UMurphyButton::HandleButtonHovered()
 {
-	PRINTLOG_SH(TEXT("MurphyButton Hovered"));
-
 	if (bUseScaleEffect)
 	{
 		ApplyUniformScale(HoverScale);
-	}
-
-	if (bUseSoundEffect)
-	{
-		PlayButtonSound(HoverSound);
 	}
 }
 
 void UMurphyButton::HandleButtonUnhovered()
 {
-	PRINTLOG_SH(TEXT("MurphyButton Unhovered"));
-
 	if (bUseScaleEffect)
 	{
 		ApplyUniformScale(NormalScale);
@@ -55,23 +46,14 @@ void UMurphyButton::HandleButtonUnhovered()
 
 void UMurphyButton::HandleButtonPressed()
 {
-	PRINTLOG_SH(TEXT("MurphyButton Pressed"));
-
 	if (bUseScaleEffect)
 	{
 		ApplyUniformScale(PressedScale);
-	}
-
-	if (bUseSoundEffect)
-	{
-		PlayButtonSound(PressedSound);
 	}
 }
 
 void UMurphyButton::HandleButtonReleased()
 {
-	PRINTLOG_SH(TEXT("MurphyButton Released"));
-
 	if (bUseScaleEffect)
 	{
 		ApplyUniformScale(IsHovered() ? HoverScale : NormalScale);
@@ -81,14 +63,4 @@ void UMurphyButton::HandleButtonReleased()
 void UMurphyButton::ApplyUniformScale(float InScale)
 {
 	SetRenderScale(FVector2D(InScale, InScale));
-}
-
-void UMurphyButton::PlayButtonSound(USoundBase* InSound) const
-{
-	if (!InSound)
-	{
-		return;
-	}
-
-	UGameplayStatics::PlaySound2D(this, InSound);
 }

@@ -2,15 +2,16 @@
 
 #include "UI/PlayReport/PlayReportMainWidget.h"
 
-#include "UI/PlayReport/PlayReportItemWidget.h" 
 #include "Components/TextBlock.h"
+#include "UI/PlayReport/PlayReportItemWidget.h" 
+
 
 void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 {
-	// 1. 총점 및 티어 업데이트
+	// === 상단 영역 (총점, 티어) 갱신 ===
 	if (txt_TotalScore)
 	{
-		txt_TotalScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), ReportData.TotalScore)));
+		txt_TotalScore->SetText(FText::AsNumber(ReportData.TotalScore));
 	}
 
 	if (txt_TierName)
@@ -18,9 +19,7 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 		txt_TierName->SetText(FText::FromString(ReportData.TierName));
 	}
 
-	// 2. 하위 세부 위젯들에 개별 데이터 주입
-	// Item 위젯의 InitializeItem(항목 이름, 점수) 함수 호출
-    
+	// === 하단 세부 항목 점수 ===
 	if (item_Comprehension)
 	{
 		item_Comprehension->InitializeItem(TEXT("이해력"), ReportData.ComprehensionScore);
@@ -31,23 +30,24 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 		item_Fluency->InitializeItem(TEXT("유창성"), ReportData.FluencyScore);
 	}
 
-	if (item_GrammarAccuracy)
+	if (item_Grammar)
 	{
-		item_GrammarAccuracy->InitializeItem(TEXT("문법정확도"), ReportData.GrammarAccuracyScore);
+		item_Grammar->InitializeItem(TEXT("문법성"), ReportData.GrammarScore);
 	}
 
-	if (item_VocabularyRange)
+	if (item_Vocabulary)
 	{
-		item_VocabularyRange->InitializeItem(TEXT("어휘력"), ReportData.VocabularyRangeScore);
+		item_Vocabulary->InitializeItem(TEXT("어휘력"), ReportData.VocabularyScore);
 	}
 
 	if (item_Clarity)
 	{
-		item_Clarity->InitializeItem(TEXT("의도명확성"), ReportData.ClarityScore);
+		item_Clarity->InitializeItem(TEXT("명확성"), ReportData.ClarityScore);
 	}
 
 	if (item_ProblemSolving)
 	{
-		item_ProblemSolving->InitializeItem(TEXT("시나리오해결"), ReportData.InteractionProblemSolvingScore);
+		item_ProblemSolving->InitializeItem(TEXT("문제해결력"), ReportData.ProblemSolvingScore);
 	}
+	
 }

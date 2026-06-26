@@ -14,6 +14,7 @@
 #include "Manager/DataManager.h"
 #include "UI/LevelEnterToastPopupWidget.h"
 #include "UI/QuestToastPopupWidget.h"
+#include "UI/TransitionWidget.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -151,6 +152,49 @@ TSubclassOf<UQuestToastPopupWidget> UUIManagerSubsystem::GetQuestToastClass()
     return CachedQuestToastClass;
 }
 
+TSubclassOf<UTransitionWidget> UUIManagerSubsystem::GetTransitionClass()
+{
+    if (!CachedTransitionClass)
+    {
+        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+        CachedTransitionClass = Settings->TransitionClass.LoadSynchronous();
+    }
+
+    return CachedTransitionClass;
+}
+
+UTransitionWidget* UUIManagerSubsystem::EnsureTransitionWidget()
+{
+    if (TransitionWidget)
+    {
+        return TransitionWidget;
+    }
+
+    APlayerController* PC = GetOwningController();
+    if (!PC)
+    {
+        PRINTLOG_SH(TEXT("EnsureTransitionWidget failed: PlayerController is nullptr."));
+        return nullptr;
+    }
+
+    TSubclassOf<UTransitionWidget> TransitionWidgetClass = GetTransitionClass();
+    if (!TransitionWidgetClass)
+    {
+        PRINTLOG_SH(TEXT("TransitionClass is nullptr. Check UIManagerSettings."));
+        return nullptr;
+    }
+
+    TransitionWidget = CreateWidget<UTransitionWidget>(PC, TransitionWidgetClass);
+    if (!TransitionWidget)
+    {
+        PRINTLOG_SH(TEXT("Failed to create TransitionWidget."));
+        return nullptr;
+    }
+
+    PushToLayer(EUILayer::System, TransitionWidget);
+    return TransitionWidget;
+}
+
 int32 UUIManagerSubsystem::LayerToZOrder(EUILayer Layer)
 {
 	return GetUILayerZOrder(Layer);
@@ -244,6 +288,9 @@ void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
     {
         return;
     }
+
+    // 맵 전환으로 이전 World 소속 트랜지션 위젯은 무효. 다음 사용 시 재생성.
+    TransitionWidget = nullptr;
 
     const FString MapName = LoadedWorld->GetMapName();
     FText ToastText;
@@ -410,26 +457,43 @@ void UUIManagerSubsystem::ShowQuestToast(const FText& Title, const FText& Conten
 
 void UUIManagerSubsystem::FadeOut(float Duration, FSimpleDelegate OnComplete)
 {
+    const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+
     // 0 이하이면 Settings의 기본값 사용
     if (Duration <= 0.f)
     {
-        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
         Duration = Settings->DefaultFadeDuration;
     }
 
-    // TransitionWidget 구현 후 연결.
-    // 임시: 즉시 완료 콜백 실행 (페이드 없이 동작 흐름만 유지)
-    OnComplete.ExecuteIfBound();
+    UTransitionWidget* Widget = EnsureTransitionWidget();
+    if (!Widget)
+    {
+        // 위젯 확보 실패 시에도 게임 흐름은 끊지 않는다.
+        OnComplete.ExecuteIfBound();
+        return;
+    }
+
+    // 화면 -> 검정 (알파 0 -> 1)
+    Widget->StartFade(0.f, 1.f, Duration, Settings->DefaultFadeColor, OnComplete);
 }
 
 void UUIManagerSubsystem::FadeIn(float Duration, FSimpleDelegate OnComplete)
 {
+    const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
+
     // 0 이하이면 Settings의 기본값 사용
     if (Duration <= 0.f)
     {
-        const UUIManagerSettings* Settings = GetDefault<UUIManagerSettings>();
         Duration = Settings->DefaultFadeDuration;
     }
 
-    OnComplete.ExecuteIfBound();
+    UTransitionWidget* Widget = EnsureTransitionWidget();
+    if (!Widget)
+    {
+        OnComplete.ExecuteIfBound();
+        return;
+    }
+
+    // 검정 -> 화면 (알파 1 -> 0)
+    Widget->StartFade(1.f, 0.f, Duration, Settings->DefaultFadeColor, OnComplete);
 }

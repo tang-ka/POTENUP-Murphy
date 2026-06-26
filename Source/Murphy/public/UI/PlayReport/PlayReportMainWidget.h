@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Data/AIDataTypes.h"
 #include "Data/PlayReportData.h"
 #include "PlayReportMainWidget.generated.h"
 
+class UImage;
 class UTextBlock;
 class UPlayReportItemWidget;
 
@@ -22,36 +22,40 @@ class MURPHY_API UPlayReportMainWidget : public UUserWidget
 protected:
 	// [상단 영역] 총점과 티어 표시
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> txt_TotalScore;
+	TObjectPtr<UTextBlock> txt_FinalRecommendation;	// P/NP
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> txt_TotalScore;			// 총점
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> img_Tier;					// 티어 이미지
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> txt_TierName;			// 티어명(영어)
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> txt_TierName;
-
+	TObjectPtr<UTextBlock> txt_TravelerTitle;		// 칭호
+	
 	// [하단 영역] 6개의 세부 평가 항목 위젯
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_TaskSuccess;		// 과업 성공
+	TObjectPtr<UPlayReportItemWidget> item_Comprehension;	// 이해도
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPlayReportItemWidget> item_Fluency;			// 유창성
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPlayReportItemWidget> item_Grammar;			// 문법성
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPlayReportItemWidget> item_Vocabulary;		// 어휘력
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPlayReportItemWidget> item_Clarity;			// 명확성
 	
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Grammar;			// 문법
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Vocabulary;		// 어휘
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_ProblemSolving;	// 문제 해결
-	
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPlayReportItemWidget> item_Politeness;		// 공손함
+	TObjectPtr<UPlayReportItemWidget> item_ProblemSolving;	// 문제해결력
 
 public:
-	// 최종 결과 API에서 만든 표시용 데이터로 결과창을 갱신합니다.
 	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
 	void DisplayReport(const FPlayReportData& ReportData);
-
-	// /respond 턴 평가 데이터를 점수판 형태로 확인할 때 사용하는 보조 함수입니다.
-	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
-	void DisplayEvaluationReport(const FAI_Evaluation& EvaluationData, int32 TotalScore, const FString& TierName);
 };

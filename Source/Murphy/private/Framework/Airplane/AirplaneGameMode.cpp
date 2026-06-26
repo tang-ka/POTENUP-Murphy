@@ -14,7 +14,6 @@
 #include "Manager/CinematicManagerSubsystem.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "UObject/ConstructorHelpers.h"
 
 AAirplaneGameMode::AAirplaneGameMode()
 {
@@ -26,18 +25,7 @@ AAirplaneGameMode::AAirplaneGameMode()
 	// 기내 씬: 항상 1인칭 자유시점 고정
 	ChatViewMode = EChatViewMode::FirstPersonLocked;
 
-	// 기내 전용 폰 BP를 캐릭터 선택값에 따라 스폰하도록 바인딩 (Boy=Player1, Girl=Player2)
-	static ConstructorHelpers::FClassFinder<APawn> BoyPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_LevelTest_Player1.BP_LevelTest_Player1_C"));
-	if (BoyPawnFinder.Succeeded())
-	{
-		BoyPawnClass = BoyPawnFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<APawn> GirlPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_LevelTest_Player2.BP_LevelTest_Player2_C"));
-	if (GirlPawnFinder.Succeeded())
-	{
-		GirlPawnClass = GirlPawnFinder.Class;
-	}
+	// 기내 전용 폰 BP는 BP_AirplaneGameMode 기본값에서 BoyPawnClass/GirlPawnClass로 할당합니다.
 }
 
 void AAirplaneGameMode::BeginPlay()
@@ -76,7 +64,8 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	{
 		FCinematicPlayRequest Request;
 		Request.CinematicId = TEXT("Airplane_Takeoff");
-		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
+		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
+		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_Manhattan_street_first-person_view_1080p_202606251542.05-1_Manhattan_street_first-person_view_1080p_202606251542")));
 		Request.bSkippable  = true;
 		Request.Fade.FadeToBlackDuration = 0.0f;
 		Request.Fade.MediaFadeInDuration = 2.f;

@@ -10,7 +10,6 @@
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Manager/LevelStreamingSubsystem.h"
-#include "UObject/ConstructorHelpers.h"
 
 APrologueGameMode::APrologueGameMode()
 {
@@ -22,18 +21,7 @@ APrologueGameMode::APrologueGameMode()
 	// 이후 씬: 3인칭 Focus 기본
 	ChatViewMode = EChatViewMode::ThirdPersonFocus;
 
-	// 프롤로그 전용 폰 BP를 캐릭터 선택값에 따라 스폰하도록 바인딩 (Boy=Player1, Girl=Player2)
-	static ConstructorHelpers::FClassFinder<APawn> BoyPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_Player1.BP_Player1_C"));
-	if (BoyPawnFinder.Succeeded())
-	{
-		BoyPawnClass = BoyPawnFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<APawn> GirlPawnFinder(TEXT("/Game/Blueprints/Characters/Player/BP_player2.BP_Player2_C"));
-	if (GirlPawnFinder.Succeeded())
-	{
-		GirlPawnClass = GirlPawnFinder.Class;
-	}
+	// 프롤로그 전용 폰 BP는 BP_PrologueGameMode 기본값에서 BoyPawnClass/GirlPawnClass로 할당합니다.
 }
 
 void APrologueGameMode::BeginPlay()
@@ -101,10 +89,16 @@ void APrologueGameMode::OnImmigrationLevelShown()
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
 		APlayerController* PC = It->Get();
-		if (!PC) continue;
+		if (!PC)
+		{
+			continue;
+		}
 
 		APawn* Pawn = PC->GetPawn();
-		if (!Pawn) continue;
+		if (!Pawn)
+		{
+			continue;
+		}
 
 		Pawn->SetActorLocationAndRotation(
 			(*FoundStart)->GetActorLocation(),

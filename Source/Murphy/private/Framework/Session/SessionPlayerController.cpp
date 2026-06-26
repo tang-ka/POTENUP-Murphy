@@ -10,6 +10,8 @@
 #include "Framework/Session/SessionGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/SessionMainHUDWidget.h"
+#include "Manager/UIManagerSubsystem.h"
+#include "Engine/LocalPlayer.h"
 
 void ASessionPlayerController::BeginPlay()
 {
@@ -18,6 +20,15 @@ void ASessionPlayerController::BeginPlay()
 	if (!IsLocalController())
 	{
 		return;
+	}
+
+	// 세션 시작: 검정에서 화면으로 페이드 인.
+	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
+	{
+		if (UUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UUIManagerSubsystem>())
+		{
+			UIManager->FadeIn(0.f, FSimpleDelegate());
+		}
 	}
 
 	// ── 고정 카메라 설정 ──────────────────────────────────────

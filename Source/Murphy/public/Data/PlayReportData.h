@@ -84,7 +84,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 ProblemSolvingScore = 0;
 	
-	// 최종 추천 결과 (P/NP)
+	// 최종 추천 결과
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FString FinalRecommendation;
 

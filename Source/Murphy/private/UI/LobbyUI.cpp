@@ -12,8 +12,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/NetworkManagerSubsystem.h"
+#include "Manager/UIManagerSubsystem.h"
 #include "UI/SessionInfoWidget.h"
 #include "UI/Base/MurphyButton.h"
+#include "Engine/LocalPlayer.h"
 
 void ULobbyUI::NativeConstruct()
 {
@@ -73,7 +75,25 @@ void ULobbyUI::NativeConstruct()
 void ULobbyUI::OnSinglePlayButtonClicked()
 {
 	PRINTLOG_SH(TEXT("싱글플레이 버튼 클릭 — Session 레벨로 이동"));
-	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Session")), true);
+
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	UUIManagerSubsystem* UIManager = LocalPlayer ? LocalPlayer->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+	if (!UIManager)
+	{
+		// UIManager가 없으면 페이드 없이 즉시 이동.
+		PRINTLOG_SH(TEXT("OnSinglePlayButtonClicked: UIManagerSubsystem is null — 페이드 없이 즉시 이동."));
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Session")), true);
+		return;
+	}
+
+	// 페이드 아웃(화면 -> 검정) 완료 후 레벨 이동.
+	FSimpleDelegate OnFadeOutComplete = FSimpleDelegate::CreateWeakLambda(this, [this]()
+	{
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Session")), true);
+	});
+
+	// Duration 0 -> UIManagerSettings::DefaultFadeDuration 사용.
+	UIManager->FadeOut(0.f, OnFadeOutComplete);
 }
 
 void ULobbyUI::OnMultiPlayButtonClicked()

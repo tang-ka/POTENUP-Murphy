@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Data/AIDataTypes.h"
+#include "Data/PlayReportData.h"
 #include "PlayReportMainWidget.generated.h"
 
 class UTextBlock;
@@ -12,7 +14,6 @@ class UPlayReportItemWidget;
 /**
  * 게임 결과창 전체를 관리하는 마스터 위젯 클래스
  */
-
 UCLASS()
 class MURPHY_API UPlayReportMainWidget : public UUserWidget
 {
@@ -45,10 +46,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPlayReportItemWidget> item_Politeness;		// 공손함
 
-
-
 public:
-	// 외부(게임모드 등)에서 데이터를 주입하여 UI를 갱신하는 함수
+	// 최종 결과 API에서 만든 표시용 데이터로 결과창을 갱신합니다.
 	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
-	void DisplayReport(const FAI_Evaluation& EvaluationData, int32 TotalScore, const FString& TierName);
+	void DisplayReport(const FPlayReportData& ReportData);
+
+	// /respond 턴 평가 데이터를 점수판 형태로 확인할 때 사용하는 보조 함수입니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
+	void DisplayEvaluationReport(const FAI_Evaluation& EvaluationData, int32 TotalScore, const FString& TierName);
 };

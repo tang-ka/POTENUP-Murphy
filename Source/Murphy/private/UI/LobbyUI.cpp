@@ -4,15 +4,16 @@
 #include "UI/LobbyUI.h"
 
 #include "Murphy.h"
-#include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Components/CanvasPanel.h"
 #include "Components/Overlay.h"
 #include "Components/VerticalBox.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/NetworkManagerSubsystem.h"
 #include "UI/SessionInfoWidget.h"
+#include "UI/Base/MurphyButton.h"
 
 void ULobbyUI::NativeConstruct()
 {
@@ -71,13 +72,8 @@ void ULobbyUI::NativeConstruct()
 
 void ULobbyUI::OnSinglePlayButtonClicked()
 {
-	if (UGameInstance* GI = GetGameInstance())
-	{
-		if (ULevelStreamingSubsystem* LevelSubsystem = GI->GetSubsystem<ULevelStreamingSubsystem>())
-		{
-			LevelSubsystem->TravelAllPlayers(FName("Airplane"));
-		}
-	}
+	PRINTLOG_SH(TEXT("싱글플레이 버튼 클릭 — Session 레벨로 이동"));
+	UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Session")), true);
 }
 
 void ULobbyUI::OnMultiPlayButtonClicked()

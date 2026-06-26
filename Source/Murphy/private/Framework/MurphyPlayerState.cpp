@@ -42,7 +42,87 @@ void AMurphyPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPS->SavedGivenname = SavedGivenname;
 		NewPS->CurrentLocationID = CurrentLocationID;
 		NewPS->CurrentItemID = CurrentItemID;
+		NewPS->AIPlaySessionId = AIPlaySessionId;
+		NewPS->LastAIResult = LastAIResult;
+		NewPS->LastPlayReportData = LastPlayReportData;
+		NewPS->bHasPlayReportData = bHasPlayReportData;
 	}
+}
+
+FString AMurphyPlayerState::GetOrCreateAIPlaySessionId()
+{
+	if (AIPlaySessionId.IsEmpty())
+	{
+		AIPlaySessionId = FString::Printf(TEXT("session_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Short));
+	}
+
+	return AIPlaySessionId;
+}
+
+void AMurphyPlayerState::SetAIPlaySessionId(const FString& InSessionId)
+{
+	const FString TrimmedSessionId = InSessionId.TrimStartAndEnd();
+	if (TrimmedSessionId.IsEmpty())
+	{
+		return;
+	}
+
+	AIPlaySessionId = TrimmedSessionId;
+}
+
+void AMurphyPlayerState::SaveAIResult(const FAIResultResponse& InResult)
+{
+	LastAIResult = InResult;
+	LastPlayReportData = BuildPlayReportDataFromAIResult(InResult);
+	bHasPlayReportData = true;
+
+	OnPlayReportDataUpdated.Broadcast();
+}
+
+FPlayReportData AMurphyPlayerState::BuildPlayReportDataFromAIResult(const FAIResultResponse& InResult) const
+{
+	FPlayReportData ReportData;
+
+	const FAIFinalResult& FinalResult = InResult.final_result;
+	const FAIQuantitativeScores& Scores = FinalResult.quantitative_scores;
+	const FAIReportSummary& ReportSummary = FinalResult.report_summary;
+	const FAIOutGameFeedback& OutGameFeedback = InResult.out_game_feedback;
+
+	ReportData.TierName = FinalResult.tier;
+	ReportData.TotalScore = FinalResult.final_score_100 > 0 ? FinalResult.final_score_100 : Scores.overall;
+	ReportData.ComprehensionScore = Scores.comprehension;
+	ReportData.ClarityScore = Scores.clarity;
+	ReportData.GrammarScore = Scores.grammar_accuracy;
+	ReportData.VocabularyScore = Scores.vocabulary_range;
+	ReportData.ProblemSolvingScore = Scores.interaction_problem_solving;
+	ReportData.FluencyScore = Scores.fluency;
+
+	ReportData.FinalRecommendation = FinalResult.final_recommendation;
+	ReportData.Rank = FinalResult.rank;
+	ReportData.OverallSummary = ReportSummary.overall;
+	ReportData.OverallSummaryKr = OutGameFeedback.overall_summary_kr;
+	ReportData.MainImprovement = ReportSummary.main_improvement;
+	ReportData.BestNode = ReportSummary.best_node;
+	ReportData.WeakestNode = ReportSummary.weakest_node;
+	ReportData.NextPracticePromptKr = OutGameFeedback.personalized_next_step.practice_prompt_kr;
+	ReportData.NextAnswerExample = OutGameFeedback.personalized_next_step.answer_example;
+
+	ReportData.FeedbackCards.Reserve(OutGameFeedback.focus_on_form_items.Num());
+	for (const FAIFocusOnFormItem& FocusItem : OutGameFeedback.focus_on_form_items)
+	{
+		FPlayReportFeedbackCardData CardData;
+		CardData.Title = FocusItem.title_kr;
+		CardData.Summary = FocusItem.rule_summary_kr;
+		CardData.OriginalUtterances = FocusItem.original_utterances;
+		CardData.SuggestedExpressions = FocusItem.suggested_expressions;
+		CardData.PracticePrompt = FocusItem.practice_prompt_kr;
+		CardData.AnswerExample = FocusItem.answer_example;
+		CardData.Priority = FocusItem.priority;
+
+		ReportData.FeedbackCards.Add(MoveTemp(CardData));
+	}
+
+	return ReportData;
 }
 
 void AMurphyPlayerState::OnRep_SessionRoomState()

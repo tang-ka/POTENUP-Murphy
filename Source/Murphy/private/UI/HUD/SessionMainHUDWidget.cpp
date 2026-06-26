@@ -8,6 +8,9 @@
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
 #include "Manager/NetworkManagerSubsystem.h"
+#include "Manager/UIManagerSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/LocalPlayer.h"
 
 void USessionMainHUDWidget::NativeConstruct()
 {
@@ -83,7 +86,25 @@ void USessionMainHUDWidget::HandleBtnReadyClicked()
 void USessionMainHUDWidget::HandleBtnStartClicked()
 {
 	PRINTLOG_SH(TEXT("Btn_Start Clicked"));
-	OnStartRequested.ExecuteIfBound();
+
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	UUIManagerSubsystem* UIManager = LocalPlayer ? LocalPlayer->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+	if (!UIManager)
+	{
+		// UIManager가 없으면 페이드 없이 즉시 시작.
+		PRINTLOG_SH(TEXT("HandleBtnStartClicked: UIManagerSubsystem is null — 페이드 없이 즉시 시작."));
+		OnStartRequested.ExecuteIfBound();
+		return;
+	}
+
+	// 페이드 아웃(화면 -> 검정) 완료 후 시작 요청 실행.
+	FSimpleDelegate OnFadeOutComplete = FSimpleDelegate::CreateWeakLambda(this, [this]()
+	{
+		OnStartRequested.ExecuteIfBound();
+	});
+
+	// Duration 0 -> UIManagerSettings::DefaultFadeDuration 사용.
+	UIManager->FadeOut(0.f, OnFadeOutComplete);
 }
 
 void USessionMainHUDWidget::HandleBtnExitClicked()
@@ -104,5 +125,14 @@ void USessionMainHUDWidget::HandleBtnExitClicked()
 		return;
 	}
 
+	// 싱글플레이는 세션이 없으므로 로비로 직접 이동
+	if (NetworkManager->GetSessionState() != ESessionState::InSession)
+	{
+		PRINTLOG_SH(TEXT("HandleBtnExitClicked: 싱글플레이 — 로비로 직접 이동"));
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Maps/Lv_Lobby")));
+		return;
+	}
+
+	// 멀티플레이: 세션 종료 후 로비 복귀 (HandleDestroySessionComplete에서 처리)
 	NetworkManager->DestroySession();
 }

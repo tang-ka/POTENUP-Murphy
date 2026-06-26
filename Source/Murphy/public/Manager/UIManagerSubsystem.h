@@ -16,6 +16,7 @@ class UCommonPopupWidget;
 class UUserWidget;
 class AMurphyGameStateBase;
 class AMurphyPlayerState;
+class UTransitionWidget;
 enum class EScenarioType : uint8;
 
 UCLASS()
@@ -36,8 +37,7 @@ public:
 
 	// 로컬 PlayerController가 준비된 뒤 PlayerState/GameState 퀘스트 복제 이벤트를 구독합니다.
 	void BindQuestStateSources();
-
-
+	
 	// ── 레이어 배치 ──
 	void PushToLayer(EUILayer Layer, UUserWidget* Widget);
 	void RemoveFromLayer(UUserWidget* Widget);
@@ -56,6 +56,10 @@ private:
 	TSubclassOf<UUserWidget> GetToastClass();
 	TSubclassOf<ULevelEnterToastPopupWidget> GetLevelEnterToastClass();
 	TSubclassOf<UQuestToastPopupWidget> GetQuestToastClass();
+	TSubclassOf<UTransitionWidget> GetTransitionClass();
+
+	// System 레이어 트랜지션 위젯 확보 (없으면 생성 후 배치).
+	UTransitionWidget* EnsureTransitionWidget();
 
 	// EUILayer → ZOrder
 	static int32 LayerToZOrder(EUILayer Layer);
@@ -83,6 +87,12 @@ private:
 	
 	UPROPERTY()
 	TSubclassOf<UQuestToastPopupWidget> CachedQuestToastClass;
+
+	UPROPERTY()
+	TSubclassOf<UTransitionWidget> CachedTransitionClass;
+
+	UPROPERTY()
+	TObjectPtr<UTransitionWidget> TransitionWidget;
 
 	UPROPERTY()
 	TObjectPtr<AMurphyPlayerState> BoundPlayerState;

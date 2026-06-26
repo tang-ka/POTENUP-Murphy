@@ -21,10 +21,11 @@ class MURPHY_API AMurphyPlayerController : public APlayerController
 
 public:
 	AMurphyPlayerController();
+	
+	virtual void OnRep_PlayerState() override;
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void OnRep_PlayerState() override;
 	virtual void SetupInputComponent() override;
 
 	// === 통합 테스트 커맨드 ===
@@ -91,9 +92,25 @@ public:
 	// Realtime STT final transcript를 /respond로 전달
 	bool SendRealtimeSTTTranscriptToAI(const FAIRequestData& RequestData, const FString& FinalText);
 
+	// 지정된 결과 레벨 진입 시 AI 최종 점수판 신호를 전송합니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
+	void NotifyAIResultTriggerLevelEntered(FName EnteredLevelName);
+
+	// 현재 AI 플레이 세션으로 최종 점수판 신호를 즉시 전송합니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
+	void TriggerFinalScoreboardSignal();
+
 	// NetSubsystem에서 전달해주는 AI 응답 구조체를 받아 처리할 콜백
 	UFUNCTION()
 	void OnAIResponseReceived(const FAIResponseData& ResponseData);
+
+	// 최종 결과 조회 API 응답을 PlayerState에 저장합니다.
+	UFUNCTION()
+	void OnAIResultReceived(const FAIResultResponse& ResultData);
+
+	// 최종 점수판 신호 응답 후 결과 조회 API를 호출합니다.
+	UFUNCTION()
+	void OnFinalScoreboardSignalResponse(const FAIResponseData& ResponseData);
 	
 	// 1분 타임아웃 시 AgentNPCBase가 호출할 함수
 	void SendTimeoutAudioToAI();
@@ -125,6 +142,21 @@ public:
 	void Client_PlayCinematic(const FCinematicPlayRequest& Request, int32 PlayId);
 	
 private:
+	FString GetOrCreateAIPlaySessionId();
+	FAIRequestData GenerateFinalScoreboardSignalRequestData();
+	bool IsAIResultTriggerResponse(const FAIResponseData& ResponseData) const;
+	bool ShouldTriggerFinalScoreboardForLevel(FName EnteredLevelName) const;
+	void RequestAIResultForSession(const FString& SessionId);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	FName FinalScoreboardTriggerLevelName = NAME_None;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	FString FinalScoreboardNodeId = TEXT("ALPHA_999_FINAL_SCOREBOARD");
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	bool bFinalScoreboardSignalSent = false;
+
 	UPROPERTY()
 	TObjectPtr<AAgentNPCBase> TargetNPC;
 

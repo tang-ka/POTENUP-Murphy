@@ -121,15 +121,16 @@ void UArrivalCardWidget::UpdateUI()
 	FString LocID = PS->CurrentLocationID;
 	FString ItmID = PS->CurrentItemID;
 
-	// ----- [방문 장소 Row 확인 및 갱신] -----
+	// === 방문 장소 Row 확인 및 갱신 ===
 	if (!LocID.IsEmpty() && txt_VisitLocation)
 	{
 		if (FLocationTextData* FoundLoc = DataManager->GetLocationData(FName(*LocID)))
 		{
-			txt_VisitLocation->SetText(FText::FromString(FoundLoc->NameEN));
+			FString CombinedStr = FString::Printf(TEXT("%s (%s)"), *FoundLoc->NameEN, *FoundLoc->NameKR);
+			txt_VisitLocation->SetText(FText::FromString(CombinedStr));
             
 			// [성공] 화면에 초록색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 장소: %s"), *FoundLoc->NameEN));
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 장소: %s"), *CombinedStr));
 		}
 		else
 		{
@@ -138,15 +139,16 @@ void UArrivalCardWidget::UpdateUI()
 		}
 	}
 
-	// ----- [세관 신고 물품 Row 확인 및 갱신] -----
+	// === 세관 신고 물품 Row 확인 및 갱신 ===
 	if (!ItmID.IsEmpty() && txt_CustomsItem)
 	{
 		if (FCustomsItemTextData* FoundItm = DataManager->GetCustomsItemData(FName(*ItmID)))
 		{
-			txt_CustomsItem->SetText(FText::FromString(FoundItm->NameEN));
+			FString CombinedStr = FString::Printf(TEXT("%s (%s)"), *FoundItm->NameEN, *FoundItm->NameKR);
+			txt_CustomsItem->SetText(FText::FromString(CombinedStr));
 
 			// [성공] 화면에 초록색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 물품: %s"), *FoundItm->NameEN));
+			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 물품: %s"), *CombinedStr));
 		}
 		else
 		{

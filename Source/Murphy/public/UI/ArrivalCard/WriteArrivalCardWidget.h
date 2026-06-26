@@ -8,6 +8,7 @@
 
 class UArrivalCardWidget;
 class UButton;
+
 /**
  * 
  */
@@ -16,15 +17,14 @@ class MURPHY_API UWriteArrivalCardWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
+protected:
+	virtual void NativeConstruct() override;
 	
 private:
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UButton> btn_Complete;
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UArrivalCardWidget> WBP_ArrivalCard;
-	
-protected:
-	virtual void NativeConstruct() override;
 	
 private:
 	UFUNCTION()

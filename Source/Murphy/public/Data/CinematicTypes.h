@@ -34,19 +34,19 @@ struct FCinematicFadeParams
 
 	// 게임화면 -> 검정. 시작이 이미 검정인 케이스는 0으로 스킵.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Fade")
-	float FadeToBlackDuration = 0.5f;
+	float FadeToBlackDuration = 1.f;
 
 	// 검정 -> 미디어
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Fade")
-	float MediaFadeInDuration = 0.5f;
+	float MediaFadeInDuration = 1.f;
 
 	// 미디어 -> 검정 (종료 시)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Fade")
-	float MediaFadeOutDuration = 0.5f;
+	float MediaFadeOutDuration = 1.f;
 
 	// 검정 -> 게임/새 맵
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Fade")
-	float FadeFromBlackDuration = 0.5f;
+	float FadeFromBlackDuration = 1.f;
 
 	// 레터박스 배경 + Hold 커버색
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic|Fade")

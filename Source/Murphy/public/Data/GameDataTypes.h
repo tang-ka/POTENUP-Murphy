@@ -233,6 +233,10 @@ struct FItemTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
 	bool bIsUsable = false;
 
+	/** 사용하기 버튼 클릭 시 띄울 위젯 클래스 (nullptr이면 위젯 없이 UseItem 이벤트만 발생) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
+	TSubclassOf<UUserWidget> UseWidgetClass;
+
 	/** 아이템 아이콘 텍스처 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Murphy|Item")
 	TSoftObjectPtr<UTexture2D> ItemIcon;
@@ -242,3 +246,32 @@ struct FItemTableRow : public FTableRowBase
 	TSoftObjectPtr<UTexture2D> ItemDetailIcon;
 };
 
+
+// 방문 장소 (공통 속성)
+USTRUCT(BlueprintType)
+struct FLocationTextData : public FTableRowBase
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ID;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString NameEN;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString NameKR;
+};
+
+// 신고 물품 (공통 속성 상속, 텍스쳐 추가)
+USTRUCT(BlueprintType)
+struct FCustomsItemTextData : public FLocationTextData
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSoftObjectPtr<UTexture2D> ItemTexture;
+	
+};

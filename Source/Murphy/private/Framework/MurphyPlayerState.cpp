@@ -90,12 +90,12 @@ FPlayReportData AMurphyPlayerState::BuildPlayReportDataFromAIResult(const FAIRes
 
 	ReportData.TierName = FinalResult.tier;
 	ReportData.TotalScore = FinalResult.final_score_100 > 0 ? FinalResult.final_score_100 : Scores.overall;
-	ReportData.ComprehensionScore = Scores.comprehension;
-	ReportData.FluencyScore = Scores.fluency;
-	ReportData.GrammarAccuracyScore = Scores.grammar_accuracy;
-	ReportData.VocabularyRangeScore = Scores.vocabulary_range;
+	ReportData.TaskSuccessScore = Scores.comprehension;
 	ReportData.ClarityScore = Scores.clarity;
-	ReportData.InteractionProblemSolvingScore = Scores.interaction_problem_solving;
+	ReportData.GrammarScore = Scores.grammar_accuracy;
+	ReportData.VocabularyScore = Scores.vocabulary_range;
+	ReportData.ProblemSolvingScore = Scores.interaction_problem_solving;
+	ReportData.FluencyScore = Scores.fluency;
 
 	ReportData.FinalRecommendation = FinalResult.final_recommendation;
 	ReportData.Rank = FinalResult.rank;
@@ -106,6 +106,21 @@ FPlayReportData AMurphyPlayerState::BuildPlayReportDataFromAIResult(const FAIRes
 	ReportData.WeakestNode = ReportSummary.weakest_node;
 	ReportData.NextPracticePromptKr = OutGameFeedback.personalized_next_step.practice_prompt_kr;
 	ReportData.NextAnswerExample = OutGameFeedback.personalized_next_step.answer_example;
+
+	ReportData.FeedbackCards.Reserve(OutGameFeedback.focus_on_form_items.Num());
+	for (const FAIFocusOnFormItem& FocusItem : OutGameFeedback.focus_on_form_items)
+	{
+		FPlayReportFeedbackCardData CardData;
+		CardData.Title = FocusItem.title_kr;
+		CardData.Summary = FocusItem.rule_summary_kr;
+		CardData.OriginalUtterances = FocusItem.original_utterances;
+		CardData.SuggestedExpressions = FocusItem.suggested_expressions;
+		CardData.PracticePrompt = FocusItem.practice_prompt_kr;
+		CardData.AnswerExample = FocusItem.answer_example;
+		CardData.Priority = FocusItem.priority;
+
+		ReportData.FeedbackCards.Add(MoveTemp(CardData));
+	}
 
 	return ReportData;
 }

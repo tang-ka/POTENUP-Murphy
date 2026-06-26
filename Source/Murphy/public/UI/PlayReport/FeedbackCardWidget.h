@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Data/PlayReportData.h"
 #include "FeedbackCardWidget.generated.h"
 
 class UImage;
@@ -43,6 +44,8 @@ protected:
 	TObjectPtr<UImage> img_Star3;
 	
 public:
-	// void InitializeCard(const FFocusOnFormItem& CardData);
+	// 최종 결과 피드백 카드 데이터를 받아 UI를 갱신합니다.
+	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
+	void InitializeCard(const FPlayReportFeedbackCardData& CardData);
 	
 };

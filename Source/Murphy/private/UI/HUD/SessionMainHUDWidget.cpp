@@ -8,7 +8,9 @@
 #include "Components/TextBlock.h"
 #include "Engine/GameInstance.h"
 #include "Manager/NetworkManagerSubsystem.h"
+#include "Manager/UIManagerSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/LocalPlayer.h"
 
 void USessionMainHUDWidget::NativeConstruct()
 {
@@ -84,7 +86,25 @@ void USessionMainHUDWidget::HandleBtnReadyClicked()
 void USessionMainHUDWidget::HandleBtnStartClicked()
 {
 	PRINTLOG_SH(TEXT("Btn_Start Clicked"));
-	OnStartRequested.ExecuteIfBound();
+
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	UUIManagerSubsystem* UIManager = LocalPlayer ? LocalPlayer->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+	if (!UIManager)
+	{
+		// UIManager가 없으면 페이드 없이 즉시 시작.
+		PRINTLOG_SH(TEXT("HandleBtnStartClicked: UIManagerSubsystem is null — 페이드 없이 즉시 시작."));
+		OnStartRequested.ExecuteIfBound();
+		return;
+	}
+
+	// 페이드 아웃(화면 -> 검정) 완료 후 시작 요청 실행.
+	FSimpleDelegate OnFadeOutComplete = FSimpleDelegate::CreateWeakLambda(this, [this]()
+	{
+		OnStartRequested.ExecuteIfBound();
+	});
+
+	// Duration 0 -> UIManagerSettings::DefaultFadeDuration 사용.
+	UIManager->FadeOut(0.f, OnFadeOutComplete);
 }
 
 void USessionMainHUDWidget::HandleBtnExitClicked()

@@ -90,7 +90,7 @@ FPlayReportData AMurphyPlayerState::BuildPlayReportDataFromAIResult(const FAIRes
 
 	ReportData.TierName = FinalResult.tier;
 	ReportData.TotalScore = FinalResult.final_score_100 > 0 ? FinalResult.final_score_100 : Scores.overall;
-	ReportData.TaskSuccessScore = Scores.comprehension;
+	ReportData.ComprehensionScore = Scores.comprehension;
 	ReportData.ClarityScore = Scores.clarity;
 	ReportData.GrammarScore = Scores.grammar_accuracy;
 	ReportData.VocabularyScore = Scores.vocabulary_range;

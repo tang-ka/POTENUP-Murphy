@@ -60,15 +60,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 TotalScore = 0;
 	
-	// 과업 성공에 대응되는 점수입니다. 최종 결과 API에서는 comprehension을 사용합니다.
+	// 이해도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	int32 TaskSuccessScore = 0;
+	int32 ComprehensionScore = 0;
 	
-	// 명확성
+	// 유창성
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	int32 ClarityScore = 0;
+	int32 FluencyScore = 0;
 	
-	// 문법 정확도
+	// 문법성
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 GrammarScore = 0;
 	
@@ -76,15 +76,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 VocabularyScore = 0;
 	
-	// 상황 해결력
+	// 명확성
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	int32 ClarityScore = 0;
+	
+	// 문제해결력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	int32 ProblemSolvingScore = 0;
-
-	// 유창성. 현재 결과창의 6번째 슬롯에 표시합니다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	int32 FluencyScore = 0;
 	
-	// 최종 추천 결과
+	// 최종 추천 결과 (P/NP)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FString FinalRecommendation;
 

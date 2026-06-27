@@ -5,6 +5,7 @@
 
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/Overlay.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Manager/DataManager.h"
@@ -14,6 +15,13 @@
 void UPhonePopupWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	if (Overlay_Phone)
+	{
+		FWidgetTransform PhonePopupTransform = Overlay_Phone->GetRenderTransform();
+		PhonePopupTransform.Translation.Y = 560.0f;
+		Overlay_Phone->SetRenderTransform(PhonePopupTransform);
+	}
 
 	// AppScreenSwitcher는 시작 시 숨김
 	if (AppScreenSwitcher)
@@ -36,10 +44,10 @@ void UPhonePopupWidget::NativeConstruct()
 	}
 
 	// 각 앱 위젯 초기화 (Row Name은 DataTable에서 사용한 이름과 일치해야 합니다)
-	InitAppWidget(WBP_Travelgram,  FName("Travelgram"));
-	InitAppWidget(WBP_Translate,	  FName("Translate"));
-	InitAppWidget(WBP_Camera,      FName("Camera"));
-	InitAppWidget(WBP_Photos,      FName("Photos"));
+	InitAppWidget(WBP_Travelgram,  	FName("Travelgram"));
+	InitAppWidget(WBP_Translate,	FName("Translate"));
+	InitAppWidget(WBP_Camera,      	FName("Camera"));
+	InitAppWidget(WBP_Photos,      	FName("Photos"));
 	SystemColorChanged(true);
 
 	PRINTLOG_SH(TEXT("PhonePopupWidget 초기화 완료"));

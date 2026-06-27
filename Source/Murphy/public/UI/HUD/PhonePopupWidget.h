@@ -7,6 +7,7 @@
 #include "PhonePopupWidget.generated.h"
 
 class UImage;
+class UOverlay;
 class UWidgetSwitcher;
 class UTextBlock;
 class UButton;
@@ -25,6 +26,9 @@ class MURPHY_API UPhonePopupWidget : public UUserWidget
 	
 	
 protected:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UOverlay> Overlay_Phone;
+
 	// 애니메이션 바인딩 시 Transient 키워드 필수
 	UPROPERTY(meta =(BindWidgetAnim), Transient)
 	TObjectPtr<UWidgetAnimation> Anim_PhoneSlideUp;

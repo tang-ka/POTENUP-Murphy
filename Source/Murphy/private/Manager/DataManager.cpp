@@ -21,6 +21,9 @@ void UDataManager::Deinitialize()
 	PhoneAppDataTable = nullptr;
 	ItemDataTable = nullptr;
 	EmotionDataTable = nullptr;
+	LocationDataTable = nullptr;
+	CustomsItemDataTable = nullptr;
+	TierDataTable = nullptr;
 }
 
 void UDataManager::LoadDataTables()
@@ -294,7 +297,7 @@ FCustomsItemTextData* UDataManager::GetCustomsItemData(const FName& RowName) con
 {
 	if (!CustomsItemDataTable)
 	{
-		PRINTLOGE_JW(TEXT("CustomsItemDataTable이 로드되지 않았습니다."));
+		PRINTLOG_HJ(TEXT("CustomsItemDataTable이 로드되지 않았습니다."));
 		return nullptr;
 	}
 	
@@ -316,4 +319,32 @@ TArray<FName> UDataManager::GetAllCustomsItemRowNames() const
 	}
 	
 	return CustomsItemDataTable->GetRowNames();
+}
+
+FTierUIDataRow* UDataManager::GetTierData(const FName& RowName) const
+{
+	if (!TierDataTable)
+	{
+		PRINTLOG_HJ(TEXT("TierDataTable이 로드되지 않았습니다."));
+		return nullptr;
+	}
+	
+	FTierUIDataRow* Row = TierDataTable->FindRow<FTierUIDataRow>(RowName, TEXT("GetTierData"));
+	if (!Row)
+	{
+		PRINTLOG_HJ(TEXT("티어 Row를 찾을 수 없습니다: %s"), *RowName.ToString());
+	}
+
+	return Row;
+}
+
+TArray<FName> UDataManager::GetAllTierRowNames() const
+{
+	if (!TierDataTable)
+	{
+		PRINTLOG_HJ(TEXT("TierDataTable이 로드되지 않았습니다."));
+		return {};
+	}
+	
+	return TierDataTable->GetRowNames();
 }

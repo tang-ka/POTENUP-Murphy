@@ -18,9 +18,13 @@ class MURPHY_API UPlayReportItemWidget : public UUserWidget
 	
 	
 protected:
-	// 항목 이름 (예: 이해력)
+	// 항목 이름 영문 (예: Comprehension)
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_CategoryTitle;
+	TObjectPtr<UTextBlock> txt_CategoryTitleEN;
+	
+	// 항목 이름 국문 (예: 이해력)
+	UPROPERTY(meta =(BindWidget))
+	TObjectPtr<UTextBlock> txt_CategoryTitleKR;
 	
 	// 점수
 	UPROPERTY(meta =(BindWidget))
@@ -29,10 +33,6 @@ protected:
 	// 원형 ProgressBar
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UImage> img_CircleProgress;
-	
-	// 아이콘
-	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UImage> img_ScoreIcon;
 	
 	// 머티리얼 파라미터 제어
 	UPROPERTY()
@@ -43,7 +43,7 @@ protected:
 	FLinearColor PerfectColor = FLinearColor(0.2f, 0.8f, 0.4f);		// 100
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	FLinearColor ExcellentColor = FLinearColor(0.5f, 0.f, 1.0f);		// 90~99
+	FLinearColor ExcellentColor = FLinearColor(0.4f, 0.f, 0.9f);		// 90~99
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FLinearColor GoodColor = FLinearColor(0.1f, 0.5f, 0.9f);			// 70~89
@@ -64,5 +64,5 @@ public:
 	 * @param Title 항목 이름
 	 * @param Score 0~100 사이의 점수
 	 */
-	void InitializeItem(const FString& Title, int32 Score);
+	void InitializeItem(const FString& TitleEN, const FString& TitleKR, int32 Score);
 };

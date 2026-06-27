@@ -275,3 +275,19 @@ public:
 	TSoftObjectPtr<UTexture2D> ItemTexture;
 	
 };
+
+// 결과창 티어 관련
+USTRUCT(BlueprintType)
+struct FTierUIDataRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	// 띄워줄 티어 이미지
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Tier")
+	TObjectPtr<UTexture2D> TierIcon;
+
+	// 띄워줄 칭호 (예: "베테랑 여행자")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|Tier")
+	FString TierTitle;
+};

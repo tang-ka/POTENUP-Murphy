@@ -138,6 +138,19 @@ public:
 	TArray<FName> GetAllCustomsItemRowNames() const;
 #pragma endregion
 	
+	// === 티어 데이터 조회 ===
+#pragma region TierData
+	/**
+	 * Row Name으로 티어 데이터를 반환합니다.
+	 * @param RowName DataTable의 행 이름 (예: Diamond, Gold)
+	 * @return 해당 Row 포인터. 없으면 nullptr
+	 */
+	FTierUIDataRow* GetTierData(const FName& RowName) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Data|Tier")
+	TArray<FName> GetAllTierRowNames() const;
+#pragma endregion
+	
 private:
 	/** DataManagerSettings에서 DataTable을 동기 로드합니다. */
 	void LoadDataTables();
@@ -162,4 +175,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> CustomsItemDataTable;
+	
+	UPROPERTY()
+	TObjectPtr<UDataTable> TierDataTable;
 };

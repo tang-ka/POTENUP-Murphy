@@ -64,8 +64,8 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	{
 		FCinematicPlayRequest Request;
 		Request.CinematicId = TEXT("Airplane_Takeoff");
-		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
-		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_Manhattan_street_first-person_view_1080p_202606251542.05-1_Manhattan_street_first-person_view_1080p_202606251542")));
+		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
+		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_ManhattanStreet.05-1_ManhattanStreet")));
 		Request.bSkippable  = true;
 		Request.Fade.FadeToBlackDuration = 0.0f;
 		Request.Fade.MediaFadeInDuration = 2.f;

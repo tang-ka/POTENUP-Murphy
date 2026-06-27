@@ -14,6 +14,7 @@
 #include "GameFramework/PlayerInput.h"
 #include "InputCoreTypes.h"
 #include "MediaPlayer.h"
+#include "MediaSoundComponent.h"
 #include "MediaSource.h"
 #include "MediaTexture.h"
 
@@ -344,6 +345,21 @@ void UCinematicManagerSubsystem::StartMedia()
 		MediaTexture->SetMediaPlayer(MediaPlayer);
 		MediaTexture->UpdateResource();
 	}
+	
+	if (!MediaSoundComp)
+	{
+		MediaSoundComp = NewObject<UMediaSoundComponent>(this);
+		if (UWorld* World = GetWorld())
+		{
+			MediaSoundComp->RegisterComponentWithWorld(World);
+		}
+	}
+	
+	if (MediaSoundComp)
+	{
+		MediaSoundComp->SetMediaPlayer(MediaPlayer);
+		MediaSoundComp->SetVolumeMultiplier(1.0f);
+	}
 
 	// 프리롤: 검정 페이드 동안 미리 연다. 실제 Play는 MediaFadingIn 진입 시.
 	MediaPlayer->OpenSource(Source);
@@ -498,6 +514,13 @@ void UCinematicManagerSubsystem::FinishAndCleanup(bool bBroadcastCompleted)
 		MediaPlayer = nullptr;
 	}
 	MediaTexture = nullptr;
+	
+	if (MediaSoundComp)
+	{
+		MediaSoundComp->UnregisterComponent();
+		MediaSoundComp->DestroyComponent();
+		MediaSoundComp = nullptr;
+	}
 
 	DestroyOverlay();
 	RestoreInput();

@@ -11,6 +11,7 @@
 class UCinematicOverlayWidget;
 class UMediaPlayer;
 class UMediaTexture;
+class UMediaSoundComponent;
 
 // 미디어 종료 -> 검정 도달. (= relay가 서버에 "나 끝남" 보고할 지점)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCinematicReachedHold, int32, PlayId);
@@ -141,4 +142,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMediaTexture> MediaTexture;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<UMediaSoundComponent> MediaSoundComp;
 };

@@ -58,7 +58,7 @@ public: // AI 대화 결과 저장용 변수
 public:
 	// 선택한 캐릭터 (Carry)
 	UPROPERTY(ReplicatedUsing = OnRep_SessionRoomState, VisibleAnywhere, BlueprintReadOnly, Category="Murphy|Session")
-	EPlayerCharacterType  SelectedCharacter = EPlayerCharacterType::None;
+	EPlayerCharacterType  SelectedCharacter = EPlayerCharacterType::BoyCharacter;
 	
 	// 준비 완료 여부 (Room only)
 	UPROPERTY(ReplicatedUsing = OnRep_SessionRoomState, VisibleAnywhere, BlueprintReadOnly, Category="Murphy|Session")

@@ -11,11 +11,11 @@
 
 void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 {
-	// TODO: 현진 - 성공 여부 따라 텍스트 변경
-	/*
+	// TODO: 현진 텍스트 색 수정
+	// === 성공 여부 표시 ===
 	if (txt_Result)
 	{
-		if (ReportData.bIsSuccess)
+		if (ReportData.bIsGameClear)
 		{
 			txt_Result->SetText(FText::FromString(TEXT("COMPLETED")));
 			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor::Green));
@@ -26,7 +26,6 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
 		}
 	}
-	*/
 	
 	// === 상단 영역 (총점, 티어) 갱신 ===
 	if (txt_TotalScore)

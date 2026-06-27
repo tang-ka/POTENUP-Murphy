@@ -35,11 +35,15 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> EmotionDataTable;
 	
-	/** NPC 감정 DataTable (FCustomsLocationTextData 기반) */
+	/** 랜덤 위치 DataTable (FCustomsLocationTextData 기반) */
 	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> LocationDataTable;
 	
-	/** NPC 감정 DataTable (FCustomsItemTextData 기반) */
+	/** 랜덤 신고 물품 DataTable (FCustomsItemTextData 기반) */
 	UPROPERTY(Config, EditAnywhere, Category="DataTable")
 	TSoftObjectPtr<UDataTable> CustomsItemDataTable;
+	
+	/** 티어 관련 DataTable (FTierUIDataRow 기반) */
+	UPROPERTY(Config, EditAnywhere, Category="DataTable")
+	TSoftObjectPtr<UDataTable> TierDataTable;
 };

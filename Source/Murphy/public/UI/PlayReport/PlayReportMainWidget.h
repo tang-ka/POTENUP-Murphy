@@ -22,7 +22,7 @@ class MURPHY_API UPlayReportMainWidget : public UUserWidget
 protected:
 	// [상단 영역] 총점과 티어 표시
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> txt_FinalRecommendation;	// P/NP
+	TObjectPtr<UTextBlock> txt_Result;				// 성공 여부
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> txt_TotalScore;			// 총점

@@ -17,14 +17,19 @@ FLinearColor UPlayReportItemWidget::GetColorByScore(int32 Score) const
 	return PoorColor;
 }
 
-void UPlayReportItemWidget::InitializeItem(const FString& Title, int32 Score)
+void UPlayReportItemWidget::InitializeItem(const FString& TitleEN, const FString& TitleKR, int32 Score)
 {
 	// UI 데이터 및 시각 효과 갱신
 	
 	// 1. 텍스트 데이터 세팅
-	if (txt_CategoryTitle)
+	if (txt_CategoryTitleEN)
 	{
-		txt_CategoryTitle->SetText(FText::FromString(Title));
+		txt_CategoryTitleEN->SetText(FText::FromString(TitleEN));
+	}
+	
+	if (txt_CategoryTitleKR)
+	{
+		txt_CategoryTitleKR->SetText(FText::FromString(TitleKR));
 	}
 	
 	if (txt_Score)

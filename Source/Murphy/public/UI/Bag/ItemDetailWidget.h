@@ -33,7 +33,7 @@ protected:
 	virtual void NativeConstruct() override;
 
 	// === WBP Binding Widget ===
-	/** 아이템 이름 텍스트 */
+	/** 아이템 이미지 */
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> Img_ItemImage;
 	

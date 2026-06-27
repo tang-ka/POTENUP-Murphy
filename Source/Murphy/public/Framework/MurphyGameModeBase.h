@@ -17,6 +17,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Murphy|View")
 	EChatViewMode ChatViewMode = EChatViewMode::ThirdPersonFocus;
 	
+	// 게임 오버 트리거
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Game")
+	void TriggerGameOver();
+
 protected:
 	// PlayerState의 SelectedCharacter 값에 따라 스폰할 폰 클래스를 분기한다.
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;

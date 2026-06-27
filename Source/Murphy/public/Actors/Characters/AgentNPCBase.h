@@ -2,10 +2,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
-#include "Interfaces/IHttpRequest.h"
 #include "Data/AIDataTypes.h"
 #include "Data/GameDataTypes.h"
+#include "GameFramework/Character.h"
+#include "Interfaces/IHttpRequest.h"
 #include "AgentNPCBase.generated.h"
 
 class UBoxComponent;
@@ -100,8 +100,11 @@ public:
 	
 protected:
 	// ABP와 Emoji에서 사용할 현재 감정 상태 변수
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentEmotion, VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
 	EAgentEmotion CurrentEmotion = EAgentEmotion::Normal;
+	
+	UFUNCTION()
+	void OnRep_CurrentEmotion();
 	
 	// 파싱된 감정 상태를 애니메이션 블루프린트로 전달 
 	void UpdateEmotion(EAgentEmotion EmotionLevel);
@@ -123,6 +126,23 @@ private:
 	virtual void OnInteractionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION() 
 	virtual void OnInteractionBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+protected:
+	// === Optimization Caches ===
+	UPROPERTY()
+	TObjectPtr<USkeletalMeshComponent> CachedFaceMesh = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UAnimInstance> CachedFaceAnimInstance = nullptr;
+
+	FFloatProperty* CachedCurrentLoudnessFloat = nullptr;
+	FDoubleProperty* CachedCurrentLoudnessDouble = nullptr;
+	
+	FFloatProperty* CachedFaceLoudnessFloat = nullptr;
+	FDoubleProperty* CachedFaceLoudnessDouble = nullptr;
+	
+	// 비동기 통신 중 플레이어가 이탈하는 경우를 대비한 캐시
+	TWeakObjectPtr<AActor> LastInteractPlayer;
 	
 public:
 	// === NPC Info ==
@@ -211,11 +231,11 @@ public:
 	// ==========================================
     
 	// 지금 플레이어를 쳐다봐야 하는 상태인지 여부 (스위치 역할)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
 	bool bIsLookingAtPlayer = false;
 
 	// 플레이어의 위치 (주로 얼굴/카메라 좌표)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "AI|IK")
 	FVector TargetLookAtLocation = FVector::ZeroVector;
     
 	// 플레이어 캐릭터 포인터 캐싱용 (Tick에서 위치를 계속 업데이트하기 위함)

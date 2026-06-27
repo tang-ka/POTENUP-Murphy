@@ -1,26 +1,27 @@
 
 #include "Actors/Characters/AgentNPCBase.h"
+#include "Actors/Characters/MurphyPlayer.h"
 
 #include "Animation/WonFaceAnimInstance.h"
-#include "HttpManager.h"
-#include "Murphy.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/QuestEventNotifyComponent.h"
-#include "HttpModule.h"                       // 오디오 다운로드용
 #include "Components/WidgetComponent.h"
 #include "Framework/MurphyPlayerController.h"
-#include "Actors/Characters/MurphyPlayer.h"
-#include "UI/HUD/MainHUD.h"
 #include "Framework/MurphyPlayerState.h"
+#include "Framework/MurphyGameModeBase.h"
 #include "Interfaces/IHttpResponse.h"
-#include "Net/UnrealNetwork.h"
-#include "UObject/UnrealType.h"
-#include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
-#include "Manager/DataManager.h"
+#include "HttpManager.h"
+#include "HttpModule.h"                       // 오디오 다운로드용
+#include "UI/HUD/MainHUD.h"
 #include "UI/AgentEmojiUI.h"
-#include "Kismet/GameplayStatics.h"
+#include "UObject/UnrealType.h"
+#include "Murphy.h"
+#include "Manager/DataManager.h"
+#include "Net/UnrealNetwork.h"
+#include "Sound/SoundWaveProcedural.h"        // 런타임 사운드 생성용
 #include "Settings/MurphyNetSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 AAgentNPCBase::AAgentNPCBase()
 {
@@ -58,18 +59,29 @@ void AAgentNPCBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	CachedFaceMesh = ResolveFaceMeshComponent();
+	if (CachedFaceMesh)
 	{
-		if (ResolvedFaceMesh != FaceMesh)
+		if (CachedFaceMesh != FaceMesh)
 		{
-			PRINTLOG_JW(TEXT("[AgentNPC] 실제 Face 컴포넌트 연결: %s"), *ResolvedFaceMesh->GetName());
+			PRINTLOG_JW(TEXT("[AgentNPC] 실제 Face 컴포넌트 연결: %s"), *CachedFaceMesh->GetName());
 		}
 
 		if (IsValid(VoiceComp))
 		{
-			VoiceComp->AttachToComponent(ResolvedFaceMesh, FAttachmentTransformRules::KeepRelativeTransform);
+			VoiceComp->AttachToComponent(CachedFaceMesh, FAttachmentTransformRules::KeepRelativeTransform);
+		}
+		
+		CachedFaceAnimInstance = CachedFaceMesh->GetAnimInstance();
+		if (CachedFaceAnimInstance)
+		{
+			CachedFaceLoudnessFloat = FindFProperty<FFloatProperty>(CachedFaceAnimInstance->GetClass(), TEXT("FaceLoudness"));
+			CachedFaceLoudnessDouble = FindFProperty<FDoubleProperty>(CachedFaceAnimInstance->GetClass(), TEXT("FaceLoudness"));
 		}
 	}
+	
+	CachedCurrentLoudnessFloat = FindFProperty<FFloatProperty>(GetClass(), TEXT("CurrentLoudness"));
+	CachedCurrentLoudnessDouble = FindFProperty<FDoubleProperty>(GetClass(), TEXT("CurrentLoudness"));
 	
 	EmojiUI = Cast<UAgentEmojiUI>(EmojiComp->GetUserWidgetObject());
 	EmojiUI->SetEmojiVisible(false);
@@ -107,22 +119,29 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	// --- 위젯 컴포넌트 업데이트 (Screen 스케일 / World 빌보딩) ---
 	if (IsValid(EmojiComp) && GetNetMode() != NM_DedicatedServer)
 	{
-		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0))
+		FVector CameraLoc = FVector::ZeroVector;
+		bool bGotCamera = false;
+		
+		// 로컬 클라이언트의 카메라 위치를 가져옵니다.
+		if (APlayerController* LocalPC = GetWorld()->GetFirstPlayerController())
 		{
-			FVector CameraLoc = CameraManager->GetCameraLocation();
-			FVector WidgetLoc = EmojiComp->GetComponentLocation();
-
-			if (EmojiComp->GetWidgetSpace() == EWidgetSpace::Screen)
+			if (APlayerCameraManager* CameraManager = LocalPC->PlayerCameraManager)
 			{
-				// [Screen 모드] 거리에 따라 위젯 스케일 작아지게
-				float Distance = FVector::Dist(CameraLoc, WidgetLoc);
-				float Scale = FMath::Clamp(300.0f / FMath::Max(Distance, 1.0f), 0.1f, 1.0f);
-				
-				if (Distance >= 300.f) 
-				if (IsValid(EmojiUI))
-				{
-					EmojiUI->SetRenderScale(FVector2D(Scale, Scale));
-				}
+				CameraLoc = CameraManager->GetCameraLocation();
+				bGotCamera = true;
+			}
+		}
+
+		if (bGotCamera && EmojiComp->GetWidgetSpace() == EWidgetSpace::Screen)
+		{
+			FVector WidgetLoc = EmojiComp->GetComponentLocation();
+			// [Screen 모드] 거리에 따라 위젯 스케일 작아지게
+			float Distance = FVector::Dist(CameraLoc, WidgetLoc);
+			float Scale = FMath::Clamp(300.0f / FMath::Max(Distance, 1.0f), 0.1f, 1.0f);
+			
+			if (IsValid(EmojiUI))
+			{
+				EmojiUI->SetRenderScale(FVector2D(Scale, Scale));
 			}
 		}
 	}
@@ -154,12 +173,22 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	// 계산된 결과를 ABP가 읽어갈 수 있도록 멤버 변수에 저장
 	bEnableIK = bShouldLookAtPlayer;
     
-	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 카메라 좌표 갱신
-	if (bEnableIK && IsValid(CurrentInteractPlayer))
+	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 카메라 좌표 갱신 (서버에서만 갱신 후 리플리케이트)
+	if (bEnableIK && IsValid(CurrentInteractPlayer) && HasAuthority())
 	{
-		if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0))
+		if (APawn* PlayerPawn = Cast<APawn>(CurrentInteractPlayer))
 		{
-			TargetLookAtLocation = CameraManager->GetCameraLocation();
+			if (APlayerController* PC = Cast<APlayerController>(PlayerPawn->GetController()))
+			{
+				if (APlayerCameraManager* CameraManager = PC->PlayerCameraManager)
+				{
+					TargetLookAtLocation = CameraManager->GetCameraLocation();
+				}
+				else
+				{
+					TargetLookAtLocation = PlayerPawn->GetActorLocation();
+				}
+			}
 		}
 	}
 	
@@ -167,20 +196,27 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	{
 		CurWaitTime += DeltaSeconds;
 		
-		if (IsValid(EmojiUI))
+		if (IsValid(EmojiUI) && GetNetMode() != NM_DedicatedServer)
 		{
 			EmojiUI->SetProgress(CurWaitTime / MaxWaitTime);
 		}
 		
-		if (CurWaitTime >= MaxWaitTime)
+		if (CurWaitTime >= MaxWaitTime && HasAuthority())
 		{
 			bIsWaitingForPlayer = false;
 			
 			PRINTLOGW_JW(TEXT("[AgentNPC] 1분 타임아웃! 플레이어가 대답하지 않았습니다."));
 			
-			if (AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(GetWorld()->GetFirstPlayerController()))
+			AActor* TargetPlayer = IsValid(CurrentInteractPlayer) ? CurrentInteractPlayer.Get() : LastInteractPlayer.Get();
+			if (TargetPlayer)
 			{
-				PC->SendTimeoutAudioToAI();
+				if (APawn* TargetPawn = Cast<APawn>(TargetPlayer))
+				{
+					if (AMurphyPlayerController* PC = Cast<AMurphyPlayerController>(TargetPawn->GetController()))
+					{
+						PC->SendTimeoutAudioToAI();
+					}
+				}
 			}
 		}
 	}
@@ -192,6 +228,9 @@ void AAgentNPCBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAgentNPCBase, bIsTalkingWithPlayer);
+	DOREPLIFETIME(AAgentNPCBase, CurrentEmotion);
+	DOREPLIFETIME(AAgentNPCBase, bIsLookingAtPlayer);
+	DOREPLIFETIME(AAgentNPCBase, TargetLookAtLocation);
 }
 
 void AAgentNPCBase::ForShortAnswer()
@@ -202,6 +241,7 @@ void AAgentNPCBase::ForShortAnswer()
 		VoiceComp->Play();
 		
 		float SoundDuration = ForShortAnswerSound->GetDuration();
+		GetWorld()->GetTimerManager().ClearTimer(VoiceTimerHandle);
 		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
 	}
 	
@@ -229,6 +269,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
     
 			// 플레이어 액터를 저장해둡니다. (매개변수로 넘어온 OtherActor가 플레이어라고 가정)
 			CurrentInteractPlayer = OtherActor;
+			LastInteractPlayer = OtherActor;
 
 			if (!QuestTargetID.IsNone())
 			{
@@ -254,6 +295,7 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 				VoiceComp->Play();
 
 				float SoundDuration = PassportSound->GetDuration();
+				GetWorld()->GetTimerManager().ClearTimer(VoiceTimerHandle);
 				GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
 
 				// 캐싱 음성 재생 = 대화 시작 -> 카테고리 생성 + 첫 Agent 대사
@@ -371,11 +413,13 @@ void AAgentNPCBase::OnVoiceEnvelopeValue(const USoundWave* PlayingSoundWave, con
 {
 	const float Loudness = FMath::Clamp(EnvelopeValue * 8.0f, 0.0f, 1.0f);
 
-	SetFloatPropertyIfExists(this, TEXT("CurrentLoudness"), Loudness);
+	if (CachedCurrentLoudnessFloat) CachedCurrentLoudnessFloat->SetPropertyValue_InContainer(this, Loudness);
+	else if (CachedCurrentLoudnessDouble) CachedCurrentLoudnessDouble->SetPropertyValue_InContainer(this, Loudness);
 
-	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	if (CachedFaceAnimInstance)
 	{
-		SetFloatPropertyIfExists(ResolvedFaceMesh->GetAnimInstance(), TEXT("FaceLoudness"), Loudness);
+		if (CachedFaceLoudnessFloat) CachedFaceLoudnessFloat->SetPropertyValue_InContainer(CachedFaceAnimInstance, Loudness);
+		else if (CachedFaceLoudnessDouble) CachedFaceLoudnessDouble->SetPropertyValue_InContainer(CachedFaceAnimInstance, Loudness);
 	}
 }
 
@@ -401,7 +445,16 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 	// 1. 상태 변수 최신화 (애니메이션 블루프린트에서 매 프레임 읽어갈 데이터)
 	CurrentEmotion = EmotionLevel;
 
-	const FString EmotionString = StaticEnum<EAgentEmotion>()->GetNameStringByValue(static_cast<int64>(EmotionLevel));
+	// 서버도 비주얼 갱신이 필요하다면 로컬 함수를 즉시 호출
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		OnRep_CurrentEmotion();
+	}
+}
+
+void AAgentNPCBase::OnRep_CurrentEmotion()
+{
+	const FString EmotionString = StaticEnum<EAgentEmotion>()->GetNameStringByValue(static_cast<int64>(CurrentEmotion));
 	const FName EmotionRowName(*EmotionString);
 	const FAI_EmotionData* EmotionData = nullptr;
 
@@ -421,21 +474,13 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 			PRINTLOGW_JW(TEXT("[AgentNPC] 감정 Row는 찾았지만 MuscleValues가 비어 있습니다: %s"), *EmotionString);
 		}
 
-		if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+		if (CachedFaceAnimInstance)
 		{
-			if (UWonFaceAnimInstance* FaceAnimInst = Cast<UWonFaceAnimInstance>(ResolvedFaceMesh->GetAnimInstance()))
+			if (UWonFaceAnimInstance* FaceAnimInst = Cast<UWonFaceAnimInstance>(CachedFaceAnimInstance))
 			{
 				FaceAnimInst->TargetEmotionMap = EmotionData->MuscleValues;
-				PRINTLOG_JW(TEXT("[AgentNPC] 얼굴 표정 데이터 적용 -> Mesh:%s Emotion:%s MuscleCount:%d"), *ResolvedFaceMesh->GetName(), *EmotionString, EmotionData->MuscleValues.Num());
+				PRINTLOG_JW(TEXT("[AgentNPC] 얼굴 표정 데이터 적용 -> Emotion:%s MuscleCount:%d"), *EmotionString, EmotionData->MuscleValues.Num());
 			}
-			else
-			{
-				PRINTLOGW_JW(TEXT("[AgentNPC] %s AnimInstance가 UWonFaceAnimInstance가 아닙니다: %s"), *ResolvedFaceMesh->GetName(), *EmotionString);
-			}
-		}
-		else
-		{
-			PRINTLOGW_JW(TEXT("[AgentNPC] Face 컴포넌트를 찾지 못해 얼굴 표정을 적용하지 못했습니다: %s"), *EmotionString);
 		}
 	}
     
@@ -447,7 +492,7 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 	}
 	if (!EmotionTexture)
 	{
-		if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(EmotionLevel))
+		if (TObjectPtr<UTexture2D>* FoundTexture = EmotionTextures.Find(CurrentEmotion))
 		{
 			EmotionTexture = *FoundTexture;
 		}
@@ -466,7 +511,7 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 	}
 	if (!EmotionMontage)
 	{
-		if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(EmotionLevel))
+		if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(CurrentEmotion))
 		{
 			EmotionMontage = *FoundMontage;
 		}
@@ -477,11 +522,10 @@ void AAgentNPCBase::UpdateEmotion(EAgentEmotion EmotionLevel)
 		// 메타휴먼은 얼굴(Face), 몸통(Body) 등 부위가 나뉘어 있으므로 모든 컴포넌트를 순회하며 재생합니다.
 		TArray<USkeletalMeshComponent*> SkeletalMeshes;
 		GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
-		USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent();
 
 		for (USkeletalMeshComponent* SkelMesh : SkeletalMeshes)
 		{
-			if (!IsValid(SkelMesh) || SkelMesh == ResolvedFaceMesh)
+			if (!IsValid(SkelMesh) || SkelMesh == CachedFaceMesh)
 			{
 				continue;
 			}
@@ -544,10 +588,18 @@ void AAgentNPCBase::StopTypingWait()
 
 void AAgentNPCBase::OnVoiceFinished()
 {	
-	SetFloatPropertyIfExists(this, TEXT("CurrentLoudness"), 0.0f);
-	if (USkeletalMeshComponent* ResolvedFaceMesh = ResolveFaceMeshComponent())
+	if (CachedCurrentLoudnessFloat) CachedCurrentLoudnessFloat->SetPropertyValue_InContainer(this, 0.0f);
+	else if (CachedCurrentLoudnessDouble) CachedCurrentLoudnessDouble->SetPropertyValue_InContainer(this, 0.0f);
+
+	if (CachedFaceAnimInstance)
 	{
-		SetFloatPropertyIfExists(ResolvedFaceMesh->GetAnimInstance(), TEXT("FaceLoudness"), 0.0f);
+		if (CachedFaceLoudnessFloat) CachedFaceLoudnessFloat->SetPropertyValue_InContainer(CachedFaceAnimInstance, 0.0f);
+		else if (CachedFaceLoudnessDouble) CachedFaceLoudnessDouble->SetPropertyValue_InContainer(CachedFaceAnimInstance, 0.0f);
+	}
+
+	if (IsValid(VoiceComp))
+	{
+		VoiceComp->SetSound(nullptr);
 	}
 
 	if (bIsScenarioCompleted)
@@ -624,6 +676,15 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	{
 		PRINTLOGW_JW(TEXT("[AgentNPC] 욕으로 인한 시나리오 중단!!"));
 		bIsScenarioCompleted = true;
+
+		// 서버인 경우 GameMode에 게임 오버 상태를 트리거합니다.
+		if (HasAuthority())
+		{
+			if (AMurphyGameModeBase* GM = Cast<AMurphyGameModeBase>(GetWorld()->GetAuthGameMode()))
+			{
+				GM->TriggerGameOver();
+			}
+		}
 	}
 	
 	// ==========================================================
@@ -704,9 +765,13 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 		PRINTLOGE_JW(TEXT("[AgentNPC] 유효하지 않은 WAV 파일 (RIFF 시그니처 없음)"));
 		return;
 	}
-	const int16 NumChannels   = *reinterpret_cast<const int16*>(Raw + 22);
-	const int32 SampleRate    = *reinterpret_cast<const int32*>(Raw + 24);
-	const int16 BitsPerSample = *reinterpret_cast<const int16*>(Raw + 34);
+	int16 NumChannels = 0;
+	int32 SampleRate = 0;
+	int16 BitsPerSample = 0;
+
+	FMemory::Memcpy(&NumChannels, Raw + 22, 2);
+	FMemory::Memcpy(&SampleRate, Raw + 24, 4);
+	FMemory::Memcpy(&BitsPerSample, Raw + 34, 2);
 	// const int32 PCMDataSize   = *reinterpret_cast<const int32*>(Raw + 40);
 	// const uint8* PCMStart     = Raw + 44;
 	
@@ -717,7 +782,8 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 	while (Offset + 8 <= static_cast<uint32>(WavData.Num()))
 	{
 		const uint8* ChunkId   = Raw + Offset;
-		const uint32 ChunkSize = *reinterpret_cast<const uint32*>(Raw + Offset + 4);
+		uint32 ChunkSize = 0;
+		FMemory::Memcpy(&ChunkSize, Raw + Offset + 4, 4);
 
 		if (ChunkId[0] == 'd' && ChunkId[1] == 'a' && ChunkId[2] == 't' && ChunkId[3] == 'a')
 		{
@@ -767,6 +833,7 @@ void AAgentNPCBase::OnAudioDownloaded(FHttpRequestPtr Request, FHttpResponsePtr 
 		VoiceComp->Play();
 		PRINTLOG_JW(TEXT("[AgentNPC] NPC 음성 재생 시작 (%.1f초)"), SoundWave->Duration);
 		
+		GetWorld()->GetTimerManager().ClearTimer(VoiceTimerHandle);
 		GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundWave->Duration, false);
 	}
 }
@@ -798,43 +865,53 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	
 	TurnIndex += 1;
 	
-	if (!ResponseData.current_node_id.IsEmpty())
-	{
-		CurrentNodeId = ResponseData.current_node_id;
-	}
+	// if (!ResponseData.current_node_id.IsEmpty())
+	// {
+	// 	CurrentNodeId = ResponseData.current_node_id;
+	// }
 
 	PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 (Action: %s)"), *ResponseData.next_action);
-	
 	if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
 	{
 		CurrentNodeId = ResponseData.next_node_id;
-	}
-	
-	// TODO:지모도
-	// 🚨 [추가할 부분] 대화 중인 플레이어의 PlayerState를 가져와서 값을 직접 꽂아줍니다!
-	// (멀티플레이 환경이라면 현재 상호작용 중인 타겟 플레이어의 Controller를 가져오도록 수정해 주시면 됩니다. 아래는 기본 예시입니다.)
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-	{
-		if (AMurphyPlayerState* PS = PC->GetPlayerState<AMurphyPlayerState>())
-		{
-			// 백엔드에서 받은 ID를 PlayerState에 저장
-			PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
-			PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
 		
-			// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
-			if (HasAuthority()) 
+		//. 수하물 Info NPC와의 시나리오 끝 노드 
+		if (CurrentNodeId == TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD"))
+		{
+			if (IsValid(InteractionBox))
 			{
-				PS->OnRep_ArrivalData();
+				InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
 			}
+		
+			bIsScenarioCompleted = true;
 		}
 	}
-
-	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록) [[ 추가해야하는것 COMPLETE_CHAPTER ]]
-	if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	
+	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
+	// if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER")) // BaggageClaim 에서 info랑 대화하는 부분 체크
 	{
-		// FLIGHT_999_COMPLETE
+		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
+		if (CurrentNodeId == TEXT("FLIGHT_999_COMPLETE"))
 		{
-			// todo [지모도] : 비행기에서 끝나는 액션을 받아와서 끝내기 
+			if (APawn* InteractingPawn = Cast<APawn>(CurrentInteractPlayer))
+			{
+				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
+				{
+					// 백엔드에서 받은 ID를 PlayerState에 저장
+					PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
+					PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
+					
+					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
+					
+					// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
+					if (HasAuthority()) 
+					{
+						PS->OnRep_ArrivalData();
+					}
+				}
+			}
 		}
 		
 		if (IsValid(InteractionBox))

@@ -2,6 +2,7 @@
 
 #include "Framework/MurphyPlayerState.h"
 
+#include "Framework/Airplane/AirplaneGameMode.h"
 #include "Manager/DataManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Quest/QuestRuntimeHelper.h"
@@ -313,6 +314,15 @@ void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSu
 	// 서버에서 실행되는 실제 데이터 저장 로직
 	SavedSurname = InSurname;
 	SavedGivenname = InGivenname;
+	
+	// GameMode를 가져와 시네마틱 완료(혹은 입국심사 완료) 후속 처리를 실행합니다.
+	if (UWorld* World = GetWorld())
+	{
+		if (AAirplaneGameMode* GM = Cast<AAirplaneGameMode>(World->GetAuthGameMode()))
+		{
+			GM->HandleCinematicComplete(1); 
+		}
+	}
 }
 
 void AMurphyPlayerState::OnRep_ArrivalData()

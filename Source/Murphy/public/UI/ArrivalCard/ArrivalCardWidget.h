@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/EditableText.h"
+#include "UI/Bag/ItemUsableWidgetInterface.h"
 #include "ArrivalCardWidget.generated.h"
 
 class UEditableText;
@@ -13,7 +14,7 @@ class UTextBlock;
  * 
  */
 UCLASS()
-class MURPHY_API UArrivalCardWidget : public UUserWidget
+class MURPHY_API UArrivalCardWidget : public UUserWidget, public IItemUsableWidgetInterface
 {
 	GENERATED_BODY()
 
@@ -56,4 +57,5 @@ private:
 	UFUNCTION()
 	void UpdateUI();
 	
+	virtual void InitFromItemUse_Implementation(const FItemTableRow& ItemInfo) override;
 };

@@ -9,6 +9,19 @@ class AMurphyPlayerState;
 struct FQuestRuntimeEvent;
 
 /**
+ * 게임 종료 결과 상태
+ */
+UENUM(BlueprintType)
+enum class EGameResultState : uint8
+{
+	Playing,
+	GameOver,
+	GameClear
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMurphyGameResultStateChanged, EGameResultState, NewState);
+
+/**
  * 시나리오/공유 퀘스트의 서버 authoritative state를 들고 있는 공통 GameState입니다.
  */
 UCLASS()
@@ -61,6 +74,13 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Murphy|Quest|Delegates")
 	FOnMurphyQuestStateChanged OnSharedQuestStateChanged;
 
+	// 게임 결과 상태가 변경될 때 호출되는 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|GameResult|Delegates")
+	FOnMurphyGameResultStateChanged OnGameResultStateChanged;
+
+	// 서버에서 결과 상태 변경 (GameMode에서 호출)
+	void SetGameResultState(EGameResultState NewState);
+
 protected:
 	UFUNCTION()
 	void OnRep_CurrentScenario();
@@ -106,4 +126,11 @@ private:
 	// AllPlayersCompleted / AnyPlayerCompleted 정책 판단에 쓰는 개인 완료 플레이어 목록입니다.
 	UPROPERTY(ReplicatedUsing = OnRep_ScenarioCompletedPlayers, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Scenario", meta = (AllowPrivateAccess = "true"))
 	TArray<TObjectPtr<AMurphyPlayerState>> ScenarioCompletedPlayers;
+
+	// 현재 게임 클리어/오버 상태
+	UPROPERTY(ReplicatedUsing = OnRep_GameResultState, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|GameResult", meta = (AllowPrivateAccess = "true"))
+	EGameResultState CurrentResultState = EGameResultState::Playing;
+
+	UFUNCTION()
+	void OnRep_GameResultState();
 };

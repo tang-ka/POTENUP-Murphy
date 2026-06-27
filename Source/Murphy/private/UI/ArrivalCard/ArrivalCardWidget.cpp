@@ -157,3 +157,12 @@ void UArrivalCardWidget::UpdateUI()
 		}
 	}
 }
+
+void UArrivalCardWidget::InitFromItemUse_Implementation(const FItemTableRow& ItemInfo)
+{
+	AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>();
+	if (PS)
+	{
+		SetReadOnlyData(FText::FromString(PS->SavedSurname), FText::FromString(PS->SavedGivenname));
+	}
+}

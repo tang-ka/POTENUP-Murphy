@@ -17,10 +17,12 @@ class MURPHY_API AAirplaneGameMode : public AMurphyGameModeBase
 public:
 	AAirplaneGameMode();
 
-protected:
-	virtual void BeginPlay() override;
 	UFUNCTION()
 	void HandleCinematicComplete(int32 PlayId);
+	
+protected:
+	virtual void BeginPlay() override;
+	
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 };
 

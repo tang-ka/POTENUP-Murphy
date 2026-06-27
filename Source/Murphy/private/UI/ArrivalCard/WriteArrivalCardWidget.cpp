@@ -5,14 +5,17 @@
 
 #include "Components/Button.h"
 #include "Framework/MurphyPlayerState.h"
+#include "Framework/Airplane/AirplaneGameMode.h"
 #include "UI/ArrivalCard/ArrivalCardWidget.h"
 
 void UWriteArrivalCardWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	if (btn_Complete) btn_Complete->OnClicked.AddDynamic(this, &UWriteArrivalCardWidget::OnCompleteClicked);
-	
+	if (btn_Complete)
+	{
+		btn_Complete->OnClicked.AddDynamic(this, &UWriteArrivalCardWidget::OnCompleteClicked);
+	}
 }
 
 void UWriteArrivalCardWidget::OnCompleteClicked()

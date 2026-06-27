@@ -4,6 +4,7 @@
 #include "Murphy.h"
 #include "Data/GameDataTypes.h"
 #include "Framework/MurphyPlayerState.h"
+#include "Framework/MurphyGameStateBase.h"
 
 UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
@@ -42,4 +43,13 @@ UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(ACo
 
 	PRINTLOG_SH(TEXT("GetDefaultPawnClassForController 경고 — 선택값(%s)에 맞는 폰 클래스 미설정, 기본 폰으로 대체"), *UEnum::GetValueAsString(MurphyPS->SelectedCharacter));
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
+void AMurphyGameModeBase::TriggerGameOver()
+{
+	if (AMurphyGameStateBase* GS = GetGameState<AMurphyGameStateBase>())
+	{
+		GS->SetGameResultState(EGameResultState::GameOver);
+		PRINTLOG_SH(TEXT("TriggerGameOver: Game State를 GameOver로 변경했습니다."));
+	}
 }

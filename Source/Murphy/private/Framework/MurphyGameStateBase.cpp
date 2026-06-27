@@ -13,6 +13,7 @@ void AMurphyGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AMurphyGameStateBase, SharedActiveQuests);
 	DOREPLIFETIME(AMurphyGameStateBase, SharedCurrentSubQuestIndex);
 	DOREPLIFETIME(AMurphyGameStateBase, ScenarioCompletedPlayers);
+	DOREPLIFETIME(AMurphyGameStateBase, CurrentResultState);
 }
 
 void AMurphyGameStateBase::StartScenario(EScenarioType NewScenario)
@@ -379,4 +380,18 @@ void AMurphyGameStateBase::BroadcastQuestStarted(FName QuestID)
 	}
 
 	OnSharedQuestStarted.Broadcast(QuestID, QuestData->QuestTitle, QuestData->QuestDescription);
+}
+
+void AMurphyGameStateBase::SetGameResultState(EGameResultState NewState)
+{
+	if (HasAuthority() && CurrentResultState != NewState)
+	{
+		CurrentResultState = NewState;
+		OnRep_GameResultState(); // 서버 측에서도 이벤트 발생
+	}
+}
+
+void AMurphyGameStateBase::OnRep_GameResultState()
+{
+	OnGameResultStateChanged.Broadcast(CurrentResultState);
 }

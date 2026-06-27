@@ -86,6 +86,7 @@ void UItemDetailWidget::OnUseClicked()
 			{
 				IItemUsableWidgetInterface::Execute_InitFromItemUse(UseWidget, CachedItemInfo);
 			}
+			
 			// ItemDetail(10)보다 위, 최상위 레이어에 표시
 			UseWidget->AddToViewport(20);
 		}

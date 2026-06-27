@@ -64,8 +64,8 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	{
 		FCinematicPlayRequest Request;
 		Request.CinematicId = TEXT("Airplane_Takeoff");
-		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
-		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_Manhattan_street_first-person_view_1080p_202606251542.05-1_Manhattan_street_first-person_view_1080p_202606251542")));
+		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
+		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_Manhattan_street_first-person_view_1080p_202606251542.05-1_Manhattan_street_first-person_view_1080p_202606251542")));
 		Request.bSkippable  = true;
 		Request.Fade.FadeToBlackDuration = 0.0f;
 		Request.Fade.MediaFadeInDuration = 2.f;
@@ -73,8 +73,9 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 
 		MurphyPC->Client_PlayCinematic(Request, 1);
 		
-		UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
-		CinematicManager->OnCompleted.AddDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
+		//> 입국심사서 작성 완료 때로 옮김 
+		// UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+		// CinematicManager->OnCompleted.AddDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
 	}
 	else
 	{

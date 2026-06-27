@@ -88,6 +88,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FString FinalRecommendation;
 
+	// 게임 클리어 여부 (성공/실패)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
+	bool bIsGameClear = false;
+
 	// 표시용 랭크 이름
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FString Rank;

@@ -4,6 +4,7 @@
 #include "UI/ArrivalCard/WriteArrivalCardWidget.h"
 
 #include "Components/Button.h"
+#include "Framework/MurphyPlayerController.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Framework/Airplane/AirplaneGameMode.h"
 #include "UI/ArrivalCard/ArrivalCardWidget.h"
@@ -32,6 +33,12 @@ void UWriteArrivalCardWidget::OnCompleteClicked()
 			{
 				// 서버로 데이터 전송
 				PS->ServerSetArrivalData(ExtractedSurname, ExtractedGivenname);
+			}
+		
+			if (AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(PC))
+			{
+				// 주의: TEXT("Item_ArrivalCard") 부분은 해당 퀘스트의 실제 TargetID 이름으로 변경해 주세요.
+				MurphyPC->NotifyQuestConditionFromLocal(TEXT("Item_ArrivalCard"), EQuestCondition::GetItem);
 			}
 		}
 	}

@@ -899,17 +899,12 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 			{
 				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
 				{
-					// 백엔드에서 받은 ID를 PlayerState에 저장
-					PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
-					PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
+					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
+					PS->SetCustomsAssignment(
+						ResponseData.customs_data.assigned_visit_location,
+						ResponseData.customs_data.random_customs_item);
 					
 					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
-					
-					// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
-					if (HasAuthority()) 
-					{
-						PS->OnRep_ArrivalData();
-					}
 				}
 			}
 		}

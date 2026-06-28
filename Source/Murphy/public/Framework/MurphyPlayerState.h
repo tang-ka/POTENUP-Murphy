@@ -16,6 +16,7 @@ struct FQuestRuntimeEvent;
 
 // 데이터가 업데이트되었음을 UI에게 알림
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCardDataUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOwnedItemsUpdated);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayReportDataUpdated);
 
 UCLASS()
@@ -39,6 +40,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CompletedPersonalScenarios();
+
+	UFUNCTION()
+	void OnRep_OwnedItemIDs();
 	
 public: // AI 대화 결과 저장용 변수
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Murphy|State")
@@ -129,13 +133,35 @@ private:
 	TArray<EScenarioType> CompletedPersonalScenarios;
 #pragma endregion
 
+#pragma region Inventory state
+public:
+	const TArray<FName>& GetOwnedItemIDs() const { return OwnedItemIDs; }
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Inventory")
+	bool HasOwnedItem(FName ItemID) const;
+
+	bool AddOwnedItemIfMissing(FName ItemID);
+	void EnsureOwnedItems(const TArray<FName>& ItemIDs);
+
+	UFUNCTION(Server, Reliable)
+	void ServerEnsureOwnedItems(const TArray<FName>& ItemIDs);
+
+	UPROPERTY(BlueprintAssignable, Category = "Murphy|Inventory|Delegate")
+	FOnOwnedItemsUpdated OnOwnedItemsUpdated;
+
+private:
+	// 실제 가방 보유 아이템 목록입니다. Bag UI는 이 배열을 기준으로 표시만 담당합니다.
+	UPROPERTY(ReplicatedUsing = OnRep_OwnedItemIDs, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Inventory", meta = (AllowPrivateAccess = "true"))
+	TArray<FName> OwnedItemIDs;
+#pragma endregion
+
 #pragma region Arrival Card Data
 public:
 	// 입국심사서에 입력한 이름 저장
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedSurname;
 	
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Murphy|CardData")
+	UPROPERTY(ReplicatedUsing = OnRep_ArrivalData, BlueprintReadOnly, Category = "Murphy|CardData")
 	FString SavedGivenname;
 	
 	// AI가 배정한 장소 ID
@@ -149,8 +175,13 @@ public:
 	// 클라->서버 이름 저장 요청
 	UFUNCTION(Server, Reliable)
 	void ServerSetArrivalData(const FString& InSurname, const FString& InGivenname);
+
+	void SetCustomsAssignment(const FString& InLocationID, const FString& InItemID);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetCustomsAssignment(const FString& InLocationID, const FString& InItemID);
 	
-	// 서버->클라 ID 데이터 도착하면 자동 실행
+	// 서버->클라 입국심사서 데이터가 도착하면 자동 실행
 	UFUNCTION()
 	void OnRep_ArrivalData();
 	

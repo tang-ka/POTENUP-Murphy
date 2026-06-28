@@ -33,7 +33,7 @@ void UArrivalCardWidget::NativeConstruct()
 	if (AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>())
 	{
 		// PlayerState의 데이터가 바뀌면 내 UpdateUI 함수를 실행해라!
-		PS->OnArrivalDataUpdated.AddDynamic(this, &UArrivalCardWidget::UpdateUI);
+		PS->OnArrivalDataUpdated.AddUniqueDynamic(this, &UArrivalCardWidget::UpdateUI);
         
 		// 창이 처음 열렸을 때 이미 값이 도착해 있을 수 있으니 수동으로 1회 갱신
 		UpdateUI();
@@ -164,5 +164,6 @@ void UArrivalCardWidget::InitFromItemUse_Implementation(const FItemTableRow& Ite
 	if (PS)
 	{
 		SetReadOnlyData(FText::FromString(PS->SavedSurname), FText::FromString(PS->SavedGivenname));
+		UpdateUI();
 	}
 }

@@ -6,7 +6,17 @@
 
 #include "Components/ScrollBox.h"
 #include "Components/WrapBox.h"
+#include "Framework/MurphyPlayerState.h"
 #include "GameFramework/PlayerController.h"
+#include "Manager/DataManager.h"
+
+void UBagPopupWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	BindOwnedItemsSource();
+	RefreshFromOwnedItems();
+}
 
 void UBagPopupWidget::ToggleBag()
 {
@@ -14,6 +24,8 @@ void UBagPopupWidget::ToggleBag()
 
 	if (!bIsOpen)
 	{
+		RefreshFromOwnedItems();
+
 		// 닫힌 상태 → 열기
 		PlayAnimation(Anim_BagSlideUp, 0.0f, 1, EUMGSequencePlayMode::Forward, 1.0f);
 		bIsOpen = true;
@@ -84,6 +96,56 @@ bool UBagPopupWidget::AddItemIfMissing(const FItemTableRow& Item)
 
 	AddItem(Item);
 	return HasItem(Item.ItemID);
+}
+
+void UBagPopupWidget::RefreshFromOwnedItems()
+{
+	BindOwnedItemsSource();
+
+	if (!IsValid(BoundPlayerState) || !IsValid(Wbx_Items))
+	{
+		return;
+	}
+
+	UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
+	if (!IsValid(DataManager))
+	{
+		return;
+	}
+
+	for (const FName& ItemID : BoundPlayerState->GetOwnedItemIDs())
+	{
+		if (ItemID.IsNone())
+		{
+			continue;
+		}
+
+		FItemTableRow* ItemInfo = DataManager->GetItemData(ItemID);
+		if (!ItemInfo)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[BagPopupWidget] 보유 아이템 Row를 찾을 수 없습니다: %s"), *ItemID.ToString());
+			continue;
+		}
+
+		AddItemIfMissing(*ItemInfo);
+	}
+}
+
+void UBagPopupWidget::BindOwnedItemsSource()
+{
+	AMurphyPlayerState* CurrentPlayerState = GetOwningPlayerState<AMurphyPlayerState>();
+	if (!IsValid(CurrentPlayerState) || BoundPlayerState == CurrentPlayerState)
+	{
+		return;
+	}
+
+	if (IsValid(BoundPlayerState))
+	{
+		BoundPlayerState->OnOwnedItemsUpdated.RemoveDynamic(this, &UBagPopupWidget::RefreshFromOwnedItems);
+	}
+
+	BoundPlayerState = CurrentPlayerState;
+	BoundPlayerState->OnOwnedItemsUpdated.AddUniqueDynamic(this, &UBagPopupWidget::RefreshFromOwnedItems);
 }
 
 void UBagPopupWidget::SetMouseCursorEnabled(bool bEnabled)

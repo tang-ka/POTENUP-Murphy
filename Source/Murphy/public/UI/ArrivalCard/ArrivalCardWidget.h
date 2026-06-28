@@ -8,6 +8,7 @@
 #include "UI/Bag/ItemUsableWidgetInterface.h"
 #include "ArrivalCardWidget.generated.h"
 
+class UButton;
 class UEditableText;
 class UTextBlock;
 /**
@@ -35,6 +36,9 @@ private:
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UTextBlock> txt_CustomsItem;
 	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> Btn_Close;
+	
 protected:
 	virtual void NativeConstruct() override;
 	
@@ -45,6 +49,9 @@ public:
 	FText GetSurnameInput() const { return etxt_Surname ? etxt_Surname->GetText() : FText::GetEmpty(); }
 	FText GetGivennameInput() const { return etxt_Givenname ? etxt_Givenname->GetText() : FText::GetEmpty(); }
 	
+	UFUNCTION()
+	void OnCloseClicked();
+
 private:
 	// 텍스트 입력 검사 함수
 	UFUNCTION()

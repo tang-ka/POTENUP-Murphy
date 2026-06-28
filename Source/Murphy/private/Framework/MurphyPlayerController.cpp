@@ -198,16 +198,18 @@ bool AMurphyPlayerController::ResolveCurrentSubQuestForTest(const TArray<FName>&
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 {
 	TargetNPC = NewNPC;
+	const bool bHasActiveNPC = IsValid(TargetNPC);
 	
 	// 오버랩에 따른 마이크 UI 상태(활성화/비활성화) 업데이트
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
-		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+		MurphyPlayer->SetMicUIState(bHasActiveNPC);
 
 		// 대화 진입~이탈 동안 Translate 연결 표시등 ON/OFF
 		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
 		{
-			MainHUD->SetTranslateConnecting(TargetNPC != nullptr);
+			MainHUD->SetTranslateConnecting(bHasActiveNPC);
+			MainHUD->SetCaptionInteractionActive(bHasActiveNPC);
 		}
 	}
 }

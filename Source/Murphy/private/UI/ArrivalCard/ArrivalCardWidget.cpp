@@ -3,6 +3,7 @@
 
 #include "UI/ArrivalCard/ArrivalCardWidget.h"
 
+#include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/TextBlock.h"
 #include "Framework/MurphyPlayerState.h"
@@ -30,6 +31,11 @@ void UArrivalCardWidget::NativeConstruct()
 		etxt_Givenname->OnTextChanged.AddDynamic(this, &UArrivalCardWidget::OnGivennameTextChanged);
 	}
 	
+	if (Btn_Close)
+	{
+		Btn_Close->OnClicked.AddDynamic(this, &UArrivalCardWidget::OnCloseClicked);
+	}
+	
 	if (AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>())
 	{
 		// PlayerState의 데이터가 바뀌면 내 UpdateUI 함수를 실행해라!
@@ -52,6 +58,11 @@ void UArrivalCardWidget::SetReadOnlyData(const FText& InSurname, const FText& In
 	etxt_Givenname->SetVisibility(ESlateVisibility::Collapsed);
 	txt_SurnameDisplay->SetVisibility(ESlateVisibility::Visible);
 	txt_GivennameDisplay->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UArrivalCardWidget::OnCloseClicked()
+{
+	RemoveFromParent();
 }
 
 void UArrivalCardWidget::OnSurnameTextChanged(const FText& Text)
@@ -160,7 +171,7 @@ void UArrivalCardWidget::UpdateUI()
 
 void UArrivalCardWidget::InitFromItemUse_Implementation(const FItemTableRow& ItemInfo)
 {
-	AMurphyPlayerState* PS = GetOwningPlayerState<AMurphyPlayerState>();
+	AMurphyPlayerState* PS = Cast<AMurphyPlayerState>(GetOwningPlayerState());
 	if (PS)
 	{
 		SetReadOnlyData(FText::FromString(PS->SavedSurname), FText::FromString(PS->SavedGivenname));

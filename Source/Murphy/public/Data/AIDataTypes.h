@@ -513,8 +513,10 @@ struct FAIResponseData
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="힌트/피드백 UI 표시 정보"))
 	FAI_UIFeedback ui;
 	
+	// UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="입국심사서 UI 갱신용 데이터"))
+	// FAI_CustomsUI_Data customs_data;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="입국심사서 UI 갱신용 데이터"))
-	FAI_CustomsUI_Data customs_data;
+	FAI_CustomsUI_Data game_state;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="Unreal state에 적용할 변화량"))
 	FAI_StateDelta state_delta;

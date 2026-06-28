@@ -42,6 +42,8 @@ public:
 	void RequestTogglePhone();
 	void UpdateMicState(bool bIsRecording);
 	void UpdateCaption(const FString& CaptionText);
+	void SetCaptionInteractionActive(bool bIsActive);
+	void ClearCaption();
 
 	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
 
@@ -71,6 +73,9 @@ private:
 
 	// BeginTranslateConversation에서 설정되는 현재 진행 중인 대화의 카테고리
 	FName ActiveTranslateCategory;
+
+	// NPC 상호작용 중일 때만 플레이어 자막을 화면에 표시합니다.
+	bool bCaptionInteractionActive = false;
 
 	UFUNCTION()
 	void HandlePhoneToggled(bool bIsPhoneOpen);

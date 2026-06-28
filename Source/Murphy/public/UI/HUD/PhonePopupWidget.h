@@ -105,7 +105,12 @@ private:
 	void ShowAppScreen(UUserWidget* TargetScreen);
 
 	void SystemColorChanged(bool bIsLight);
-	
+
+	UFUNCTION()
+	void UpdateTime();
+
+	FTimerHandle TimerHandle_Clock;
+
 	// DataManager에서 생성한 Call 앱 화면
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CallAppScreen;

@@ -50,6 +50,15 @@ void UPhonePopupWidget::NativeConstruct()
 	InitAppWidget(WBP_Photos,      	FName("Photos"));
 	SystemColorChanged(true);
 
+	UpdateTime();
+	GetWorld()->GetTimerManager().SetTimer(
+		TimerHandle_Clock,
+		this,
+		&UPhonePopupWidget::UpdateTime,
+		60.0f,
+		true
+	);
+
 	PRINTLOG_SH(TEXT("PhonePopupWidget 초기화 완료"));
 }
 
@@ -243,6 +252,17 @@ void UPhonePopupWidget::HandleHomeClicked()
 	}
 
 	SystemColorChanged(true);
+}
+
+void UPhonePopupWidget::UpdateTime()
+{
+	FDateTime Now = FDateTime::Now();
+	const FString TimeStr = FString::Printf(TEXT("%02d:%02d"), Now.GetHour(), Now.GetMinute());
+
+	if (Txt_Time)
+	{
+		Txt_Time->SetText(FText::FromString(TimeStr));
+	}
 }
 
 void UPhonePopupWidget::TogglePhone()

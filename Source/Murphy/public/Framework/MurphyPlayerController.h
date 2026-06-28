@@ -36,7 +36,7 @@ protected:
 
 	UFUNCTION(Exec)
 	void Test_SimulateAIResponse(const FString& SimulatedJSONResponse);
-	
+
 public:
 	// AgentNPCBase가 Overlap 시 호출해 대화 타겟 NPC를 등록/해제
 	void SetActiveNPC(AAgentNPCBase* NewNPC);
@@ -64,6 +64,13 @@ public:
 private:
 	void BindLocalQuestStateSources();
 	void EnsurePrologueRequiredItemsInBag();
+
+	// [임시 진단] 첫 시네마틱 재생 완료 후 같은 영상을 한 번 더 재생해 2회차 끊김을 비교한다.
+	UFUNCTION()
+	void HandleCinematicReplay(int32 PlayId);
+
+	FCinematicPlayRequest LastCinematicRequest;
+	bool bCinematicReplayPending = false;
 
 	//. 테스트 전용: N 키 입력을 받아 현재 진행 중인 서브퀘스트를 서버에서 강제 완료합니다.
 	void HandleAdvanceSubQuestTestKey();

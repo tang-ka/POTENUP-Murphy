@@ -32,6 +32,23 @@ void UCinematicManagerSubsystem::Deinitialize()
 		FinishAndCleanup(/*bBroadcastCompleted*/ false);
 	}
 
+	// 캐싱한 미디어 객체는 서브시스템 종료 시점에만 실제 해제.
+	if (MediaPlayer)
+	{
+		MediaPlayer->Close();
+		MediaPlayer->OnEndReached.RemoveDynamic(this, &UCinematicManagerSubsystem::HandleMediaEndReached);
+		MediaPlayer->OnMediaOpened.RemoveDynamic(this, &UCinematicManagerSubsystem::HandleMediaOpened);
+		MediaPlayer = nullptr;
+	}
+	if (MediaSoundComp)
+	{
+		MediaSoundComp->UnregisterComponent();
+		MediaSoundComp->DestroyComponent();
+		MediaSoundComp = nullptr;
+	}
+	MediaTexture = nullptr;
+	CachedMediaSources.Empty();
+
 	Super::Deinitialize();
 }
 
@@ -322,12 +339,20 @@ void UCinematicManagerSubsystem::TickFade(float DeltaTime)
 
 void UCinematicManagerSubsystem::StartMedia()
 {
-	UMediaSource* Source = ActiveRequest.MediaSource.LoadSynchronous(); // 1차: 동기 로드.
+	UMediaSource* Source = ResolveMediaSource(ActiveRequest.MediaSource);
 	if (!Source)
 	{
 		return;
 	}
 
+	EnsureMediaObjects();
+
+	// 프리롤: 검정 페이드 동안 미리 연다. 실제 Play는 MediaFadingIn 진입 시.
+	MediaPlayer->OpenSource(Source);
+}
+
+void UCinematicManagerSubsystem::EnsureMediaObjects()
+{
 	if (!MediaPlayer)
 	{
 		MediaPlayer = NewObject<UMediaPlayer>(this);
@@ -345,24 +370,49 @@ void UCinematicManagerSubsystem::StartMedia()
 		MediaTexture->SetMediaPlayer(MediaPlayer);
 		MediaTexture->UpdateResource();
 	}
-	
+
+	UWorld* World = GetWorld();
 	if (!MediaSoundComp)
 	{
 		MediaSoundComp = NewObject<UMediaSoundComponent>(this);
-		if (UWorld* World = GetWorld())
+		MediaSoundComp->SetMediaPlayer(MediaPlayer);
+		MediaSoundComp->SetVolumeMultiplier(1.0f);
+		if (World)
 		{
 			MediaSoundComp->RegisterComponentWithWorld(World);
 		}
 	}
-	
-	if (MediaSoundComp)
+	else if (World && MediaSoundComp->GetWorld() != World)
 	{
-		MediaSoundComp->SetMediaPlayer(MediaPlayer);
-		MediaSoundComp->SetVolumeMultiplier(1.0f);
+		// 맵 전환으로 월드가 바뀌면 사운드 컴포넌트를 새 월드에 재등록.
+		MediaSoundComp->UnregisterComponent();
+		MediaSoundComp->RegisterComponentWithWorld(World);
+	}
+}
+
+UMediaSource* UCinematicManagerSubsystem::ResolveMediaSource(const TSoftObjectPtr<UMediaSource>& SoftSource)
+{
+	const FSoftObjectPath Path = SoftSource.ToSoftObjectPath();
+	if (Path.IsNull())
+	{
+		return nullptr;
 	}
 
-	// 프리롤: 검정 페이드 동안 미리 연다. 실제 Play는 MediaFadingIn 진입 시.
-	MediaPlayer->OpenSource(Source);
+	if (TObjectPtr<UMediaSource>* Found = CachedMediaSources.Find(Path))
+	{
+		if (*Found)
+		{
+			return *Found;
+		}
+	}
+
+	// 1차: 동기 로드 (추후 RequestAsyncLoad 프리로드로 교체 예정).
+	UMediaSource* Loaded = SoftSource.LoadSynchronous();
+	if (Loaded)
+	{
+		CachedMediaSources.Add(Path, Loaded);
+	}
+	return Loaded;
 }
 
 void UCinematicManagerSubsystem::HandleMediaEndReached()
@@ -506,20 +556,10 @@ void UCinematicManagerSubsystem::FinishAndCleanup(bool bBroadcastCompleted)
 {
 	const int32 FinishedPlayId = ActivePlayId;
 
+	// 캐싱: 미디어 객체는 파괴하지 않고 다음 재생에서 재사용. 스트림만 닫는다.
 	if (MediaPlayer)
 	{
 		MediaPlayer->Close();
-		MediaPlayer->OnEndReached.RemoveDynamic(this, &UCinematicManagerSubsystem::HandleMediaEndReached);
-		MediaPlayer->OnMediaOpened.RemoveDynamic(this, &UCinematicManagerSubsystem::HandleMediaOpened);
-		MediaPlayer = nullptr;
-	}
-	MediaTexture = nullptr;
-	
-	if (MediaSoundComp)
-	{
-		MediaSoundComp->UnregisterComponent();
-		MediaSoundComp->DestroyComponent();
-		MediaSoundComp = nullptr;
 	}
 
 	DestroyOverlay();

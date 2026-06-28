@@ -108,6 +108,10 @@ private:
 	UFUNCTION()
 	void HandleMediaOpened(FString OpenedUrl);
 
+	// 미디어 객체/소스 캐싱: 매 재생 생성·파괴 대신 재사용한다.
+	void EnsureMediaObjects();
+	UMediaSource* ResolveMediaSource(const TSoftObjectPtr<UMediaSource>& SoftSource);
+
 	// 커버 위젯
 	void CreateOverlay();
 	void DestroyOverlay();
@@ -145,4 +149,8 @@ private:
 	
 	UPROPERTY(Transient)
 	TObjectPtr<UMediaSoundComponent> MediaSoundComp;
+
+	// 경로별 로드된 MediaSource 캐시 (반복 재생 시 재로드 방지 + GC 방지).
+	UPROPERTY(Transient)
+	TMap<FSoftObjectPath, TObjectPtr<UMediaSource>> CachedMediaSources;
 };

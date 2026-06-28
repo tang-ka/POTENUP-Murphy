@@ -66,6 +66,15 @@ public:
 	TObjectPtr<UButton> Btn_Call;
 
 	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Safari;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Message;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> Btn_Music;
+
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UApplicationWidget> WBP_Travelgram;
 
 	UPROPERTY(meta = (BindWidget))
@@ -83,6 +92,12 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> Btn_Home;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Phone")
+	TSubclassOf<UUserWidget> PendingAppScreenWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> PendingAppScreen;
+
 private:
 	// 앱 아이콘 클릭 시 AppScreenSwitcher 전환
 	UFUNCTION()
@@ -90,10 +105,45 @@ private:
 
 	UFUNCTION()
 	void HandleCallClicked();
+
+	UFUNCTION()
+	void HandleCallHovered();
+
+	UFUNCTION()
+	void HandleCallUnhovered();
+
+	UFUNCTION()
+	void HandleSafariClicked();
+
+	UFUNCTION()
+	void HandleSafariHovered();
+
+	UFUNCTION()
+	void HandleSafariUnhovered();
+
+	UFUNCTION()
+	void HandleMessageClicked();
+
+	UFUNCTION()
+	void HandleMessageHovered();
+
+	UFUNCTION()
+	void HandleMessageUnhovered();
+
+	UFUNCTION()
+	void HandleMusicClicked();
+
+	UFUNCTION()
+	void HandleMusicHovered();
+
+	UFUNCTION()
+	void HandleMusicUnhovered();
 	
 	// Home 버튼 클릭 시 AppScreenSwitcher 닫기
 	UFUNCTION()
 	void HandleHomeClicked();
+
+	void SetPhoneButtonScale(UButton* TargetButton, const FVector2D& Scale);
 
 	// 앱 위젯 한 개를 DataManager에서 초기화하는 헬퍼
 	void InitAppWidget(UApplicationWidget* Widget, const FName& RowName);

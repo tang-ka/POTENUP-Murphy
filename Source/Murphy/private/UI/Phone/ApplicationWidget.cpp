@@ -52,7 +52,7 @@ void UApplicationWidget::SetAppData(const FPhoneAppRow& Row, UUserWidget* InAppS
 
 			// Pressed: Hovered와 동일 + Tint (1, 1, 1, 0.7)
 			FSlateBrush PressedBrush = NormalBrush;
-			PressedBrush.TintColor   = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 0.7f));
+			PressedBrush.TintColor   = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
 
 			FButtonStyle Style = Btn_AppIcon->GetStyle();
 			Style.Normal  = NormalBrush;

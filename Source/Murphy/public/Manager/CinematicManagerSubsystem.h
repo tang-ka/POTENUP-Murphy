@@ -66,6 +66,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void PlayMedia(const FCinematicPlayRequest& Request, int32 PlayId, bool bInAutoReleaseHold = false);
 
+	/**
+	 * 검정 Hold 상태에서 게임 노출 없이 다음 미디어로 이어 재생.
+	 * (시퀀스 연속재생 / 트래블 직후 첫 클립용. Hold가 아니면 일반 PlayMedia로 폴백)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void PlayNextInHold(const FCinematicPlayRequest& Request, int32 PlayId);
+
 	/** 검정 Hold 탈출 -> FadingFromBlack 시작. (서버 합의 후 호출) */
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void ReleaseHold(int32 PlayId);

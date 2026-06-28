@@ -692,33 +692,32 @@ void AMurphyPlayerController::Client_PlayCinematic_Implementation(const FCinemat
 		return;
 	}
 
-	// [임시 진단] 첫 재생 완료 후 같은 영상을 한 번 더 재생하기 위해 요청을 보관하고 완료 콜백을 건다.
-	LastCinematicRequest = Request;
-	bCinematicReplayPending = true;
-	CinematicManager->OnCompleted.AddUniqueDynamic(this, &AMurphyPlayerController::HandleCinematicReplay);
-
-	CinematicManager->PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ true);
+	// 시퀀서가 검정 Hold에서 다음 엔트리/트래블을 제어하므로 자동 해제는 끈다.
+	CinematicManager->PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ false);
 }
 
-void AMurphyPlayerController::HandleCinematicReplay(int32 PlayId)
+void AMurphyPlayerController::Client_PlayNextCinematic_Implementation(const FCinematicPlayRequest& Request, int32 PlayId)
 {
-	// 1회만 다시 재생. (2회차 완료 시엔 그냥 콜백 해제하고 끝)
-	if (!bCinematicReplayPending)
-	{
-		return;
-	}
-	bCinematicReplayPending = false;
-
 	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
 	if (!CinematicManager)
 	{
+		PRINTLOG_SH(TEXT("Client_PlayNextCinematic: CinematicManagerSubsystem is null"));
 		return;
 	}
 
-	CinematicManager->OnCompleted.RemoveDynamic(this, &AMurphyPlayerController::HandleCinematicReplay);
+	CinematicManager->PlayNextInHold(Request, PlayId);
+}
 
-	PRINTLOG_SH(TEXT("[CinReplay] 2회차 재생 시작 - 끊김 없으면 콜드로드(셰이더/PSO·텍스처 스트리밍) 원인"));
-	CinematicManager->PlayMedia(LastCinematicRequest, PlayId + 1, /*bInAutoReleaseHold*/ true);
+void AMurphyPlayerController::Client_ReleaseCinematic_Implementation(int32 PlayId)
+{
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+	if (!CinematicManager)
+	{
+		PRINTLOG_SH(TEXT("Client_ReleaseCinematic: CinematicManagerSubsystem is null"));
+		return;
+	}
+
+	CinematicManager->ReleaseHold(PlayId);
 }
 
 void AMurphyPlayerController::Server_RequestReposition_Implementation(const FName& SubLevelName)

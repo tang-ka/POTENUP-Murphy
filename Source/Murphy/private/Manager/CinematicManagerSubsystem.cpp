@@ -115,6 +115,41 @@ void UCinematicManagerSubsystem::PlayMedia(const FCinematicPlayRequest& Request,
 	EnterState(ECinematicState::FadingToBlack);
 }
 
+void UCinematicManagerSubsystem::PlayNextInHold(const FCinematicPlayRequest& Request, int32 PlayId)
+{
+	// 검정 Hold가 아니면 일반 재생으로 폴백 (최초 1회 등).
+	if (CurrentState != ECinematicState::HoldingBlack)
+	{
+		PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ false);
+		return;
+	}
+
+	ActiveRequest = Request;
+	ActivePlayId = PlayId;
+	bAutoReleaseHold = false;
+	bMediaEnded = false;
+	bMediaOpened = false;
+	bPendingMediaPlay = false;
+	ElapsedInState = 0.f;
+
+	// 새 미디어 프리롤. (이전 미디어는 HoldingBlack 진입 시 Close됨)
+	StartMedia();
+
+	// 트래블로 오버레이가 파괴됐을 수 있으니 재생성 + 검정 유지.
+	CreateOverlay();
+	if (OverlayWidget)
+	{
+		OverlayWidget->SetFadeColor(ActiveRequest.Fade.FadeColor);
+		OverlayWidget->SetMediaTexture(MediaTexture);
+	}
+	ApplyOpacity(/*Black*/ 1.f, /*Media*/ 0.f); // 게임 노출 없이 검정 유지.
+
+	BlockInput();
+
+	// 게임 -> 검정 단계를 건너뛰고 바로 검정 -> 미디어.
+	EnterState(ECinematicState::MediaFadingIn);
+}
+
 void UCinematicManagerSubsystem::ReleaseHold(int32 PlayId)
 {
 	if (PlayId != ActivePlayId)
@@ -187,6 +222,10 @@ void UCinematicManagerSubsystem::EnterState(ECinematicState NewState)
 		{
 			if (bMediaOpened)
 			{
+				if (MediaSoundComp)
+				{
+					MediaSoundComp->Start();
+				}
 				MediaPlayer->Play();
 			}
 			else
@@ -217,6 +256,11 @@ void UCinematicManagerSubsystem::EnterState(ECinematicState NewState)
 		{
 			MediaPlayer->Close();
 		}
+		// Close는 디코더만 멈춘다. 사운드 컴포넌트가 살아있으면 잔여 버퍼가 루프됨 -> 명시 정지.
+		if (MediaSoundComp)
+		{
+			MediaSoundComp->Stop();
+		}
 		// 미디어 종료 = 검정 도달. relay가 이 시점에 서버 보고.
 		OnReachedHold.Broadcast(ActivePlayId);
 
@@ -238,16 +282,15 @@ void UCinematicManagerSubsystem::EnterState(ECinematicState NewState)
 
 	// 0초 페이드 구간은 즉시 통과 (NaN 방지 + 1프레임 깜빡 방지).
 	if ((NewState == ECinematicState::FadingToBlack
-		|| NewState == ECinematicState::MediaFadingIn
 		|| NewState == ECinematicState::MediaFadingOut
 		|| NewState == ECinematicState::FadingFromBlack)
 		&& GetSegmentDuration(NewState) <= KINDA_SMALL_NUMBER)
 	{
 		// 끝 상태 알파를 적용한 뒤 다음 단계로.
+		// (MediaFadingIn은 제외: 첫 프레임 게이트를 거치도록 항상 TickFade에서 처리)
 		switch (NewState)
 		{
 		case ECinematicState::FadingToBlack:   ApplyOpacity(1.f, 0.f); EnterState(ECinematicState::MediaFadingIn);	break;
-		case ECinematicState::MediaFadingIn:   ApplyOpacity(1.f, 1.f); EnterState(ECinematicState::Playing);		break;
 		case ECinematicState::MediaFadingOut:  ApplyOpacity(1.f, 0.f); EnterState(ECinematicState::HoldingBlack);	break;
 		case ECinematicState::FadingFromBlack: ApplyOpacity(0.f, 0.f); FinishAndCleanup(true);	break;
 		default: break;
@@ -275,6 +318,18 @@ void UCinematicManagerSubsystem::TickFade(float DeltaTime)
 
 	case ECinematicState::MediaFadingIn:
 	{
+		// 새 클립이 첫 프레임을 내보내기 전엔 노출 금지.
+		// (비동기 Open 중에는 MediaTexture에 이전 클립의 마지막 프레임이 남아있어 그게 보인다.)
+		const bool bFramesFlowing = MediaPlayer
+			&& MediaPlayer->IsPlaying()
+			&& MediaPlayer->GetTime() > FTimespan::Zero();
+		if (!bFramesFlowing)
+		{
+			ApplyOpacity(1.f, 0.f); // 검정 유지, 미디어 숨김
+			ElapsedInState = 0.f;   // 프레임 들어올 때까지 페이드 타이머 멈춤
+			break;
+		}
+
 		const float Dur = GetSegmentDuration(CurrentState);
 		const float A = FMath::Clamp(ElapsedInState / Dur, 0.f, 1.f);
 		ApplyOpacity(1.f, A);
@@ -432,6 +487,10 @@ void UCinematicManagerSubsystem::HandleMediaOpened(FString OpenedUrl)
 
 	if (bPendingMediaPlay && MediaPlayer)
 	{
+		if (MediaSoundComp)
+		{
+			MediaSoundComp->Start();
+		}
 		MediaPlayer->Play();
 		bPendingMediaPlay = false;
 	}
@@ -560,6 +619,11 @@ void UCinematicManagerSubsystem::FinishAndCleanup(bool bBroadcastCompleted)
 	if (MediaPlayer)
 	{
 		MediaPlayer->Close();
+	}
+	// 스트림만 닫으면 사운드 컴포넌트 잔여 버퍼가 인게임에서 루프됨 -> 정지.
+	if (MediaSoundComp)
+	{
+		MediaSoundComp->Stop();
 	}
 
 	DestroyOverlay();

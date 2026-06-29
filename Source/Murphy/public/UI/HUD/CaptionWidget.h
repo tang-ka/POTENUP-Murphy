@@ -19,5 +19,11 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable)
 	void SetCaption(const FString& CaptionText);
+
+	UFUNCTION(BlueprintCallable)
+	void ClearCaption();
+
+	UFUNCTION(BlueprintCallable)
+	void SetCaptionVisible(bool bIsVisible);
 	
 };

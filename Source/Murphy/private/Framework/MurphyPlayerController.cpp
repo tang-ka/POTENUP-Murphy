@@ -56,6 +56,7 @@ void AMurphyPlayerController::BeginPlay()
 	{
 		SubscribeLevelEnterEvents();
 		BindLocalQuestStateSources();
+		RefreshLocalBagFromOwnedItems();
 
 		const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
 		NotifyAIResultTriggerLevelEntered(FName(*CurrentLevelName));
@@ -87,6 +88,7 @@ void AMurphyPlayerController::OnRep_PlayerState()
 	if (IsLocalController())
 	{
 		BindLocalQuestStateSources();
+		RefreshLocalBagFromOwnedItems();
 	}
 }
 
@@ -196,16 +198,18 @@ bool AMurphyPlayerController::ResolveCurrentSubQuestForTest(const TArray<FName>&
 void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 {
 	TargetNPC = NewNPC;
+	const bool bHasActiveNPC = IsValid(TargetNPC);
 	
 	// 오버랩에 따른 마이크 UI 상태(활성화/비활성화) 업데이트
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
-		MurphyPlayer->SetMicUIState(TargetNPC != nullptr);
+		MurphyPlayer->SetMicUIState(bHasActiveNPC);
 
 		// 대화 진입~이탈 동안 Translate 연결 표시등 ON/OFF
 		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
 		{
-			MainHUD->SetTranslateConnecting(TargetNPC != nullptr);
+			MainHUD->SetTranslateConnecting(bHasActiveNPC);
+			MainHUD->SetCaptionInteractionActive(bHasActiveNPC);
 		}
 	}
 }
@@ -299,6 +303,36 @@ void AMurphyPlayerController::EnsurePrologueRequiredItemsInBag()
 		return;
 	}
 
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (!IsValid(MurphyPlayerState))
+	{
+		return;
+	}
+
+	static const FName ArrivalCardItemID(TEXT("Item_ArrivalCard"));
+	static const FName PassportItemID(TEXT("Item_Passport"));
+	const TArray<FName> RequiredItemIDs = { ArrivalCardItemID, PassportItemID };
+
+	// Prologue 기본 소지품은 PlayerState 보유 목록에 먼저 보장하고, Bag UI는 그 목록을 표시합니다.
+	if (MurphyPlayerState->HasAuthority())
+	{
+		MurphyPlayerState->EnsureOwnedItems(RequiredItemIDs);
+	}
+	else
+	{
+		MurphyPlayerState->ServerEnsureOwnedItems(RequiredItemIDs);
+	}
+
+	RefreshLocalBagFromOwnedItems();
+}
+
+void AMurphyPlayerController::RefreshLocalBagFromOwnedItems()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
 	AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn());
 	if (!IsValid(MurphyPlayer))
 	{
@@ -312,31 +346,9 @@ void AMurphyPlayerController::EnsurePrologueRequiredItemsInBag()
 	}
 
 	UBagPopupWidget* BagWidget = MainHUD->GetBagPopupWidget();
-	if (!IsValid(BagWidget))
+	if (IsValid(BagWidget))
 	{
-		return;
-	}
-
-	UDataManager* DataManager = GetGameInstance() ? GetGameInstance()->GetSubsystem<UDataManager>() : nullptr;
-	if (!IsValid(DataManager))
-	{
-		return;
-	}
-
-	static const FName ArrivalCardItemID(TEXT("Item_ArrivalCard"));
-	static const FName PassportItemID(TEXT("Item_Passport"));
-	const FName RequiredItemIDs[] = { ArrivalCardItemID, PassportItemID };
-
-	for (const FName& ItemID : RequiredItemIDs)
-	{
-		FItemTableRow* ItemInfo = DataManager->GetItemData(ItemID);
-		if (!ItemInfo)
-		{
-			PRINTLOGW_JW(TEXT("[PrologueItems] 기본 소지품 아이템 Row를 찾을 수 없습니다: %s"), *ItemID.ToString());
-			continue;
-		}
-
-		BagWidget->AddItemIfMissing(*ItemInfo);
+		BagWidget->RefreshFromOwnedItems();
 	}
 }
 

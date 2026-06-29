@@ -19,6 +19,7 @@ void AMurphyPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 	DOREPLIFETIME(AMurphyPlayerState, SavedGivenname);
 	DOREPLIFETIME(AMurphyPlayerState, CurrentLocationID);
 	DOREPLIFETIME(AMurphyPlayerState, CurrentItemID);
+	DOREPLIFETIME(AMurphyPlayerState, OwnedItemIDs);
 
 	DOREPLIFETIME(AMurphyPlayerState, PersonalScenario);
 	DOREPLIFETIME(AMurphyPlayerState, PersonalActiveQuests);
@@ -43,6 +44,7 @@ void AMurphyPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPS->SavedGivenname = SavedGivenname;
 		NewPS->CurrentLocationID = CurrentLocationID;
 		NewPS->CurrentItemID = CurrentItemID;
+		NewPS->OwnedItemIDs = OwnedItemIDs;
 		NewPS->AIPlaySessionId = AIPlaySessionId;
 		NewPS->LastAIResult = LastAIResult;
 		NewPS->LastPlayReportData = LastPlayReportData;
@@ -69,6 +71,62 @@ void AMurphyPlayerState::SetAIPlaySessionId(const FString& InSessionId)
 	}
 
 	AIPlaySessionId = TrimmedSessionId;
+}
+
+bool AMurphyPlayerState::HasOwnedItem(FName ItemID) const
+{
+	return !ItemID.IsNone() && OwnedItemIDs.Contains(ItemID);
+}
+
+bool AMurphyPlayerState::AddOwnedItemIfMissing(FName ItemID)
+{
+	if (ItemID.IsNone() || OwnedItemIDs.Contains(ItemID))
+	{
+		return false;
+	}
+
+	if (!HasAuthority())
+	{
+		TArray<FName> ItemIDs;
+		ItemIDs.Add(ItemID);
+		ServerEnsureOwnedItems(ItemIDs);
+		return false;
+	}
+
+	OwnedItemIDs.Add(ItemID);
+	OnRep_OwnedItemIDs();
+	return true;
+}
+
+void AMurphyPlayerState::EnsureOwnedItems(const TArray<FName>& ItemIDs)
+{
+	if (!HasAuthority())
+	{
+		ServerEnsureOwnedItems(ItemIDs);
+		return;
+	}
+
+	bool bAddedAnyItem = false;
+	for (const FName& ItemID : ItemIDs)
+	{
+		if (ItemID.IsNone() || OwnedItemIDs.Contains(ItemID))
+		{
+			continue;
+		}
+
+		OwnedItemIDs.Add(ItemID);
+		bAddedAnyItem = true;
+	}
+
+	if (bAddedAnyItem)
+	{
+		OnRep_OwnedItemIDs();
+	}
+}
+
+void AMurphyPlayerState::ServerEnsureOwnedItems_Implementation(const TArray<FName>& ItemIDs)
+{
+	EnsureOwnedItems(ItemIDs);
 }
 
 void AMurphyPlayerState::SaveAIResult(const FAIResultResponse& InResult)
@@ -146,6 +204,11 @@ void AMurphyPlayerState::OnRep_PersonalActiveQuests(TArray<FQuestRuntimeData> Ol
 void AMurphyPlayerState::OnRep_CompletedPersonalScenarios()
 {
 	OnPersonalQuestStateChanged.Broadcast();
+}
+
+void AMurphyPlayerState::OnRep_OwnedItemIDs()
+{
+	OnOwnedItemsUpdated.Broadcast();
 }
 
 bool AMurphyPlayerState::HasCompletedPersonalScenario(EScenarioType ScenarioType) const
@@ -312,8 +375,10 @@ void AMurphyPlayerState::MarkCurrentPersonalScenarioCompleted()
 void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSurname, const FString& InGivenname)
 {
 	// 서버에서 실행되는 실제 데이터 저장 로직
-	SavedSurname = InSurname;
-	SavedGivenname = InGivenname;
+	SavedSurname = InSurname.TrimStartAndEnd();
+	SavedGivenname = InGivenname.TrimStartAndEnd();
+	AddOwnedItemIfMissing(FName(TEXT("Item_ArrivalCard")));
+	OnArrivalDataUpdated.Broadcast();
 	
 	// GameMode를 가져와 시네마틱 완료(혹은 입국심사 완료) 후속 처리를 실행합니다.
 	if (UWorld* World = GetWorld())
@@ -323,6 +388,42 @@ void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSu
 			GM->HandleCinematicComplete(1); 
 		}
 	}
+}
+
+void AMurphyPlayerState::SetCustomsAssignment(const FString& InLocationID, const FString& InItemID)
+{
+	if (!HasAuthority())
+	{
+		ServerSetCustomsAssignment(InLocationID, InItemID);
+		return;
+	}
+
+	const FString TrimmedLocationID = InLocationID.TrimStartAndEnd();
+	const FString TrimmedItemID = InItemID.TrimStartAndEnd();
+	bool bChanged = false;
+
+	// 비어 있는 AI 응답이 기존 데이터를 지우지 않도록 유효한 값만 반영합니다.
+	if (!TrimmedLocationID.IsEmpty() && CurrentLocationID != TrimmedLocationID)
+	{
+		CurrentLocationID = TrimmedLocationID;
+		bChanged = true;
+	}
+
+	if (!TrimmedItemID.IsEmpty() && CurrentItemID != TrimmedItemID)
+	{
+		CurrentItemID = TrimmedItemID;
+		bChanged = true;
+	}
+
+	if (bChanged)
+	{
+		OnRep_ArrivalData();
+	}
+}
+
+void AMurphyPlayerState::ServerSetCustomsAssignment_Implementation(const FString& InLocationID, const FString& InItemID)
+{
+	SetCustomsAssignment(InLocationID, InItemID);
 }
 
 void AMurphyPlayerState::OnRep_ArrivalData()

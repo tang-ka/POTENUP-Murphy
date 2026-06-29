@@ -10,6 +10,7 @@
 class UWrapBox;
 class UWidgetAnimation;
 class UItemWidget;
+class AMurphyPlayerState;
 
 /**
  * 가방 팝업 위젯
@@ -36,6 +37,9 @@ protected:
 	// 열려있는지 여부
 	bool bIsOpen = false;
 
+protected:
+	virtual void NativeConstruct() override;
+
 public:
 	/** Q 키 호출 함수 - 애니메이션 + 마우스 커서 처리 */
 	void ToggleBag();
@@ -52,7 +56,18 @@ public:
 	/** 이미 보유 중이면 추가하지 않고, 없을 때만 Bag UI에 추가합니다. */
 	bool AddItemIfMissing(const FItemTableRow& Item);
 
+	/** PlayerState의 보유 아이템 목록을 기준으로 Bag UI를 갱신합니다. */
+	UFUNCTION(BlueprintCallable, Category = "Murphy|Bag")
+	void RefreshFromOwnedItems();
+
 private:
+	/** 현재 바인딩된 PlayerState입니다. PlayerState 교체 시 델리게이트 중복 바인딩을 막기 위해 보관합니다. */
+	UPROPERTY()
+	TObjectPtr<AMurphyPlayerState> BoundPlayerState;
+
+	/** PlayerState의 보유 아이템 변경 델리게이트를 Bag UI에 연결합니다. */
+	void BindOwnedItemsSource();
+
 	/** 마우스 커서 및 입력 모드 설정 */
 	void SetMouseCursorEnabled(bool bEnabled);
 };

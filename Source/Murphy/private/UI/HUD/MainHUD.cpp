@@ -27,6 +27,8 @@ void UMainHUD::NativeConstruct()
 	{
 		WBP_PhonePopup->OnPhoneToggled.AddDynamic(this, &UMainHUD::HandlePhoneToggled);
 	}
+
+	ClearCaption();
 }
 
 void UMainHUD::HandlePhoneToggled(bool bIsPhoneOpen)
@@ -79,9 +81,40 @@ void UMainHUD::UpdateMicState(bool bIsRecording)
 
 void UMainHUD::UpdateCaption(const FString& CaptionText)
 {
+	if (!bCaptionInteractionActive || !WBP_PlayerCaption)
+	{
+		return;
+	}
+
+	WBP_PlayerCaption->SetCaption(CaptionText);
+	WBP_PlayerCaption->SetCaptionVisible(true);
+}
+
+void UMainHUD::SetCaptionInteractionActive(bool bIsActive)
+{
+	bCaptionInteractionActive = bIsActive;
+
+	if (!WBP_PlayerCaption)
+	{
+		return;
+	}
+
+	if (bCaptionInteractionActive)
+	{
+		WBP_PlayerCaption->SetCaptionVisible(true);
+		return;
+	}
+
+	WBP_PlayerCaption->ClearCaption();
+}
+
+void UMainHUD::ClearCaption()
+{
+	bCaptionInteractionActive = false;
+
 	if (WBP_PlayerCaption)
 	{
-		WBP_PlayerCaption->SetCaption(CaptionText);
+		WBP_PlayerCaption->ClearCaption();
 	}
 }
 

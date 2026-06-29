@@ -893,31 +893,34 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER")) // BaggageClaim 에서 info랑 대화하는 부분 체크
 	{
 		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
-		if (CurrentNodeId == TEXT("FLIGHT_999_COMPLETE"))
+		if (ResponseData.next_node_id == TEXT("FLIGHT_999_COMPLETE"))
 		{
 			if (APawn* InteractingPawn = Cast<APawn>(CurrentInteractPlayer))
 			{
 				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
 				{
-					// 백엔드에서 받은 ID를 PlayerState에 저장
-					PS->CurrentLocationID = ResponseData.customs_data.assigned_visit_location;
-					PS->CurrentItemID = ResponseData.customs_data.random_customs_item;
+					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
+					// PS->SetCustomsAssignment(
+					// 	ResponseData.customs_data.assigned_visit_location,
+					// 	ResponseData.customs_data.random_customs_item);
+					//
+					// PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
 					
-					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
 					
-					// 방장(Listen Server) PC에서 직접 플레이할 경우를 대비해 수동으로 한 번 호출해 줍니다.
-					if (HasAuthority()) 
-					{
-						PS->OnRep_ArrivalData();
-					}
+					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
+					PS->SetCustomsAssignment(
+						ResponseData.game_state.assigned_visit_location,
+						ResponseData.game_state.random_customs_item);
+					
+					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location, *ResponseData.game_state.random_customs_item);
 				}
 			}
 		}
 		
 		if (IsValid(InteractionBox))
 		{
-			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
+			// InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			// PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
 		}
 		
 		bIsScenarioCompleted = true;

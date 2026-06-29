@@ -104,6 +104,48 @@ void UDataManager::LoadDataTables()
 	{
 		PRINTLOGW_JW(TEXT("EmotionDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
 	}
+
+	// 입국심사 장소 DataTable 동기 로드
+	if (!Settings->LocationDataTable.IsNull())
+	{
+		LocationDataTable = Settings->LocationDataTable.LoadSynchronous();
+		if (!LocationDataTable)
+		{
+			PRINTLOGE_JW(TEXT("LocationDataTable 로드 실패: %s"), *Settings->LocationDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("LocationDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
+
+	// 입국심사 물품 DataTable 동기 로드
+	if (!Settings->CustomsItemDataTable.IsNull())
+	{
+		CustomsItemDataTable = Settings->CustomsItemDataTable.LoadSynchronous();
+		if (!CustomsItemDataTable)
+		{
+			PRINTLOGE_JW(TEXT("CustomsItemDataTable 로드 실패: %s"), *Settings->CustomsItemDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("CustomsItemDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
+
+	// 티어 DataTable 동기 로드
+	if (!Settings->TierDataTable.IsNull())
+	{
+		TierDataTable = Settings->TierDataTable.LoadSynchronous();
+		if (!TierDataTable)
+		{
+			PRINTLOGE_JW(TEXT("TierDataTable 로드 실패: %s"), *Settings->TierDataTable.ToString());
+		}
+	}
+	else
+	{
+		PRINTLOGW_JW(TEXT("TierDataTable이 설정되지 않았습니다. Project Settings -> Murphy Data Settings를 확인하세요."));
+	}
 }
 
 FScenarioTableRow* UDataManager::GetScenarioData(const FName& RowName) const

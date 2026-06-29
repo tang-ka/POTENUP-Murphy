@@ -75,13 +75,7 @@ int32 FQuestRuntimeHelper::BuildScenarioRuntimeQuests(
 	return FirstIndex;
 }
 
-void FQuestRuntimeHelper::ProcessQuestStartEvent(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	int32& InOutCurrentSubQuestIndex,
-	FName TargetID,
-	EQuestCondition Condition,
-	TArray<FQuestRuntimeEvent>& OutEvents)
+void FQuestRuntimeHelper::ProcessQuestStartEvent(const UDataManager* DataManager, TArray<FQuestRuntimeData>& ActiveQuests, int32& InOutCurrentSubQuestIndex, FName TargetID,  EQuestCondition Condition, TArray<FQuestRuntimeEvent>& OutEvents)
 {
 	if (!DataManager || Condition == EQuestCondition::None)
 	{
@@ -123,14 +117,7 @@ void FQuestRuntimeHelper::ProcessQuestStartEvent(
 	}
 }
 
-void FQuestRuntimeHelper::ProcessQuestConditionMet(
-	const UDataManager* DataManager,
-	TArray<FQuestRuntimeData>& ActiveQuests,
-	int32& InOutCurrentSubQuestIndex,
-	FName TargetID,
-	EQuestCondition Condition,
-	TArray<FQuestRuntimeEvent>& OutEvents,
-	bool& bOutScenarioCompleted)
+void FQuestRuntimeHelper::ProcessQuestConditionMet(const UDataManager* DataManager, TArray<FQuestRuntimeData>& ActiveQuests, int32& InOutCurrentSubQuestIndex,FName TargetID, EQuestCondition Condition, TArray<FQuestRuntimeEvent>& OutEvents, bool& bOutScenarioCompleted)
 {
 	bOutScenarioCompleted = false;
 
@@ -210,9 +197,7 @@ void FQuestRuntimeHelper::ProcessQuestConditionMet(
 	}
 }
 
-bool FQuestRuntimeHelper::AreRequiredChildQuestsCompleted(
-	const UDataManager* DataManager,
-	const TArray<FQuestRuntimeData>& ActiveQuests)
+bool FQuestRuntimeHelper::AreRequiredChildQuestsCompleted(const UDataManager* DataManager, const TArray<FQuestRuntimeData>& ActiveQuests)
 {
 	if (!DataManager || ActiveQuests.IsEmpty())
 	{

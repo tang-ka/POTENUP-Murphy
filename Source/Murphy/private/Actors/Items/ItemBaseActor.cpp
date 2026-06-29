@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/QuestEventNotifyComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Framework/MurphyPlayerState.h"
 #include "UI/HUD/BagPopupWidget.h"
 #include "UI/HUD/MainHUD.h"
 #include "Kismet/GameplayStatics.h"
@@ -92,25 +93,40 @@ bool AItemBaseActor::GetItem(AMurphyPlayer* Player)
 		return false;
 	}
 
-	if (UGameInstance* GI = UGameplayStatics::GetGameInstance(this))
+	if (ItemID.IsNone())
 	{
-		if (UDataManager* DataManager = GI->GetSubsystem<UDataManager>())
+		PRINTLOGW_JW(TEXT("[ItemBaseActor] ItemID가 비어 있어 아이템을 획득할 수 없습니다."));
+		return false;
+	}
+
+	UGameInstance* GI = UGameplayStatics::GetGameInstance(this);
+	UDataManager* DataManager = GI ? GI->GetSubsystem<UDataManager>() : nullptr;
+	if (!DataManager)
+	{
+		PRINTLOGW_JW(TEXT("[ItemBaseActor] DataManager를 찾을 수 없습니다."));
+		return false;
+	}
+
+	FItemTableRow* ItemInfo = DataManager->GetItemData(ItemID);
+	if (!ItemInfo)
+	{
+		PRINTLOGW_JW(TEXT("[ItemBaseActor] DataManager에서 아이템 정보를 찾을 수 없습니다: %s"), *ItemID.ToString());
+		return false;
+	}
+
+	if (AMurphyPlayerState* MurphyPlayerState = Player->GetPlayerState<AMurphyPlayerState>())
+	{
+		// 월드에서 습득한 아이템은 모두 실제 보유 목록에 저장합니다.
+		MurphyPlayerState->AddOwnedItemIfMissing(ItemInfo->ItemID);
+	}
+
+	if (UMainHUD* MainHUD = Player->GetMainHUD())
+	{
+		if (UBagPopupWidget* BagWidget = MainHUD->GetBagPopupWidget())
 		{
-			if (FItemTableRow* ItemInfo = DataManager->GetItemData(ItemID))
-			{
-				if (UMainHUD* MainHUD = Player->GetMainHUD())
-				{
-					if (UBagPopupWidget* BagWidget = MainHUD->GetBagPopupWidget())
-					{
-						BagWidget->AddItem(*ItemInfo);
-					}
-				}
-			}
-			else
-			{
-				PRINTLOGW_JW(TEXT("[ItemBaseActor] DataManager에서 아이템 정보를 찾을 수 없습니다: %s"), *ItemID.ToString());
-				return false;
-			}
+			// 클라이언트 RPC 복제 지연 중에도 즉시 보이도록 추가하고, 이후 PlayerState 갱신으로 재동기화합니다.
+			BagWidget->AddItemIfMissing(*ItemInfo);
+			BagWidget->RefreshFromOwnedItems();
 		}
 	}
 

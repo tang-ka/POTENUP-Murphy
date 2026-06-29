@@ -16,6 +16,9 @@ void UTransitionWidget::StartFade(float From, float To, float Duration, const FL
 	// 재진입: 이전 페이드 콜백은 버리고 새 목표로 갱신.
 	OnFadeComplete = OnComplete;
 
+	// 페이드 진행 중에는 입력을 막는다. (이전 페이드 인 완료로 Collapsed 였을 수 있어 복구)
+	SetVisibility(ESlateVisibility::Visible);
+
 	// 시작 알파 즉시 반영 (AddToViewport 직후 깜빡 방지).
 	ApplyAlpha(FromAlpha);
 
@@ -65,6 +68,13 @@ void UTransitionWidget::ApplyAlpha(float Alpha)
 
 void UTransitionWidget::CompleteFade()
 {
+	// 페이드 인 완료(완전 투명)면 화면/입력을 가릴 필요가 없으므로 접는다.
+	// 페이드 아웃 완료(검정)면 곧 트래블하므로 가시(입력 차단) 상태를 유지한다.
+	if (ToAlpha <= KINDA_SMALL_NUMBER)
+	{
+		SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	// 콜백 내부에서 StartFade 재진입해도 안전하도록 지역 복사 후 먼저 비운다.
 	FSimpleDelegate Local = OnFadeComplete;
 	OnFadeComplete.Unbind();

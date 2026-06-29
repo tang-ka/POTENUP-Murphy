@@ -378,14 +378,17 @@ struct FAI_CustomsUI_Data
 {
 	GENERATED_BODY()
 
+	// UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="배정된 방문 장소 ID (예: LOC_DOWNTOWN_HOTEL)"))
+	// FString assigned_visit_location;
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="배정된 방문 장소 ID (예: LOC_DOWNTOWN_HOTEL)"))
-	FString assigned_visit_location;
+	FString assigned_visit_location_id;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 장소를 의심하는 이유 (심사관 대사 생성 참고용)"))
 	FString visit_location_suspicion_reason;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="랜덤하게 소지한 밀수/의심 물품 ID (예: ITM_SUSPICIOUS_WATCH)"))
-	FString random_customs_item;
+	FString random_customs_item_id;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 물품을 의심하는 이유 (심사관 대사 생성 참고용)"))
 	FString random_customs_item_suspicion_reason;

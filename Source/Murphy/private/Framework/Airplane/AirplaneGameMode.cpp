@@ -30,12 +30,12 @@ AAirplaneGameMode::AAirplaneGameMode()
 void AAirplaneGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	// 시퀀스 전체 완료 시 NPC 상호작용 박스 반전 후처리를 연결.
-	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	{
-		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
-	}
+	// if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	// {
+		// Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
+	//}
 }
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -64,28 +64,6 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayer 캐스팅 실패 (Pawn 없음)"));
 	}
 
-	// 시네마틱 재생 요청
-	if (AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(NewPlayer))
-	{
-		FCinematicPlayRequest Request;
-		Request.CinematicId = TEXT("Airplane_Takeoff");
-		Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/Temp_Takeoff.Temp_Takeoff")));
-		// Request.MediaSource = TSoftObjectPtr<UMediaSource>(FSoftObjectPath(TEXT("/Game/Movies/05-1_Manhattan_street_first-person_view_1080p_202606251542.05-1_Manhattan_street_first-person_view_1080p_202606251542")));
-		Request.bSkippable  = true;
-		Request.Fade.FadeToBlackDuration = 0.0f;
-		Request.Fade.MediaFadeInDuration = 2.f;
-		Request.Fade.FadeFromBlackDuration = 2.f;
-
-		MurphyPC->Client_PlayCinematic(Request, 1);
-		
-		//> 입국심사서 작성 완료 때로 옮김 
-		// UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
-		// CinematicManager->OnCompleted.AddDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
-	}
-	else
-	{
-		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayerController 캐스팅 실패"));
-	}
 	// 시네마틱 시퀀스 시작은 베이스(AMurphyGameModeBase)가 LevelCinematic DA로 처리한다.
 }
 

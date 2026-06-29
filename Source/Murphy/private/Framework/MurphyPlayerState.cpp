@@ -381,12 +381,9 @@ void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSu
 	OnArrivalDataUpdated.Broadcast();
 	
 	// GameMode를 가져와 시네마틱 완료(혹은 입국심사 완료) 후속 처리를 실행합니다.
-	if (UWorld* World = GetWorld())
+	if (AAirplaneGameMode* GM = Cast<AAirplaneGameMode>(GetWorld()->GetAuthGameMode()))
 	{
-		if (AAirplaneGameMode* GM = Cast<AAirplaneGameMode>(World->GetAuthGameMode()))
-		{
-			GM->HandleCinematicComplete(1); 
-		}
+		GM->HandleCinematicComplete(); 
 	}
 }
 

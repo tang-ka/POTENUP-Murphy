@@ -909,10 +909,10 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 					
 					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
 					PS->SetCustomsAssignment(
-						ResponseData.game_state.assigned_visit_location,
-						ResponseData.game_state.random_customs_item);
+						ResponseData.game_state.assigned_visit_location_id,
+						ResponseData.game_state.random_customs_item_id);
 					
-					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location, *ResponseData.game_state.random_customs_item);
+					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item_id);
 				}
 			}
 		}

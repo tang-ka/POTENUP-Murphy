@@ -17,12 +17,13 @@ class MURPHY_API AAirplaneGameMode : public AMurphyGameModeBase
 public:
 	AAirplaneGameMode();
 
+	// 시퀀스(전체 영상) 완료 후 기내 NPC 상호작용 박스를 좌우 반전한다.
 	UFUNCTION()
-	void HandleCinematicComplete(int32 PlayId);
-	
+	void HandleCinematicComplete();
+
 protected:
 	virtual void BeginPlay() override;
-	
+
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 };
 

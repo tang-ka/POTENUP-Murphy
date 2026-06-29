@@ -704,7 +704,32 @@ void AMurphyPlayerController::Client_PlayCinematic_Implementation(const FCinemat
 		return;
 	}
 
-	CinematicManager->PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ true);
+	// 시퀀서가 검정 Hold에서 다음 엔트리/트래블을 제어하므로 자동 해제는 끈다.
+	CinematicManager->PlayMedia(Request, PlayId, /*bInAutoReleaseHold*/ false);
+}
+
+void AMurphyPlayerController::Client_PlayNextCinematic_Implementation(const FCinematicPlayRequest& Request, int32 PlayId)
+{
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+	if (!CinematicManager)
+	{
+		PRINTLOG_SH(TEXT("Client_PlayNextCinematic: CinematicManagerSubsystem is null"));
+		return;
+	}
+
+	CinematicManager->PlayNextInHold(Request, PlayId);
+}
+
+void AMurphyPlayerController::Client_ReleaseCinematic_Implementation(int32 PlayId)
+{
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>();
+	if (!CinematicManager)
+	{
+		PRINTLOG_SH(TEXT("Client_ReleaseCinematic: CinematicManagerSubsystem is null"));
+		return;
+	}
+
+	CinematicManager->ReleaseHold(PlayId);
 }
 
 void AMurphyPlayerController::Server_RequestReposition_Implementation(const FName& SubLevelName)

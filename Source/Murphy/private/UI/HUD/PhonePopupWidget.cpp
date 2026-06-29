@@ -5,6 +5,7 @@
 
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/Overlay.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Manager/DataManager.h"
@@ -14,6 +15,13 @@
 void UPhonePopupWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	if (Overlay_Phone)
+	{
+		FWidgetTransform PhonePopupTransform = Overlay_Phone->GetRenderTransform();
+		PhonePopupTransform.Translation.Y = 560.0f;
+		Overlay_Phone->SetRenderTransform(PhonePopupTransform);
+	}
 
 	// AppScreenSwitcher는 시작 시 숨김
 	if (AppScreenSwitcher)
@@ -26,6 +34,29 @@ void UPhonePopupWidget::NativeConstruct()
 	{
 		InitCallWidget();
 		Btn_Call->OnClicked.AddDynamic(this, &UPhonePopupWidget::HandleCallClicked);
+		Btn_Call->OnHovered.AddDynamic(this, &UPhonePopupWidget::HandleCallHovered);
+		Btn_Call->OnUnhovered.AddDynamic(this, &UPhonePopupWidget::HandleCallUnhovered);
+	}
+
+	if (Btn_Safari)
+	{
+		Btn_Safari->OnClicked.AddDynamic(this, &UPhonePopupWidget::HandleSafariClicked);
+		Btn_Safari->OnHovered.AddDynamic(this, &UPhonePopupWidget::HandleSafariHovered);
+		Btn_Safari->OnUnhovered.AddDynamic(this, &UPhonePopupWidget::HandleSafariUnhovered);
+	}
+
+	if (Btn_Message)
+	{
+		Btn_Message->OnClicked.AddDynamic(this, &UPhonePopupWidget::HandleMessageClicked);
+		Btn_Message->OnHovered.AddDynamic(this, &UPhonePopupWidget::HandleMessageHovered);
+		Btn_Message->OnUnhovered.AddDynamic(this, &UPhonePopupWidget::HandleMessageUnhovered);
+	}
+
+	if (Btn_Music)
+	{
+		Btn_Music->OnClicked.AddDynamic(this, &UPhonePopupWidget::HandleMusicClicked);
+		Btn_Music->OnHovered.AddDynamic(this, &UPhonePopupWidget::HandleMusicHovered);
+		Btn_Music->OnUnhovered.AddDynamic(this, &UPhonePopupWidget::HandleMusicUnhovered);
 	}
 
 	// Home 버튼은 AppScreen이 켜질 때만 표시
@@ -36,11 +67,20 @@ void UPhonePopupWidget::NativeConstruct()
 	}
 
 	// 각 앱 위젯 초기화 (Row Name은 DataTable에서 사용한 이름과 일치해야 합니다)
-	InitAppWidget(WBP_Travelgram,  FName("Travelgram"));
-	InitAppWidget(WBP_Translate,	  FName("Translate"));
-	InitAppWidget(WBP_Camera,      FName("Camera"));
-	InitAppWidget(WBP_Photos,      FName("Photos"));
+	InitAppWidget(WBP_Travelgram,  	FName("Travelgram"));
+	InitAppWidget(WBP_Translate,		FName("Translate"));
+	InitAppWidget(WBP_Camera,      	FName("Camera"));
+	InitAppWidget(WBP_Photos,      	FName("Photos"));
 	SystemColorChanged(true);
+
+	UpdateTime();
+	GetWorld()->GetTimerManager().SetTimer(
+		TimerHandle_Clock,
+		this,
+		&UPhonePopupWidget::UpdateTime,
+		60.0f,
+		true
+	);
 
 	PRINTLOG_SH(TEXT("PhonePopupWidget 초기화 완료"));
 }
@@ -70,7 +110,29 @@ void UPhonePopupWidget::InitAppWidget(UApplicationWidget* Widget, const FName& R
 
 	// AppScreenWidgetClass가 있으면 인스턴스 생성
 	UUserWidget* AppScreen = nullptr;
-	if (!Row->AppScreenWidgetClass.IsNull())
+	if (!Row->bIsImplemented)
+	{
+		if (!PendingAppScreen && PendingAppScreenWidgetClass)
+		{
+			PendingAppScreen = CreateWidget<UUserWidget>(GetOwningPlayer(), PendingAppScreenWidgetClass);
+			if (PendingAppScreen)
+			{
+				PRINTLOG_SH(TEXT("[%s] PendingAppScreen create success"), *RowName.ToString());
+			}
+			else
+			{
+				PRINTLOG_SH(TEXT("[%s] PendingAppScreen create failed"), *RowName.ToString());
+			}
+		}
+		else if (!PendingAppScreenWidgetClass)
+		{
+			PRINTLOG_SH(TEXT("[%s] PendingAppScreenWidgetClass is not set"), *RowName.ToString());
+		}
+
+		AppScreen = PendingAppScreen;
+		PRINTLOG_SH(TEXT("[%s] Not implemented app. Use PendingAppScreen."), *RowName.ToString());
+	}
+	else if (!Row->AppScreenWidgetClass.IsNull())
 	{
 		if (TSubclassOf<UUserWidget> WidgetClass = Row->AppScreenWidgetClass.LoadSynchronous())
 		{
@@ -98,7 +160,7 @@ void UPhonePopupWidget::InitAppWidget(UApplicationWidget* Widget, const FName& R
 	Widget->SetAppData(*Row, AppScreen);
 
 	// AppScreenSwitcher에 AppScreen 등록
-	if (AppScreenSwitcher && AppScreen)
+	if (AppScreenSwitcher && AppScreen && AppScreen->GetParent() != AppScreenSwitcher)
 	{
 		AppScreenSwitcher->AddChild(AppScreen);
 		PRINTLOG_SH(TEXT("[%s] AppScreen을 AppScreenSwitcher에 등록했습니다."), *RowName.ToString());
@@ -163,6 +225,8 @@ void UPhonePopupWidget::HandleAppIconClicked(UApplicationWidget* ClickedApp)
 
 void UPhonePopupWidget::HandleCallClicked()
 {
+	SetPhoneButtonScale(Btn_Call, FVector2D(0.95f, 0.95f));
+
 	if (!CallAppScreen)
 	{
 		PRINTLOG_SH(TEXT("[Call] CallAppScreen이 유효하지 않습니다."));
@@ -172,6 +236,73 @@ void UPhonePopupWidget::HandleCallClicked()
 	PRINTLOG_SH(TEXT("[Call] 전화 앱 화면 전환"));
 	ShowAppScreen(CallAppScreen);
 	SystemColorChanged(true);
+}
+
+void UPhonePopupWidget::HandleCallHovered()
+{
+	SetPhoneButtonScale(Btn_Call, FVector2D(1.05f, 1.05f));
+}
+
+void UPhonePopupWidget::HandleCallUnhovered()
+{
+	SetPhoneButtonScale(Btn_Call, FVector2D(1.0f, 1.0f));
+}
+
+void UPhonePopupWidget::HandleSafariClicked()
+{
+	SetPhoneButtonScale(Btn_Safari, FVector2D(0.95f, 0.95f));
+}
+
+void UPhonePopupWidget::HandleSafariHovered()
+{
+	SetPhoneButtonScale(Btn_Safari, FVector2D(1.05f, 1.05f));
+}
+
+void UPhonePopupWidget::HandleSafariUnhovered()
+{
+	SetPhoneButtonScale(Btn_Safari, FVector2D(1.0f, 1.0f));
+}
+
+void UPhonePopupWidget::HandleMessageClicked()
+{
+	SetPhoneButtonScale(Btn_Message, FVector2D(0.95f, 0.95f));
+}
+
+void UPhonePopupWidget::HandleMessageHovered()
+{
+	SetPhoneButtonScale(Btn_Message, FVector2D(1.05f, 1.05f));
+}
+
+void UPhonePopupWidget::HandleMessageUnhovered()
+{
+	SetPhoneButtonScale(Btn_Message, FVector2D(1.0f, 1.0f));
+}
+
+void UPhonePopupWidget::HandleMusicClicked()
+{
+	SetPhoneButtonScale(Btn_Music, FVector2D(0.95f, 0.95f));
+}
+
+void UPhonePopupWidget::HandleMusicHovered()
+{
+	SetPhoneButtonScale(Btn_Music, FVector2D(1.05f, 1.05f));
+}
+
+void UPhonePopupWidget::HandleMusicUnhovered()
+{
+	SetPhoneButtonScale(Btn_Music, FVector2D(1.0f, 1.0f));
+}
+
+void UPhonePopupWidget::SetPhoneButtonScale(UButton* TargetButton, const FVector2D& Scale)
+{
+	if (!TargetButton)
+	{
+		return;
+	}
+
+	FWidgetTransform Transform = TargetButton->GetRenderTransform();
+	Transform.Scale = Scale;
+	TargetButton->SetRenderTransform(Transform);
 }
 
 void UPhonePopupWidget::ShowAppScreen(UUserWidget* TargetScreen)
@@ -235,6 +366,17 @@ void UPhonePopupWidget::HandleHomeClicked()
 	}
 
 	SystemColorChanged(true);
+}
+
+void UPhonePopupWidget::UpdateTime()
+{
+	FDateTime Now = FDateTime::Now();
+	const FString TimeStr = FString::Printf(TEXT("%02d:%02d"), Now.GetHour(), Now.GetMinute());
+
+	if (Txt_Time)
+	{
+		Txt_Time->SetText(FText::FromString(TimeStr));
+	}
 }
 
 void UPhonePopupWidget::TogglePhone()

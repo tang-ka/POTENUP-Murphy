@@ -18,8 +18,8 @@ public:
 	virtual void NativeConstruct() override;
 
 public:
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UImage> Img_Widget;
+	// UPROPERTY(meta = (BindWidget))
+	// TObjectPtr<UImage> Img_Widget;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Txt_WidgetName;

@@ -20,4 +20,7 @@ struct FPhoneAppRow : public FTableRowBase
 	// 비어있으면 가짜 앱
 	UPROPERTY(EditAnywhere, Category = "App")
 	TSoftClassPtr<UUserWidget> AppScreenWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "App")
+	bool bIsImplemented = true;
 };

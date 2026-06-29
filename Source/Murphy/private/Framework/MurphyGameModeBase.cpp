@@ -3,8 +3,11 @@
 #include "Framework/MurphyGameModeBase.h"
 #include "Murphy.h"
 #include "Data/GameDataTypes.h"
+#include "Data/CinematicSequenceData.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Framework/MurphyGameStateBase.h"
+#include "Manager/CinematicSequenceSubsystem.h"
+#include "Engine/GameInstance.h"
 
 UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
@@ -51,5 +54,28 @@ void AMurphyGameModeBase::TriggerGameOver()
 	{
 		GS->SetGameResultState(EGameResultState::GameOver);
 		PRINTLOG_SH(TEXT("TriggerGameOver: Game State를 GameOver로 변경했습니다."));
+	}
+}
+
+void AMurphyGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+	if (bCinematicSequenceStarted || !LevelCinematic)
+	{
+		return;
+	}
+
+	// 필요 인원이 모두 도착했을 때 1회 시작 (RPC가 전원에게 가도록).
+	if (GetNumPlayers() < RequiredPlayersToStart)
+	{
+		return;
+	}
+
+	bCinematicSequenceStarted = true;
+
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->StartLevelSequence(LevelCinematic);
 	}
 }

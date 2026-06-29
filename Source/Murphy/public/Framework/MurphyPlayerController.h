@@ -36,7 +36,7 @@ protected:
 
 	UFUNCTION(Exec)
 	void Test_SimulateAIResponse(const FString& SimulatedJSONResponse);
-	
+
 public:
 	// AgentNPCBase가 Overlap 시 호출해 대화 타겟 NPC를 등록/해제
 	void SetActiveNPC(AAgentNPCBase* NewNPC);
@@ -138,10 +138,18 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerEndScenarioForTest(bool bSuccess);
 
-	// Airplane 등 진입 시 서버가 발급한 PlayId로 로컬에서 시네마틱 재생.
+	// 서버가 발급한 PlayId로 로컬에서 시네마틱 재생 (게임 -> 검정 -> 미디어).
 	UFUNCTION(Client, Reliable)
 	void Client_PlayCinematic(const FCinematicPlayRequest& Request, int32 PlayId);
-	
+
+	// 검정 Hold 상태에서 게임 노출 없이 다음 미디어로 이어 재생 (연속/트래블 직후).
+	UFUNCTION(Client, Reliable)
+	void Client_PlayNextCinematic(const FCinematicPlayRequest& Request, int32 PlayId);
+
+	// 검정 Hold 해제 -> 게임 복귀.
+	UFUNCTION(Client, Reliable)
+	void Client_ReleaseCinematic(int32 PlayId);
+
 private:
 	FString GetOrCreateAIPlaySessionId();
 	FAIRequestData GenerateFinalScoreboardSignalRequestData();

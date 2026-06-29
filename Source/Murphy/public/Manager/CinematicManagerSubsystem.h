@@ -11,6 +11,7 @@
 class UCinematicOverlayWidget;
 class UMediaPlayer;
 class UMediaTexture;
+class UMediaSoundComponent;
 
 // 미디어 종료 -> 검정 도달. (= relay가 서버에 "나 끝남" 보고할 지점)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCinematicReachedHold, int32, PlayId);
@@ -65,6 +66,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void PlayMedia(const FCinematicPlayRequest& Request, int32 PlayId, bool bInAutoReleaseHold = false);
 
+	/**
+	 * 검정 Hold 상태에서 게임 노출 없이 다음 미디어로 이어 재생.
+	 * (시퀀스 연속재생 / 트래블 직후 첫 클립용. Hold가 아니면 일반 PlayMedia로 폴백)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Cinematic")
+	void PlayNextInHold(const FCinematicPlayRequest& Request, int32 PlayId);
+
 	/** 검정 Hold 탈출 -> FadingFromBlack 시작. (서버 합의 후 호출) */
 	UFUNCTION(BlueprintCallable, Category = "Cinematic")
 	void ReleaseHold(int32 PlayId);
@@ -107,6 +115,10 @@ private:
 	UFUNCTION()
 	void HandleMediaOpened(FString OpenedUrl);
 
+	// 미디어 객체/소스 캐싱: 매 재생 생성·파괴 대신 재사용한다.
+	void EnsureMediaObjects();
+	UMediaSource* ResolveMediaSource(const TSoftObjectPtr<UMediaSource>& SoftSource);
+
 	// 커버 위젯
 	void CreateOverlay();
 	void DestroyOverlay();
@@ -141,4 +153,11 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMediaTexture> MediaTexture;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<UMediaSoundComponent> MediaSoundComp;
+
+	// 경로별 로드된 MediaSource 캐시 (반복 재생 시 재로드 방지 + GC 방지).
+	UPROPERTY(Transient)
+	TMap<FSoftObjectPath, TObjectPtr<UMediaSource>> CachedMediaSources;
 };

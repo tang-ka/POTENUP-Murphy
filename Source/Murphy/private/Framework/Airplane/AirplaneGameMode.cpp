@@ -9,11 +9,10 @@
 #include "Framework/MurphyPlayerController.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Murphy.h"
-#include "Data/CinematicTypes.h"
-#include "MediaSource.h"
-#include "Manager/CinematicManagerSubsystem.h"
+#include "Manager/CinematicSequenceSubsystem.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/GameInstance.h"
 
 AAirplaneGameMode::AAirplaneGameMode()
 {
@@ -31,6 +30,12 @@ AAirplaneGameMode::AAirplaneGameMode()
 void AAirplaneGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 시퀀스 전체 완료 시 NPC 상호작용 박스 반전 후처리를 연결.
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
+	}
 }
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -81,9 +86,10 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	{
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayerController 캐스팅 실패"));
 	}
+	// 시네마틱 시퀀스 시작은 베이스(AMurphyGameModeBase)가 LevelCinematic DA로 처리한다.
 }
 
-void AAirplaneGameMode::HandleCinematicComplete(int32 PlayId)
+void AAirplaneGameMode::HandleCinematicComplete()
 {
 	TArray<AActor*> FoundNPCs;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAgentNPCBase::StaticClass(), FoundNPCs);
@@ -110,7 +116,3 @@ void AAirplaneGameMode::HandleCinematicComplete(int32 PlayId)
 		PRINTLOG_SH(TEXT("[Airplane] %s InteractionBox X 반전 (%f)"), *NPC->GetName(), LocalLoc.X);
 	}
 }
-
-
-
-

@@ -173,21 +173,22 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	// 계산된 결과를 ABP가 읽어갈 수 있도록 멤버 변수에 저장
 	bEnableIK = bShouldLookAtPlayer;
     
-	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 카메라 좌표 갱신 (서버에서만 갱신 후 리플리케이트)
+	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 좌표 갱신 (서버에서만 갱신 후 리플리케이트)
 	if (bEnableIK && IsValid(CurrentInteractPlayer) && HasAuthority())
 	{
 		if (APawn* PlayerPawn = Cast<APawn>(CurrentInteractPlayer))
 		{
-			if (APlayerController* PC = Cast<APlayerController>(PlayerPawn->GetController()))
+			// 1. 플레이어가 ACharacter를 상속받는다고 가정하고 캐스팅합니다.
+			if (ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerPawn))
 			{
-				if (APlayerCameraManager* CameraManager = PC->PlayerCameraManager)
-				{
-					TargetLookAtLocation = CameraManager->GetCameraLocation();
-				}
-				else
-				{
-					TargetLookAtLocation = PlayerPawn->GetActorLocation();
-				}
+				// 2. 플레이어의 스켈레탈 메시에서 'head' 뼈의 월드 좌표를 가져옵니다. 
+				// (대부분의 언리얼 기본/메타휴먼 뼈대에서 미간 위치와 정확히 일치합니다.)
+				TargetLookAtLocation = PlayerCharacter->GetMesh()->GetSocketLocation(FName("head"));
+			}
+			else
+			{
+				// 캐릭터가 아니라면 임시로 액터 중심점 + 눈높이(약 160)를 타겟으로 삼습니다.
+				TargetLookAtLocation = PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
 			}
 		}
 	}
@@ -899,20 +900,12 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 			{
 				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
 				{
-					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
-					// PS->SetCustomsAssignment(
-					// 	ResponseData.customs_data.assigned_visit_location,
-					// 	ResponseData.customs_data.random_customs_item);
-					//
-					// PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
-					
-					
-					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
+					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장
 					PS->SetCustomsAssignment(
 						ResponseData.game_state.assigned_visit_location_id,
-						ResponseData.game_state.random_customs_item_id);
+						ResponseData.game_state.random_customs_item.item_id);
 					
-					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item_id);
+					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item.item_id);
 				}
 			}
 		}

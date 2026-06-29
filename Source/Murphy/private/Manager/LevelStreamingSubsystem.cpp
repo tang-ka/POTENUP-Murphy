@@ -31,6 +31,7 @@ void ULevelStreamingSubsystem::TravelAllPlayers(FName LevelKey)
 		return;
 	}
 
+	// AGameMode* gm = World->GetAuthGameMode<AGameMode>();
 	// PlayerState를 유지하려면 SeamlessTravel이 필요 → GameMode에 활성화
 	if (AGameModeBase* GameMode = World->GetAuthGameMode<AGameModeBase>())
 	{

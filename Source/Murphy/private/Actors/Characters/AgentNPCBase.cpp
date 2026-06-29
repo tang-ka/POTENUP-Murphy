@@ -899,20 +899,12 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 			{
 				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
 				{
-					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
-					// PS->SetCustomsAssignment(
-					// 	ResponseData.customs_data.assigned_visit_location,
-					// 	ResponseData.customs_data.random_customs_item);
-					//
-					// PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.customs_data.assigned_visit_location, *ResponseData.customs_data.random_customs_item);
-					
-					
-					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장합니다.
+					// 백엔드에서 받은 세관 데이터를 PlayerState의 단일 진입점으로 저장
 					PS->SetCustomsAssignment(
 						ResponseData.game_state.assigned_visit_location_id,
-						ResponseData.game_state.random_customs_item_id);
+						ResponseData.game_state.random_customs_item.item_id);
 					
-					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item_id);
+					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item.item_id);
 				}
 			}
 		}

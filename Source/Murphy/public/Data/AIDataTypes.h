@@ -373,6 +373,20 @@ struct FAI_StateDelta
 	int32 hint_count_delta = 0;
 };
 
+//  억까 물건 데이터용 하위 구조체 생성
+USTRUCT(BlueprintType)
+struct FAI_RandomCustomsItem_Data
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication")
+	FString item_id;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication")
+	FString suspicion_reason;
+    
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication")
+	FString item_name;
+};
+
 USTRUCT(BlueprintType)
 struct FAI_CustomsUI_Data
 {
@@ -387,11 +401,15 @@ struct FAI_CustomsUI_Data
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 장소를 의심하는 이유 (심사관 대사 생성 참고용)"))
 	FString visit_location_suspicion_reason;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="랜덤하게 소지한 밀수/의심 물품 ID (예: ITM_SUSPICIOUS_WATCH)"))
-	FString random_customs_item_id;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 물품을 의심하는 이유 (심사관 대사 생성 참고용)"))
-	FString random_customs_item_suspicion_reason;
+	// UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="랜덤하게 소지한 밀수/의심 물품 ID (예: ITM_SUSPICIOUS_WATCH)"))
+	// FString random_customs_item_id;
+	
+	// UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication", meta=(ToolTip="해당 물품을 의심하는 이유 (심사관 대사 생성 참고용)"))
+	// FString random_customs_item_suspicion_reason;
+	
+	// ✅ 중요: 변수명을 백엔드 JSON 키와 동일하게 'random_customs_item'으로 맞춥니다!
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Communication")
+	FAI_RandomCustomsItem_Data random_customs_item; 
 };
 
 USTRUCT(BlueprintType)

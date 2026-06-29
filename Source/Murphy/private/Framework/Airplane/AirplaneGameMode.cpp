@@ -32,10 +32,10 @@ void AAirplaneGameMode::BeginPlay()
 	Super::BeginPlay();
 	
 	// 시퀀스 전체 완료 시 NPC 상호작용 박스 반전 후처리를 연결.
-	// if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	// {
-		// Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
-	//}
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
+	}
 }
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)

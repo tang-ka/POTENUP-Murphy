@@ -26,6 +26,33 @@
 #include "Manager/LevelStreamingSubsystem.h"
 #include "Manager/AIBridgeSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
+#include "Framework/MurphyPlayerController.h"
+
+#include "Actors/Characters/MurphyPlayer.h"
+#include "Actors/Characters/AgentNPCBase.h"
+#include "UI/HUD/MainHUD.h"
+
+#include "VoiceChat/VoiceRecorderComponent.h"
+#include "EnhancedInputComponent.h"
+#include "InputActionValue.h"
+
+#include "Components/QuestEventNotifyComponent.h"
+#include "Components/InputComponent.h"
+#include "Json.h"
+#include "JsonObjectConverter.h"
+#include "HttpModule.h"
+#include "InputCoreTypes.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
+
+#include "Murphy.h"
+#include "Manager/CinematicManagerSubsystem.h"
+#include "Manager/DataManager.h"
+#include "Manager/LevelStreamingSubsystem.h"
+#include "Manager/AIBridgeSubsystem.h"
+#include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
 #include "Framework/Airplane/AirplaneGameMode.h"
 #include "Framework/MurphyGameStateBase.h"
@@ -34,6 +61,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/BagPopupWidget.h"
 #include "UI/HUD/MainHUD.h"
+#include "UI/PlayReport/PlayReportMainWidget.h"
 
 AMurphyPlayerController::AMurphyPlayerController()
 {
@@ -416,7 +444,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 	AAgentNPCBase* CurrentNPC = TargetNPC;
 	if (IsValid(CurrentNPC))
 	{
-		const FString ResultSessionId = GetOrCreateAIPlaySessionId();
+		const FString ResultSessionId = CurrentNPC->GetCurrentSessionId();
 
 		CurrentNPC->ProcessDialogueResponse(ResponseData);
 		CurrentNPC->UpdateSessionStateFromResponse(ResponseData);
@@ -471,12 +499,31 @@ void AMurphyPlayerController::OnAIResultReceived(const FAIResultResponse& Result
 		*ResultData.session_id,
 		*ResultData.final_result.tier,
 		ResultData.final_result.final_score_100);
+
+	// UI 표시 및 데이터 바인딩
+	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
+	{
+		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+		{
+			MainHUD->SetReportVisible(true);
+			
+			if (UPlayReportMainWidget* ReportWidget = MainHUD->GetPlayReportMain())
+			{
+				ReportWidget->DisplayReport(MurphyPlayerState->GetLastPlayReportData());
+			}
+		}
+	}
+
+	// 성적표 조작을 위한 인풋 모드 설정
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	SetInputMode(InputMode);
 }
 
 void AMurphyPlayerController::OnFinalScoreboardSignalResponse(const FAIResponseData& ResponseData)
 {
 	const FString ResultSessionId = ResponseData.session_id.IsEmpty()
-		? GetOrCreateAIPlaySessionId()
+		? (IsValid(TargetNPC) ? TargetNPC->GetCurrentSessionId() : GetOrCreateAIPlaySessionId())
 		: ResponseData.session_id;
 
 	PRINTLOGW_JW(TEXT("[AIResult] 최종 점수판 신호 응답 수신: session_id=%s, next_node=%s, action=%s"),
@@ -504,7 +551,7 @@ FAIRequestData AMurphyPlayerController::GenerateFinalScoreboardSignalRequestData
 	FAIRequestData RequestData = GenerateAIRequestData();
 
 	RequestData.request_id = FGuid::NewGuid().ToString();
-	RequestData.session.session_id = GetOrCreateAIPlaySessionId();
+	RequestData.session.session_id = IsValid(TargetNPC) ? TargetNPC->GetCurrentSessionId() : GetOrCreateAIPlaySessionId();
 	RequestData.session.current_node_id = FinalScoreboardNodeId;
 	RequestData.session.turn_index = FMath::Max(RequestData.session.turn_index, 1);
 
@@ -904,12 +951,10 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	RequestData.request_id = FGuid::NewGuid().ToString();
 	
 	RequestData.session.player_id = TEXT("player_001");
-	const FString PlaySessionId = GetOrCreateAIPlaySessionId();
 	
 	if (IsValid(TargetNPC))
 	{
-		RequestData.session.session_id = PlaySessionId.IsEmpty() ? TargetNPC->GetCurrentSessionId() : PlaySessionId;
-		TargetNPC->CurrentSessionId = RequestData.session.session_id;
+		RequestData.session.session_id = TargetNPC->GetCurrentSessionId();
 		RequestData.session.chapter_id = TargetNPC->GetChapterId();
 		RequestData.session.scene_id = TargetNPC->GetSceneId();
 		RequestData.session.current_node_id = TargetNPC->GetCurrentNodeId();
@@ -923,6 +968,7 @@ FAIRequestData AMurphyPlayerController::GenerateAIRequestData()
 	}
 	else
 	{
+		const FString PlaySessionId = GetOrCreateAIPlaySessionId();
 		RequestData.session.session_id = PlaySessionId.IsEmpty() ? TEXT("session_fallback") : PlaySessionId;
 		RequestData.session.chapter_id = TEXT("CH0_03_IMMIGRATION_CHECK");
 		RequestData.session.scene_id = TEXT("JFK_IMMIGRATION_HALL");
@@ -1064,10 +1110,10 @@ void AMurphyPlayerController::TriggerFinalScoreboardSignal()
 		return;
 	}
 
-	const FString SessionId = GetOrCreateAIPlaySessionId();
+	const FString SessionId = IsValid(TargetNPC) ? TargetNPC->GetCurrentSessionId() : GetOrCreateAIPlaySessionId();
 	if (SessionId.IsEmpty())
 	{
-		PRINTLOGE_JW(TEXT("[AIResult] AIPlaySessionId가 비어 있어 최종 점수판 신호를 보내지 못했습니다."));
+		PRINTLOGE_JW(TEXT("[AIResult] session_id가 비어 있어 최종 점수판 신호를 보내지 못했습니다."));
 		return;
 	}
 

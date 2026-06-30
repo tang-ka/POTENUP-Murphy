@@ -11,6 +11,7 @@
 #include "UI/Phone/ApplicationWidget.h"
 #include "UI/Phone/TranslateAppScreenWidget.h"
 #include "UI/Phone/TranslateDialogManager.h"
+#include "UI/PlayReport/PlayReportMainWidget.h"
 
 void UMainHUD::NativeConstruct()
 {
@@ -115,6 +116,18 @@ void UMainHUD::ClearCaption()
 	if (WBP_PlayerCaption)
 	{
 		WBP_PlayerCaption->ClearCaption();
+	}
+}
+
+void UMainHUD::SetReportVisible(bool bIsVisible)
+{
+	if (bIsVisible)
+	{
+		WBP_PlayReportMain->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		WBP_PlayReportMain->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 

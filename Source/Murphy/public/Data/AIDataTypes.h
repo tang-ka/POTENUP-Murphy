@@ -43,7 +43,8 @@ struct FAI_EmotionData : public FTableRowBase
 	TSoftObjectPtr<UTexture2D> EmotionTextures;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category="AI Emotion", meta=(ToolTip="애니메이션 몽타주"))
-	TSoftObjectPtr<UAnimMontage> EmotionMontages;
+	TArray<TSoftObjectPtr<UAnimMontage>> EmotionMontages;
+	
 };
 
 //  === [Unreal -> AI] Request Structs ===

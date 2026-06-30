@@ -504,21 +504,26 @@ void AAgentNPCBase::OnRep_CurrentEmotion()
 		EmojiUI->SetEmoji(EmotionTexture);
 	}
 
-	// 4. 일회성 감정 표현(애니메이션 몽타주) 재생 로직
-	UAnimMontage* EmotionMontage = nullptr;
-	if (EmotionData && !EmotionData->EmotionMontages.IsNull())
+	// 4. 일회성 감정 표현(애니메이션 몽타주) 랜덤 재생 로직
+	// =======================================================
+	UAnimMontage* EmotionMontageToPlay = nullptr;
+
+	// 데이터 테이블에 해당 감정의 몽타주 '배열'이 존재하는지 확인
+	if (EmotionData && EmotionData->EmotionMontages.Num() > 0)
 	{
-		EmotionMontage = EmotionData->EmotionMontages.LoadSynchronous();
+		// 배열의 크기 안에서 랜덤 인덱스(0 ~ 배열크기-1) 추출
+		int32 RandomIndex = FMath::RandRange(0, EmotionData->EmotionMontages.Num() - 1);
+       
+		// 당첨된 인덱스의 몽타주를 메모리에 로드
+		EmotionMontageToPlay = EmotionData->EmotionMontages[RandomIndex].LoadSynchronous();
 	}
-	if (!EmotionMontage)
+	else
 	{
-		if (TObjectPtr<UAnimMontage>* FoundMontage = EmotionMontages.Find(CurrentEmotion))
-		{
-			EmotionMontage = *FoundMontage;
-		}
+		PRINTLOGW_JW(TEXT("[AgentNPC] 데이터 테이블에 %s 감정용 몽타주가 하나도 없습니다!"), *EmotionString);
 	}
 
-	if (IsValid(EmotionMontage))
+	// 랜덤으로 선택된 몽타주가 유효하다면 재생
+	if (IsValid(EmotionMontageToPlay))
 	{
 		// 메타휴먼은 얼굴(Face), 몸통(Body) 등 부위가 나뉘어 있으므로 모든 컴포넌트를 순회하며 재생합니다.
 		TArray<USkeletalMeshComponent*> SkeletalMeshes;
@@ -533,12 +538,12 @@ void AAgentNPCBase::OnRep_CurrentEmotion()
 
 			if (UAnimInstance* AnimInst = SkelMesh->GetAnimInstance())
 			{
-				AnimInst->Montage_Play(EmotionMontage);
+				AnimInst->Montage_Play(EmotionMontageToPlay);
 			}
 		}
        
-		// 성공 로그는 콘솔창이 지저분해지지 않게 딱 한 줄만 깔끔하게 남깁니다.
-		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 재생 -> %s"), *EmotionMontage->GetName());
+		// 어떤 몽타주가 랜덤으로 뽑혔는지 로그로 확인
+		PRINTLOG_CW(TEXT("[AgentNPC] 감정 몽타주 랜덤 재생 완료 -> %s"), *EmotionMontageToPlay->GetName());
 	}
 }
 

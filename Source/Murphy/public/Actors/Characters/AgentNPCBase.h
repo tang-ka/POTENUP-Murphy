@@ -90,8 +90,8 @@ public:
 	TMap<EAgentEmotion, TObjectPtr<UTexture2D>> EmotionTextures;
 	
 	// 감정별로 재생할 일회성 행동(몽타주)을 매핑해두는 딕셔너리
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI|Animation")
-	TMap<EAgentEmotion, TObjectPtr<UAnimMontage>> EmotionMontages;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AI|Emoji")
+	TArray<TSoftObjectPtr<UAnimMontage>> EmotionMontages;
 	
 	// 감정에따른 표정 변화
 	UFUNCTION(BlueprintImplementableEvent, Category="AI|Emotion")

@@ -10,6 +10,7 @@
 #include "Framework/MurphyPlayerState.h"
 #include "Murphy.h"
 #include "Manager/CinematicSequenceSubsystem.h"
+#include "Manager/LevelStreamingSubsystem.h"
 #include "Components/BoxComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameInstance.h"
@@ -93,4 +94,39 @@ void AAirplaneGameMode::HandleCinematicComplete()
 
 		PRINTLOG_SH(TEXT("[Airplane] %s InteractionBox X 반전 (%f)"), *NPC->GetName(), LocalLoc.X);
 	}
+}
+
+void AAirplaneGameMode::CompleteScenarioAndTravel()
+{
+	if (bScenarioCompleteTravelRequested)
+	{
+		PRINTLOG_SH(TEXT("[Airplane] 시나리오 완료 트래블이 이미 요청되었습니다."));
+		return;
+	}
+
+	if (NextLevelKeyAfterScenarioComplete.IsNone())
+	{
+		PRINTLOG_SH(TEXT("[Airplane] NextLevelKeyAfterScenarioComplete가 비어 있어 트래블하지 않습니다."));
+		return;
+	}
+
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>()
+		: nullptr;
+	if (!LevelSubsystem)
+	{
+		PRINTLOG_SH(TEXT("[Airplane] LevelStreamingSubsystem이 없어 트래블하지 못했습니다."));
+		return;
+	}
+
+	bScenarioCompleteTravelRequested = true;
+
+	if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
+	{
+		// 비행기 대화 시나리오를 성공 종료로 처리한 뒤 다음 맵으로 이동합니다.
+		AirplaneGameState->EndScenario(true);
+	}
+
+	PRINTLOG_SH(TEXT("[Airplane] 시나리오 완료 -> 다음 레벨 트래블: %s"), *NextLevelKeyAfterScenarioComplete.ToString());
+	LevelSubsystem->TravelAllPlayers(NextLevelKeyAfterScenarioComplete);
 }

@@ -187,6 +187,10 @@ public:
 	
 	// 시나리오 완료 여부 추적 플래그
 	bool bIsScenarioCompleted = false;
+
+protected:
+	// 비행기 최종 노드는 NPC 음성이 끝난 뒤에만 다음 레벨 이동을 요청합니다.
+	bool bShouldRequestAirplaneTravelAfterVoice = false;
 	
 public:
 	UFUNCTION(BlueprintCallable, Category="AI|Info")

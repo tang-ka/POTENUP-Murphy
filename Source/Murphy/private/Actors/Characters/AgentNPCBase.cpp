@@ -600,7 +600,14 @@ void AAgentNPCBase::EndConversation()
 void AAgentNPCBase::StartTypingWait()
 {
 	bIsWaitingForAIResponse = true;
-
+	
+	if (IsValid(EmojiUI))
+	{
+		// AI 서버 응답 대기 중에는 감정 이모지를 숨기고 생각 말풍선을 보여줍니다.
+		EmojiUI->SetEmojiVisible(false);
+		EmojiUI->SetBubbleVisible(true);
+	}
+	
 	if (IsValid(TypingAudioComp) && IsValid(TypingAudioComp->GetSound()))
 	{
 		TypingAudioComp->Play();
@@ -616,6 +623,13 @@ void AAgentNPCBase::StopTypingWait()
 	if (IsValid(TypingAudioComp) && TypingAudioComp->IsPlaying())
 	{
 		TypingAudioComp->Stop();
+	}
+	
+	if (IsValid(EmojiUI))
+	{
+		// NPC 응답이 도착하면 생각 말풍선을 숨기고 감정 이모지를 다시 보여줍니다.
+		EmojiUI->SetBubbleVisible(false);
+		EmojiUI->SetEmojiVisible(true);
 	}
 	
 	PRINTLOG_JW(TEXT("[AgentNPC] AI 응답 대기 종료 - 타이핑 연출 중지"));
@@ -661,6 +675,26 @@ void AAgentNPCBase::OnVoiceFinished()
 			QuestInstigator = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
 		}
 
+		const bool bShouldRequestAirplaneTravel = bShouldRequestAirplaneTravelAfterVoice;
+		bShouldRequestAirplaneTravelAfterVoice = false;
+
+		AMurphyPlayerController* TravelRequestPC = nullptr;
+		if (bShouldRequestAirplaneTravel)
+		{
+			if (APawn* InteractingPawn = Cast<APawn>(QuestInstigator))
+			{
+				TravelRequestPC = Cast<AMurphyPlayerController>(InteractingPawn->GetController());
+			}
+			if (!TravelRequestPC)
+			{
+				TravelRequestPC = Cast<AMurphyPlayerController>(QuestInstigator);
+			}
+			if (!TravelRequestPC && GetWorld())
+			{
+				TravelRequestPC = Cast<AMurphyPlayerController>(GetWorld()->GetFirstPlayerController());
+			}
+		}
+
 		if (QuestEventNotifier && IsValid(QuestInstigator) && !QuestTargetID.IsNone())
 		{
 			// AI 대화가 최종 종료된 뒤에만 TalkToNPC 완료 조건을 서버로 보냅니다.
@@ -672,6 +706,19 @@ void AAgentNPCBase::OnVoiceFinished()
 		CurrentInteractPlayer = nullptr;
 				
 		EndConversation();
+
+		if (bShouldRequestAirplaneTravel)
+		{
+			if (TravelRequestPC)
+			{
+				PRINTLOG_JW(TEXT("[AgentNPC] 비행기 최종 대사 종료. 다음 레벨 이동을 서버에 요청합니다."));
+				TravelRequestPC->RequestAirplaneScenarioCompleteTravel();
+			}
+			else
+			{
+				PRINTLOGE_JW(TEXT("[AgentNPC] 비행기 레벨 이동 요청 실패: PlayerController를 찾지 못했습니다."));
+			}
+		}
 		return;
 	}
 	
@@ -925,11 +972,15 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	
 	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
 	// if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
-	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER")) // BaggageClaim 에서 info랑 대화하는 부분 체크
+	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	{
 		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
 		if (ResponseData.next_node_id == TEXT("FLIGHT_999_COMPLETE"))
 		{
+			// 최종 NPC 대사가 끝난 뒤 OnVoiceFinished에서 다음 레벨 이동을 요청합니다.
+			bShouldRequestAirplaneTravelAfterVoice = true;
+			PRINTLOG_JW(TEXT("[AgentNPC] 비행기 최종 노드 감지. NPC 음성 종료 후 다음 레벨 이동을 예약합니다."));
+
 			if (APawn* InteractingPawn = Cast<APawn>(CurrentInteractPlayer))
 			{
 				if (AMurphyPlayerState* PS = InteractingPawn->GetPlayerState<AMurphyPlayerState>())
@@ -946,8 +997,8 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 		
 		if (IsValid(InteractionBox))
 		{
-			// InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			// PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
+			InteractionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			PRINTLOG_JW(TEXT("[AgentNPC] 시나리오 종료됨 (Action: %s). InteractionBox 비활성화."), *ResponseData.next_action);
 		}
 		
 		bIsScenarioCompleted = true;

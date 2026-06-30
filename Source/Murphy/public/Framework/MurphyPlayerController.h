@@ -53,6 +53,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Level Streaming")
 	void TransitionToBaggageClaim();
 
+	// 비행기 최종 NPC 대사가 끝난 뒤 서버에 다음 레벨 이동을 요청합니다.
+	void RequestAirplaneScenarioCompleteTravel();
+
 	// 퀘스트 시작 조건만 서버로 전달합니다. NPC 접근처럼 완료와 분리해야 할 때 사용합니다.
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyQuestStartEvent(FName TargetID, EQuestCondition StartCondition);
@@ -131,6 +134,9 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_RequestReposition(const FName& SubLevelName);
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestAirplaneScenarioCompleteTravel();
 
 	UFUNCTION(Server, Reliable)
 	void ServerStartScenarioForTest(EScenarioType NewScenario);

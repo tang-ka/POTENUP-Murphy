@@ -7,6 +7,8 @@
 #include "Data/PlayReportData.h"
 #include "PlayReportMainWidget.generated.h"
 
+class UCanvasPanel;
+class UButton;
 class UImage;
 class UTextBlock;
 class UPlayReportItemWidget;
@@ -54,8 +56,24 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPlayReportItemWidget> item_ProblemSolving;	// 문제해결력
-
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> btn_Next;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UCanvasPanel> panel_Report;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UCanvasPanel> panel_Feedback;
+	
+protected:
+	virtual void NativeConstruct() override;
+	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
 	void DisplayReport(const FPlayReportData& ReportData);
+	
+private:
+	UFUNCTION()
+	void OnNextButtonClicked();
 };

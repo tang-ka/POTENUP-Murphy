@@ -2,12 +2,44 @@
 
 #include "UI/PlayReport/PlayReportMainWidget.h"
 
+#include "Components/Button.h"
+#include "Components/CanvasPanel.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Data/GameDataTypes.h"
 #include "Manager/DataManager.h"
 #include "UI/PlayReport/PlayReportItemWidget.h" 
 
+void UPlayReportMainWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+	
+	if (btn_Next)
+	{
+		btn_Next->OnClicked.AddDynamic(this, &UPlayReportMainWidget::OnNextButtonClicked);
+	}
+	
+	if (panel_Report)
+	{
+		panel_Report->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+	
+	if (panel_Feedback)
+	{
+		panel_Feedback->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	if (APlayerController* PC = GetOwningPlayer())
+	{
+		PC->bShowMouseCursor = true;
+		
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        
+		PC->SetInputMode(InputMode);
+	}
+}
 
 void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 {
@@ -18,12 +50,12 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 		if (ReportData.bIsGameClear)
 		{
 			txt_Result->SetText(FText::FromString(TEXT("COMPLETED")));
-			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor::Green));
+			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor(0.409698f,1.0f,0.247795f)));
 		}
 		else
 		{
 			txt_Result->SetText(FText::FromString(TEXT("FAILED")));
-			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
+			txt_Result->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.055f, 0.026f)));
 		}
 	}
 	
@@ -94,4 +126,17 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 		item_ProblemSolving->InitializeItem(TEXT("Problem Solving"), TEXT("문제해결력"), ReportData.ProblemSolvingScore);
 	}
 	
+}
+
+void UPlayReportMainWidget::OnNextButtonClicked()
+{
+	if (panel_Report)
+	{
+		panel_Report->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	
+	if (panel_Feedback)
+	{
+		panel_Feedback->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
 }

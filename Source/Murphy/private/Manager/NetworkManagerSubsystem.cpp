@@ -10,6 +10,8 @@
 #include "OnlineSubsystemUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Manager/LevelStreamingSubsystem.h"
+#include "Manager/UIManagerSubsystem.h"
+#include "Engine/LocalPlayer.h"
 #include "Online/OnlineSessionNames.h"
 
 void UNetworkManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -64,7 +66,7 @@ void UNetworkManagerSubsystem::CreateSession(FSessionInfo Info)
 	// 3. 세션 설정 구성
 	FName SubsystemName = IOnlineSubsystem::Get()->GetSubsystemName();
 	const bool bIsLAN = SubsystemName == "NULL";
-
+ 
 	FOnlineSessionSettings SessionSettings;
 	{
 		SessionSettings.bIsDedicated = false;
@@ -113,8 +115,23 @@ void UNetworkManagerSubsystem::HandleCreateSessionComplete(FName SessionName, bo
 	PRINTLOG_SH(TEXT("세션 생성 성공: %s"), *SessionName.ToString());
 	SetSessionState(ESessionState::InSession);
 
-	// 모든 플레이어를 Lobby 맵으로 이동 (?listen 은 ServerTravel이 자동 처리)
-	UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/Lv_Session")), true, TEXT("listen?port=7777"));
+	// 페이드 아웃(화면 -> 검정) 완료 후 레벨 이동. (OnSinglePlayButtonClicked과 동일 패턴)
+	FSimpleDelegate OnFadeOutComplete = FSimpleDelegate::CreateWeakLambda(this, [this]()
+	{
+		// 모든 플레이어를 Lobby 맵으로 이동 (?listen 은 ServerTravel이 자동 처리)
+		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("/Game/Maps/Lv_Session")), true, TEXT("listen?port=7777"));
+	});
+
+	ULocalPlayer* LocalPlayer = GetGameInstance() ? GetGameInstance()->GetFirstGamePlayer() : nullptr;
+	UUIManagerSubsystem* UIManager = LocalPlayer ? LocalPlayer->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+	if (!UIManager)
+	{
+		// UIManager가 없으면 페이드 없이 즉시 이동.
+		OnFadeOutComplete.ExecuteIfBound();
+		return;
+	}
+
+	UIManager->FadeOut(0.f, OnFadeOutComplete);
 }
 
 void UNetworkManagerSubsystem::FindSessions(int32 MaxSearchResults, bool bIsLAN)
@@ -232,10 +249,24 @@ void UNetworkManagerSubsystem::HandleJoinSessionComplete(FName SessionName, EOnJ
 
 		PRINTLOG_SH(TEXT("Join URL: %s"), *TravelURL);
 
-		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		// 페이드 아웃(화면 -> 검정) 완료 후 ClientTravel. (OnSinglePlayButtonClicked과 동일 패턴)
+		FSimpleDelegate OnFadeOutComplete = FSimpleDelegate::CreateWeakLambda(this, [this, TravelURL]()
 		{
-			PC->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
+			if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+			{
+				PC->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
+			}
+		});
+
+		ULocalPlayer* LocalPlayer = GetGameInstance() ? GetGameInstance()->GetFirstGamePlayer() : nullptr;
+		UUIManagerSubsystem* UIManager = LocalPlayer ? LocalPlayer->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+		if (!UIManager)
+		{
+			OnFadeOutComplete.ExecuteIfBound();
+			return;
 		}
+
+		UIManager->FadeOut(0.f, OnFadeOutComplete);
 	}
 }
 

@@ -759,16 +759,16 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// AI 서버 응답이 도착했으므로 대기 연출 먼저 종료
 	StopTypingWait();
 
-	// 시나리오 종료 판단
-	if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
-		ResponseData.next_action == TEXT("FAIL_END") || 
-		ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK")) // 이거는 입국심사때의 마지막 노드 
-	{
-		bIsScenarioCompleted = true;
-	}
+	// 입국심사에서만의 시나리오 종료 판단 (개발 초기 하드코딩)
+	// if (ResponseData.next_action == TEXT("FINAL_DECISION") || 
+	// 	ResponseData.next_action == TEXT("FAIL_END"))// || 
+		// ResponseData.next_node_id == TEXT("IMM_006_DECLARATION_CHECK")) // 이거는 입국심사때의 마지막 노드 
+	// {
+	// 	bIsScenarioCompleted = true;
+	// }
 	
-	// todo 욕을 하는 경우 끝남 -> 이건 게임오버 종료 조건 
-	if (ResponseData.next_node_id == TEXT("IMM_BAD_END_VERBAL_ABUSE"))
+	// if (ResponseData.next_node_id == TEXT("IMM_BAD_END_VERBAL_ABUSE"))
+	if (ResponseData.next_node_id.Contains(TEXT("BAD_END_VERBAL_ABUSE")))
 	{
 		PRINTLOGW_JW(TEXT("[AgentNPC] 욕으로 인한 시나리오 중단!!"));
 		bIsScenarioCompleted = true;
@@ -781,6 +781,8 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 				GM->TriggerGameOver();
 			}
 		}
+
+		RequestAIResultForCurrentSession();
 	}
 	
 	// ==========================================================
@@ -986,6 +988,7 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	
 	// 시나리오가 종료되었을 때 InteractionBox를 끕니다. (더 이상 대화할 수 없도록)
 	// if (ResponseData.next_action == TEXT("END") || ResponseData.next_action == TEXT("COMPLETE_CHAPTER") || ResponseData.next_action == TEXT("SUCCESS") || ResponseData.next_action == TEXT("FAIL"))
+	// if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	{
 		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
@@ -1008,6 +1011,11 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 				}
 			}
 		}
+		//. 수하물에서 시나리오 끝난 경우 Report UI 띄우기
+		else if (ResponseData.next_node_id == TEXT("BAG_999_COMPLETE"))
+		{
+			RequestAIResultForCurrentSession();
+		}
 		
 		if (IsValid(InteractionBox))
 		{
@@ -1016,5 +1024,16 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 		}
 		
 		bIsScenarioCompleted = true;
+	}
+}
+
+void AAgentNPCBase::RequestAIResultForCurrentSession()
+{
+	if (UWorld* World = GetWorld())
+	{
+		if (AMurphyPlayerController* MPC = Cast<AMurphyPlayerController>(World->GetFirstPlayerController()))
+		{
+			MPC->RequestAIResultForSession(CurrentSessionId);
+		}
 	}
 }

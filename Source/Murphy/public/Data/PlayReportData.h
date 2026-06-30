@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/AIDataTypes.h"
 #include "PlayReportData.generated.h"
 
 /**
@@ -127,4 +128,11 @@ public:
 	// 표현/문법 교정 카드 목록
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	TArray<FPlayReportFeedbackCardData> FeedbackCards;
+
+	/**
+	 * AI 서버 최종 결과 응답을 UI용 데이터로 변환합니다.
+	 * @param InResult GET /api/game/ai/result/{session_id} 응답 구조체
+	 * @return UI 위젯에 바인딩할 FPlayReportData
+	 */
+	static FPlayReportData FromAIResult(const FAIResultResponse& InResult);
 };

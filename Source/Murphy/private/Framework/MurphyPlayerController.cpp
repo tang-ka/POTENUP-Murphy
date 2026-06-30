@@ -27,6 +27,7 @@
 #include "Manager/AIBridgeSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
+#include "Framework/Airplane/AirplaneGameMode.h"
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
 #include "GameFramework/PlayerStart.h"
@@ -693,6 +694,36 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 	}
 
 	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
+}
+
+void AMurphyPlayerController::RequestAirplaneScenarioCompleteTravel()
+{
+	if (HasAuthority())
+	{
+		Server_RequestAirplaneScenarioCompleteTravel_Implementation();
+		return;
+	}
+
+	Server_RequestAirplaneScenarioCompleteTravel();
+}
+
+void AMurphyPlayerController::Server_RequestAirplaneScenarioCompleteTravel_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG_SH(TEXT("Server_RequestAirplaneScenarioCompleteTravel: World is null"));
+		return;
+	}
+
+	AAirplaneGameMode* AirplaneGameMode = Cast<AAirplaneGameMode>(World->GetAuthGameMode());
+	if (!AirplaneGameMode)
+	{
+		PRINTLOG_SH(TEXT("Server_RequestAirplaneScenarioCompleteTravel: AirplaneGameMode가 아닙니다."));
+		return;
+	}
+
+	AirplaneGameMode->CompleteScenarioAndTravel();
 }
 
 void AMurphyPlayerController::Client_PlayCinematic_Implementation(const FCinematicPlayRequest& Request, int32 PlayId)

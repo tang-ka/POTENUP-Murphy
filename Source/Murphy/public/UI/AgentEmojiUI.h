@@ -25,6 +25,7 @@ public:
 	void SetNPCName(FString NPCName) const;
 	
 	void SetEmojiVisible(bool bIsVisible);
+	void SetBubbleVisible(bool bIsVisible);
 	
 public:
 	UPROPERTY(meta=(BindWidget))
@@ -34,8 +35,12 @@ public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> Text_NPCName;
 	
-	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> AppearEmoji;
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> AppearBubble;
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> Thinking;
 	
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynMat;

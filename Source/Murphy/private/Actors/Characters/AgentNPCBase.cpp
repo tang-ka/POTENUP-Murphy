@@ -178,16 +178,45 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	{
 		if (APawn* PlayerPawn = Cast<APawn>(CurrentInteractPlayer))
 		{
-			// 1. 플레이어가 ACharacter를 상속받는다고 가정하고 캐스팅합니다.
 			if (ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerPawn))
 			{
-				// 2. 플레이어의 스켈레탈 메시에서 'head' 뼈의 월드 좌표를 가져옵니다. 
-				// (대부분의 언리얼 기본/메타휴먼 뼈대에서 미간 위치와 정확히 일치합니다.)
-				TargetLookAtLocation = PlayerCharacter->GetMesh()->GetSocketLocation(FName("head"));
+				// 1. 플레이어 캐릭터의 하위 컴포넌트들 중 "Body"라는 이름의 스켈레탈 메시 컴포넌트를 찾습니다.
+				USkeletalMeshComponent* PlayerBodyMesh = nullptr;
+             
+				TArray<USkeletalMeshComponent*> PlayerMeshes;
+				PlayerCharacter->GetComponents<USkeletalMeshComponent>(PlayerMeshes);
+             
+				for (USkeletalMeshComponent* SkelMesh : PlayerMeshes)
+				{
+					if (IsValid(SkelMesh) && SkelMesh->GetName().Equals(TEXT("Body"), ESearchCase::IgnoreCase))
+					{
+						PlayerBodyMesh = SkelMesh;
+						break;
+					}
+				}
+
+				// 2. 만약 "Body" 컴포넌트를 찾았다면, 그 Body의 'head' 뼈 위치를 가져옵니다.
+				if (PlayerBodyMesh)
+				{
+					TargetLookAtLocation = PlayerBodyMesh->GetSocketLocation(FName("head"));
+				}
+				else
+				{
+					// 메타휴먼 구조가 아니거나 "Body"를 못 찾은 경우를 위한 안전한 폴백(Fallback) 코드
+					// 기본 Mesh라도 유효하다면 소켓 위치를 시도하고, 아니면 액터 위치 기반으로 처리합니다.
+					if (PlayerCharacter->GetMesh() && PlayerCharacter->GetMesh()->GetNumComponentSpaceTransforms() > 0)
+					{
+						TargetLookAtLocation = PlayerCharacter->GetMesh()->GetSocketLocation(FName("head"));
+					}
+					else
+					{
+						TargetLookAtLocation = PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+					}
+				}
 			}
 			else
 			{
-				// 캐릭터가 아니라면 임시로 액터 중심점 + 눈높이(약 160)를 타겟으로 삼습니다.
+				// 캐릭터 계열이 아닐 경우 액터 중심점 + 대략적인 눈높이
 				TargetLookAtLocation = PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
 			}
 		}

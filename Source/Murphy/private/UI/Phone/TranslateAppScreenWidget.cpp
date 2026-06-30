@@ -264,8 +264,16 @@ void UTranslateAppScreenWidget::SyncExistingCategories()
 		HandleCategoryAdded(CategoryPair.Key, CategoryPair.Value);
 	}
 
+	// 새로 생성된 위젯은 CurrentCategory가 None이므로 Subsystem에서 복구
+	if (CurrentCategory.IsNone())
+	{
+		CurrentCategory = DialogManager->GetActiveCategory();
+		PRINTLOG_SH(TEXT("SyncExistingCategories: Restoring ActiveCategory from Subsystem: %s"), *CurrentCategory.ToString());
+	}
+
 	if (!CurrentCategory.IsNone())
 	{
+		UpdateCategoryButtonSelection(CurrentCategory);
 		RefreshDialog(CurrentCategory);
 	}
 }

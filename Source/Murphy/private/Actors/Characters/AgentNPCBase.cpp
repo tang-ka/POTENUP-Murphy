@@ -318,23 +318,37 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 			// 	ScenarioSubsystem->StartScenario(NPCScenarioType);
 			// }
 			
-			// 2 먼저 말을 거는 NPC
-			if (bIsTalkingFirst && IsValid(VoiceComp) && IsValid(PassportSound))
+			// 2 대화 시작 분기
+			if (bIsTalkingFirst)
 			{
-				VoiceComp->SetSound(PassportSound);
-				VoiceComp->Play();
+				// NPC가 먼저 말을 건다
+				if (IsValid(VoiceComp) && IsValid(PassportSound))
+				{
+					VoiceComp->SetSound(PassportSound);
+					VoiceComp->Play();
 
-				float SoundDuration = PassportSound->GetDuration();
-				GetWorld()->GetTimerManager().ClearTimer(VoiceTimerHandle);
-				GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+					float SoundDuration = PassportSound->GetDuration();
+					GetWorld()->GetTimerManager().ClearTimer(VoiceTimerHandle);
+					GetWorld()->GetTimerManager().SetTimer(VoiceTimerHandle, this, &AAgentNPCBase::OnVoiceFinished, SoundDuration, false);
+				}
 
-				// 캐싱 음성 재생 = 대화 시작 -> 카테고리 생성 + 첫 Agent 대사
 				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(OtherPawn))
 				{
 					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
 					{
 						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
 						MainHUD->AddAgentDialog(NPCName.ToString(), LastNpcMessage);
+					}
+				}
+			}
+			else
+			{
+				// 플레이어가 먼저 말을 건다 — 카테고리만 선등록, 첫 대화는 유저 대사
+				if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(OtherPawn))
+				{
+					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
+					{
+						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
 					}
 				}
 			}

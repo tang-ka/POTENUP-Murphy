@@ -2,6 +2,7 @@
 
 #include "UI/HUD/MainHUD.h"
 
+#include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "Murphy.h"
 #include "UI/HUD/BagPopupWidget.h"
@@ -16,7 +17,13 @@ void UMainHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	DialogManager = NewObject<UTranslateDialogManager>(this);
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	DialogManager = LocalPlayer ? LocalPlayer->GetSubsystem<UTranslateDialogManager>() : nullptr;
+
+	if (!DialogManager)
+	{
+		PRINTLOG_SH(TEXT("TranslateDialogManager LocalPlayerSubsystem is null"));
+	}
 
 	if (UTranslateAppScreenWidget* Screen = GetTranslateScreen())
 	{
@@ -145,14 +152,14 @@ void UMainHUD::BeginTranslateConversation(FName InCategoryName, const FText& InD
 		return;
 	}
 
-	ActiveTranslateCategory = InCategoryName;
+	DialogManager->SetActiveCategory(InCategoryName);
 	DialogManager->RegisterCategory(InCategoryName, InDisplayName); // 중복 자동 무시
 	PRINTLOG_SH(TEXT("Translate Conversation Begin: %s"), *InCategoryName.ToString());
 }
 
 void UMainHUD::AddAgentDialog(const FString& InSpeaker, const FString& InText)
 {
-	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	if (!DialogManager || DialogManager->GetActiveCategory().IsNone())
 	{
 		PRINTLOG_SH(TEXT("AddAgentDialog skipped: no active category"));
 		return;
@@ -164,12 +171,12 @@ void UMainHUD::AddAgentDialog(const FString& InSpeaker, const FString& InText)
 	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
 	Entry.Content = FText::FromString(InText);
 
-	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+	DialogManager->AddDialog(DialogManager->GetActiveCategory(), Entry);
 }
 
 void UMainHUD::AddUserDialog(const FString& InText)
 {
-	if (!DialogManager || ActiveTranslateCategory.IsNone())
+	if (!DialogManager || DialogManager->GetActiveCategory().IsNone())
 	{
 		PRINTLOG_SH(TEXT("AddUserDialog skipped: no active category"));
 		return;
@@ -180,7 +187,7 @@ void UMainHUD::AddUserDialog(const FString& InText)
 	Entry.Time = FText::FromString(FDateTime::Now().ToString(TEXT("%H:%M")));
 	Entry.Content = FText::FromString(InText);
 
-	DialogManager->AddDialog(ActiveTranslateCategory, Entry);
+	DialogManager->AddDialog(DialogManager->GetActiveCategory(), Entry);
 }
 
 void UMainHUD::SetTranslateConnecting(bool bIsConnecting)

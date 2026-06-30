@@ -16,6 +16,7 @@ void UAgentEmojiUI::NativeConstruct()
 	DynMat->SetScalarParameterValue(TEXT("Progress"), Progress);
 	Image_EmotionGuage->SetBrush(Brush);
 	
+	PlayAnimation(AppearBubble, 0, 1, EUMGSequencePlayMode::Reverse);
 }
 
 void UAgentEmojiUI::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -50,6 +51,11 @@ void UAgentEmojiUI::SetEmoji(UTexture2D* Emoji) const
 
 void UAgentEmojiUI::SetNPCName(FString NPCName) const
 {
+	if (!NPCName.IsEmpty())
+	{
+		NPCName[0] = FChar::ToUpper(NPCName[0]);
+	}
+	
 	Text_NPCName->SetVisibility(ESlateVisibility::HitTestInvisible); // 강제로 보이게 켬
 	Text_NPCName->SetText(FText::FromString(NPCName));
 	
@@ -75,4 +81,32 @@ void UAgentEmojiUI::SetEmojiVisible(bool bIsVisible)
 		PlayAnimation(AppearEmoji);
 	else
 		PlayAnimation(AppearEmoji, 0, 1, EUMGSequencePlayMode::Reverse);
+}
+
+void UAgentEmojiUI::SetBubbleVisible(bool bIsVisible)
+{
+	// ESlateVisibility V = ESlateVisibility::Visible;
+	// if (bIsVisible == false) V = ESlateVisibility::Hidden; 
+	//
+	// Image_Emoji->SetVisibility(V);
+	// Image_EmotionGuage->SetVisibility(V);
+	
+	if (AppearBubble == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AppearBubble 애니메이션이 바인딩되지 않았습니다!"));
+		return;
+	}
+
+	if (bIsVisible)
+	{
+		PlayAnimation(AppearBubble);
+		PlayAnimation(Thinking, 0, 0);
+	}
+	else
+	{
+		PlayAnimation(AppearBubble, 0, 1, EUMGSequencePlayMode::Reverse);
+		StopAnimation(Thinking);
+	}
+	
+	
 }

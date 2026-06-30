@@ -566,7 +566,14 @@ void AAgentNPCBase::EndConversation()
 void AAgentNPCBase::StartTypingWait()
 {
 	bIsWaitingForAIResponse = true;
-
+	
+	if (IsValid(EmojiUI))
+	{
+		// AI 서버 응답 대기 중에는 감정 이모지를 숨기고 생각 말풍선을 보여줍니다.
+		EmojiUI->SetEmojiVisible(false);
+		EmojiUI->SetBubbleVisible(true);
+	}
+	
 	if (IsValid(TypingAudioComp) && IsValid(TypingAudioComp->GetSound()))
 	{
 		TypingAudioComp->Play();
@@ -582,6 +589,13 @@ void AAgentNPCBase::StopTypingWait()
 	if (IsValid(TypingAudioComp) && TypingAudioComp->IsPlaying())
 	{
 		TypingAudioComp->Stop();
+	}
+	
+	if (IsValid(EmojiUI))
+	{
+		// NPC 응답이 도착하면 생각 말풍선을 숨기고 감정 이모지를 다시 보여줍니다.
+		EmojiUI->SetBubbleVisible(false);
+		EmojiUI->SetEmojiVisible(true);
 	}
 	
 	PRINTLOG_JW(TEXT("[AgentNPC] AI 응답 대기 종료 - 타이핑 연출 중지"));

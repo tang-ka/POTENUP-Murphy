@@ -7,6 +7,7 @@
 #include "Data/PlayReportData.h"
 #include "PlayReportMainWidget.generated.h"
 
+class UFeedbackMainWidget;
 class UCanvasPanel;
 class UButton;
 class UImage;
@@ -66,12 +67,17 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCanvasPanel> panel_Feedback;
 	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UFeedbackMainWidget> WBP_FeedbackMain;
+	
 protected:
 	virtual void NativeConstruct() override;
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|PlayReport")
 	void DisplayReport(const FPlayReportData& ReportData);
+	
+	UFeedbackMainWidget* GetFeedbackMain() const { return WBP_FeedbackMain; }
 	
 private:
 	UFUNCTION()

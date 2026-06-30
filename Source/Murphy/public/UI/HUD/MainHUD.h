@@ -7,6 +7,7 @@
 #include "Data/TranslateTypes.h"
 #include "MainHUD.generated.h"
 
+class UPlayReportMainWidget;
 class UCaptionWidget;
 class UPhonePopupWidget;
 class UMyMicWidget;
@@ -34,6 +35,8 @@ protected:
 	TObjectPtr<UPhonePopupWidget> WBP_PhonePopup;
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCaptionWidget> WBP_PlayerCaption;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPlayReportMainWidget> WBP_PlayReportMain;
 
 public:
 	virtual void NativeConstruct() override;
@@ -44,8 +47,11 @@ public:
 	void UpdateCaption(const FString& CaptionText);
 	void SetCaptionInteractionActive(bool bIsActive);
 	void ClearCaption();
-
+	
 	UBagPopupWidget* GetBagPopupWidget() const { return WBP_BagPopup; }
+	UPlayReportMainWidget* GetPlayReportMain() const { return WBP_PlayReportMain; }
+	
+	void SetReportVisible(bool bIsVisible);
 
 #pragma region Test
 	/** 외부 진입점: 대화 추가 */

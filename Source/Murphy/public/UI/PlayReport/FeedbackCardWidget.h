@@ -30,11 +30,11 @@ protected:
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UTextBlock> txt_SuggestedExpressions;	// 모범 영어 예문
 	
-	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_PracticePrompt;			// 복습 작문 한글 프롬포트
-	
-	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_AnswerExample;			// 작문 모범 영어 예문
+	// UPROPERTY(meta =(BindWidget))
+	// TObjectPtr<UTextBlock> txt_PracticePrompt;			// 복습 작문 한글 프롬포트
+	// 
+	// UPROPERTY(meta =(BindWidget))
+	// TObjectPtr<UTextBlock> txt_AnswerExample;			// 작문 모범 영어 예문
 	
 	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UImage> img_Star1;

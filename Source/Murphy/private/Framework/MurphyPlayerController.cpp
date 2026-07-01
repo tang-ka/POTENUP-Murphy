@@ -54,6 +54,7 @@
 #include "Manager/AIBridgeSubsystem.h"
 #include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
+#include "Data/CinematicSequenceData.h"
 #include "Framework/Airplane/AirplaneGameMode.h"
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
@@ -89,6 +90,11 @@ void AMurphyPlayerController::BeginPlay()
 
 		const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this, true);
 		NotifyAIResultTriggerLevelEntered(FName(*CurrentLevelName));
+
+		if (CurrentLevelName.Contains(TEXT("Lv_Airplane")))
+		{
+			ShowLevelEnterToastAfterCinematic(FText::FromString(TEXT("비행기(기내)")));
+		}
 	}
 }
 
@@ -654,19 +660,7 @@ void AMurphyPlayerController::OnImmigrationLevelShown()
 {
 	EnsurePrologueRequiredItemsInBag();
 
-	ULocalPlayer* LP = GetLocalPlayer();
-	if (!LP)
-	{
-		return;
-	}
-
-	UUIManagerSubsystem* UIManager = LP->GetSubsystem<UUIManagerSubsystem>();
-	if (!UIManager)
-	{
-		return;
-	}
-
-	UIManager->ShowLevelEnterToast(FText::FromString(TEXT("입국심사")));
+	ShowLevelEnterToastAfterCinematic(FText::FromString(TEXT("입국심사")));
 }
 
 void AMurphyPlayerController::TransitionToBaggageClaim()
@@ -675,15 +669,57 @@ void AMurphyPlayerController::TransitionToBaggageClaim()
 	{
 		return;
 	}
-	
-	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
-	if (!LevelSubsystem)
+
+	// 각 플레이어가 각자 넘어가므로 서버 전역 시퀀스가 아닌 '로컬' 시네마틱으로 검정을 깐다.
+	// 시네마틱 미지정/매니저 없음이면 예전처럼 즉시 스왑으로 폴백.
+	if (!BaggageClaimCinematic || BaggageClaimCinematic->Entries.Num() == 0)
 	{
-		PRINTLOG_SH(TEXT("TransitionToBaggageClaim: LevelStreamingSubsystem is null"));
+		PRINTLOG_SH(TEXT("TransitionToBaggageClaim: BaggageClaimCinematic 미지정 - 즉시 스왑"));
+		StartBaggageClaimSwap();
 		return;
 	}
 
-	// BaggageClaim 레벨이 표시되면 플레이어 이동 & 토스트 출력
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>()
+		: nullptr;
+	if (!CinematicManager)
+	{
+		PRINTLOG_SH(TEXT("TransitionToBaggageClaim: CinematicManagerSubsystem is null - 즉시 스왑"));
+		StartBaggageClaimSwap();
+		return;
+	}
+
+	// 첫 엔트리로 로컬 재생 요청 구성 (단일 클립).
+	const FCinematicEntry& Entry = BaggageClaimCinematic->Entries[0];
+	FCinematicPlayRequest Request;
+	Request.CinematicId = Entry.CinematicId;
+	Request.MediaSource = Entry.Media;
+	Request.Duration = Entry.Duration;
+	Request.bSkippable = Entry.bSkippable;
+	Request.VolumeScale = Entry.VolumeScale;
+	Request.Fade = Entry.Fade;
+
+	// 검정(HoldingBlack) 도달 시 스왑을 태우기 위해 로컬 PlayId 발급 + Hold 신호 1회 구독.
+	BaggageClaimCinematicPlayId = NextLocalCinematicPlayId++;
+	CinematicManager->OnReachedHold.AddUniqueDynamic(this, &AMurphyPlayerController::HandleBaggageClaimCinematicReachedHold);
+
+	// bAutoReleaseHold=false: 스왑/로드가 끝난 뒤 OnBaggageClaimLevelShown에서 직접 ReleaseHold로 리빌한다.
+	CinematicManager->PlayMedia(Request, BaggageClaimCinematicPlayId, /*bInAutoReleaseHold*/ false);
+	PRINTLOG_SH(TEXT("TransitionToBaggageClaim: 로컬 시네마틱 시작 (PlayId=%d)"), BaggageClaimCinematicPlayId);
+}
+
+void AMurphyPlayerController::StartBaggageClaimSwap()
+{
+	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>()
+		: nullptr;
+	if (!LevelSubsystem)
+	{
+		PRINTLOG_SH(TEXT("StartBaggageClaimSwap: LevelStreamingSubsystem is null"));
+		return;
+	}
+
+	// BaggageClaim 레벨이 표시되면 리포지션 & 리빌 & 토스트 처리
 	ULevelStreaming* BaggageLevel = LevelSubsystem->GetStreamingSubLevel(TEXT("SubLevel_BaggageClaim"));
 	if (BaggageLevel)
 	{
@@ -698,6 +734,25 @@ void AMurphyPlayerController::TransitionToBaggageClaim()
 	LatentInfo.Linkage = 0;
 
 	LevelSubsystem->UnloadSubLevel(TEXT("SubLevel_Immigration"), LatentInfo, false);
+}
+
+void AMurphyPlayerController::HandleBaggageClaimCinematicReachedHold(int32 PlayId)
+{
+	if (PlayId != BaggageClaimCinematicPlayId)
+	{
+		return;
+	}
+
+	// 이 신호는 1회만 필요하므로 즉시 구독 해제.
+	if (UCinematicManagerSubsystem* CinematicManager = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>()
+		: nullptr)
+	{
+		CinematicManager->OnReachedHold.RemoveDynamic(this, &AMurphyPlayerController::HandleBaggageClaimCinematicReachedHold);
+	}
+
+	PRINTLOG_SH(TEXT("HandleBaggageClaimCinematicReachedHold: 검정 도달 - 서브레벨 스왑 시작 (PlayId=%d)"), PlayId);
+	StartBaggageClaimSwap();
 }
 
 void AMurphyPlayerController::OnImmigrationLevelHidden()
@@ -728,19 +783,55 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 
 	EnsurePrologueRequiredItemsInBag();
 
+	ShowLevelEnterToastAfterCinematic(FText::FromString(TEXT("수하물 수취장")));
+
+	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
+
+	// 스왑/로드 완료 - 검정 아래에서 리포지션까지 마쳤으니 검정을 풀어 새 레벨을 드러낸다. (로컬 리빌)
+	if (BaggageClaimCinematicPlayId != INDEX_NONE)
+	{
+		if (UCinematicManagerSubsystem* CinematicManager = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>()
+			: nullptr)
+		{
+			CinematicManager->ReleaseHold(BaggageClaimCinematicPlayId);
+		}
+		BaggageClaimCinematicPlayId = INDEX_NONE;
+	}
+}
+
+void AMurphyPlayerController::ShowLevelEnterToastAfterCinematic(const FText& LevelName)
+{
+	UCinematicManagerSubsystem* CinematicManager = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UCinematicManagerSubsystem>()
+		: nullptr;
+
+	if (CinematicManager && CinematicManager->IsPlaying())
+	{
+		PendingLevelEnterToastName = LevelName;
+		CinematicManager->OnCompleted.AddUniqueDynamic(this, &AMurphyPlayerController::HandleCinematicCompletedForLevelEnterToast);
+		return;
+	}
+
 	ULocalPlayer* LP = GetLocalPlayer();
-	if (!LP)
+	UUIManagerSubsystem* UIManager = LP ? LP->GetSubsystem<UUIManagerSubsystem>() : nullptr;
+	if (UIManager)
+	{
+		UIManager->ShowLevelEnterToast(LevelName);
+	}
+}
+
+void AMurphyPlayerController::HandleCinematicCompletedForLevelEnterToast(int32 PlayId)
+{
+	if (!PendingLevelEnterToastName.IsSet())
 	{
 		return;
 	}
 
-	UUIManagerSubsystem* UIManager = LP->GetSubsystem<UUIManagerSubsystem>();
-	if (UIManager)
-	{
-		UIManager->ShowLevelEnterToast(FText::FromString(TEXT("수하물 수취장")));
-	}
+	const FText LevelName = PendingLevelEnterToastName.GetValue();
+	PendingLevelEnterToastName.Reset();
 
-	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
+	ShowLevelEnterToastAfterCinematic(LevelName);
 }
 
 void AMurphyPlayerController::RequestAirplaneScenarioCompleteTravel()

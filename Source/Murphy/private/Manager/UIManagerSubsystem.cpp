@@ -293,25 +293,18 @@ void UUIManagerSubsystem::HandlePostLoadMapWithWorld(UWorld* LoadedWorld)
     TransitionWidget = nullptr;
 
     const FString MapName = LoadedWorld->GetMapName();
-    FText ToastText;
-    
-    if (MapName.Contains(TEXT("Lv_Airplane")))
-    {
-        ToastText = FText::FromString(TEXT("비행기(기내)"));
-    }
-    else if (MapName.Contains(TEXT("Lv_Prologue")))
-    {
-        ToastText = FText::FromString(TEXT("입국심사"));
-    }
-    else
+
+    // 레벨 진입 토스트("비행기(기내)"/"입국심사")는 AMurphyPlayerController가
+    // (BeginPlay / OnImmigrationLevelShown에서) 시네마틱 종료 시점까지 고려해 직접 처리한다.
+    // 여기서는 해당 레벨 진입 시 필요한 퀘스트 소스 재바인딩만 남겨둔다.
+    if (!MapName.Contains(TEXT("Lv_Airplane")) && !MapName.Contains(TEXT("Lv_Prologue")))
     {
         return;
     }
-    
-    LoadedWorld->GetTimerManager().SetTimerForNextTick([this, ToastText]()
+
+    LoadedWorld->GetTimerManager().SetTimerForNextTick([this]()
     {
         BindQuestStateSources();
-        ShowLevelEnterToast(ToastText);
     });
 }
 

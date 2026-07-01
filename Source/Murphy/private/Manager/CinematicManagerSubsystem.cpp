@@ -402,6 +402,12 @@ void UCinematicManagerSubsystem::StartMedia()
 
 	EnsureMediaObjects();
 
+	// 이 재생의 볼륨 배율 적용. (EnsureMediaObjects는 최초 생성 시 1.0으로만 초기화하므로 매 재생마다 여기서 덮어씀)
+	if (MediaSoundComp)
+	{
+		MediaSoundComp->SetVolumeMultiplier(ActiveRequest.VolumeScale);
+	}
+
 	// 프리롤: 검정 페이드 동안 미리 연다. 실제 Play는 MediaFadingIn 진입 시.
 	MediaPlayer->OpenSource(Source);
 }

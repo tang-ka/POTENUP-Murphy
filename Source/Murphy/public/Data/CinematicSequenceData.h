@@ -30,6 +30,10 @@ struct FCinematicEntry
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
 	bool bSkippable = true;
 
+	// 이 클립의 오디오 볼륨 배율 (0 = 무음, 1 = 원음). 클립별 음성 크기 조절용.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic", meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "1.0"))
+	float VolumeScale = 1.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
 	FCinematicFadeParams Fade;
 };

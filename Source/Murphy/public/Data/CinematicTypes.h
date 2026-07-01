@@ -74,6 +74,10 @@ struct FCinematicPlayRequest
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
 	bool bSkippable = false;
 
+	// 오디오 볼륨 배율 (0 = 무음, 1 = 원음). MediaSoundComponent에 적용.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic", meta = (ClampMin = "0.0", UIMin = "0.0", UIMax = "1.0"))
+	float VolumeScale = 1.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cinematic")
 	FCinematicFadeParams Fade;
 };

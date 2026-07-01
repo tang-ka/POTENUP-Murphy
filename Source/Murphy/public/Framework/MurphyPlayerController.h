@@ -13,6 +13,7 @@
 class AAgentNPCBase;
 class UInputAction;
 class UQuestEventNotifyComponent;
+class UCinematicSequenceData;
 
 UCLASS()
 class MURPHY_API AMurphyPlayerController : public APlayerController
@@ -132,6 +133,14 @@ public:
 
 	UFUNCTION()
 	void OnBaggageClaimLevelShown();
+
+	// 시네마틱 재생 중이면 OnCompleted(종료) 시점으로 미뤘다가 레벨 진입 토스트를 띄운다.
+	void ShowLevelEnterToastAfterCinematic(const FText& LevelName);
+
+	UFUNCTION()
+	void HandleCinematicCompletedForLevelEnterToast(int32 PlayId);
+
+	TOptional<FText> PendingLevelEnterToastName;
 #pragma endregion
 	
 	UFUNCTION(Server, Reliable)
@@ -179,4 +188,22 @@ private:
 	// 가방 UI 등 비Actor 호출부도 같은 퀘스트 통보 경로를 쓰도록 PlayerController가 소유합니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UQuestEventNotifyComponent> QuestEventNotifier;
+
+	// BaggageClaim 진입 시 로컬 재생할 시네마틱(단일 클립).
+	// 각자 넘어가는 per-player 전환이라 서버 전역 시퀀스가 아닌 로컬 CinematicManager로 재생한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Murphy|Cinematic", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCinematicSequenceData> BaggageClaimCinematic;
+
+	// 진행 중인 BaggageClaim 로컬 시네마틱의 PlayId. 없으면 INDEX_NONE.
+	int32 BaggageClaimCinematicPlayId = INDEX_NONE;
+
+	// 로컬 시네마틱 PlayId 발급 카운터.
+	int32 NextLocalCinematicPlayId = 1;
+
+	// 검정 도달 후 Immigration 언로드 -> BaggageClaim 로드 스왑을 시작한다.
+	void StartBaggageClaimSwap();
+
+	// 로컬 시네마틱이 검정 Hold에 도달하면 서브레벨 스왑을 태운다.
+	UFUNCTION()
+	void HandleBaggageClaimCinematicReachedHold(int32 PlayId);
 };

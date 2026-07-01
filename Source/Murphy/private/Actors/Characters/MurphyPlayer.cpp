@@ -652,12 +652,13 @@ void AMurphyPlayer::DebugAddTranslateDialog(FName InCategoryName)
 	Entry.Time = FText::FromString(TEXT("12:00"));
 	Entry.Content = FText::FromString(
 		FString::Printf(
-			TEXT("[%s] %s Dialog %d"),
+			TEXT("[%s] %s Dialog %d: This is Dialog content for testing purposes. This dialog is part of the category and is meant to simulate a conversation between the user and the agent."),
 			*InCategoryName.ToString(),
 			bUserDialog ? TEXT("User") : TEXT("Agent"),
 			DisplayIndex
 		)
 	);
+	
 
 	MainHUDInstance->AddTranslateDialog(InCategoryName, Entry);
 

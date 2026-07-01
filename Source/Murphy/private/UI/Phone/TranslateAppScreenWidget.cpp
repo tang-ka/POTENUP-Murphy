@@ -45,7 +45,7 @@ void UTranslateAppScreenWidget::HandleDialogAdded(FName InCategoryName, const FD
 {
 	if (InCategoryName == CurrentCategory)
 	{
-		RefreshDialog(CurrentCategory);
+		AppendDialog(Entry);
 	}
 }
 
@@ -212,7 +212,7 @@ void UTranslateAppScreenWidget::HideActiveDialogWidgets()
 
 	ActiveDialogWidgets.Reset();
 }
-
+	
 void UTranslateAppScreenWidget::RefreshDialog(FName InCategoryName)
 {
 	if (!VB_Dialog)
@@ -246,10 +246,39 @@ void UTranslateAppScreenWidget::RefreshDialog(FName InCategoryName)
 			ActiveDialogWidgets.Add(DialogWidget);
 		}
 	}
-	
+
+	VB_Dialog->ForceLayoutPrepass();
 	Scroll_Dialog->ScrollToEnd();
 
 	PRINTLOG_SH(TEXT("Dialog Refresh: Category=%s, Count=%d"), *InCategoryName.ToString(), Dialogs->Num());
+}
+
+void UTranslateAppScreenWidget::AppendDialog(const FDialogEntry& Entry)
+{
+	if (!VB_Dialog)
+	{
+		return;
+	}
+
+	UUserWidget* DialogWidget = AcquireDialogWidget(Entry);
+	if (!DialogWidget)
+	{
+		return;
+	}
+
+	ApplyDialogData(DialogWidget, Entry);
+	DialogWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	VB_Dialog->AddChild(DialogWidget);
+	ActiveDialogWidgets.Add(DialogWidget);
+
+	VB_Dialog->ForceLayoutPrepass();
+
+	if (Scroll_Dialog)
+	{
+		Scroll_Dialog->ScrollToEnd();
+	}
+
+	PRINTLOG_SH(TEXT("Dialog Appended"));
 }
 
 void UTranslateAppScreenWidget::SyncExistingCategories()

@@ -93,6 +93,7 @@ private:
 	void ApplyDialogData(UUserWidget* DialogWidget, const FDialogEntry& Entry);
 	void HideActiveDialogWidgets();
 	void RefreshDialog(FName InCategoryName);
+	void AppendDialog(const FDialogEntry& Entry);
 	void SyncExistingCategories();
 	void UpdateCategoryButtonSelection(FName InSelectedCategoryName);
 

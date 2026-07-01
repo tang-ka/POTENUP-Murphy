@@ -182,6 +182,7 @@ public:
 
 	// Update Mic UI
 	void SetMicUIState(bool bIsRecording);
+	void SetMicAnimation(bool bIsRecording);
 	
 	void SystemMenuPressed();
 

@@ -232,7 +232,7 @@ void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 	// 오버랩에 따른 마이크 UI 상태(활성화/비활성화) 업데이트
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
-		MurphyPlayer->SetMicUIState(bHasActiveNPC);
+		// MurphyPlayer->SetMicUIState(bHasActiveNPC);
 
 		// 대화 진입~이탈 동안 Translate 연결 표시등 ON/OFF
 		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
@@ -430,11 +430,11 @@ void AMurphyPlayerController::OnAudioRecordingFinished(const FString& SavedFileP
 		PRINTLOGW_JW(TEXT("[Voice Test] NetSubsystem을 통해 서버로 오디오 전송 시작"));
 		NetSubsystem->SendToAI(RequestData, SavedFilePath, Callback);
 		
-		if (MurphyPlayer)
-		{
-			// 마이크 UI 비활성화
-			MurphyPlayer->SetMicUIState(false);
-		}
+		// if (MurphyPlayer)
+		// {
+		 	// 마이크 UI 비활성화
+		// 	MurphyPlayer->SetMicUIState(false);
+		// }
 	}
 }
 
@@ -469,7 +469,7 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 			MurphyPlayer->EndChatWithNPC();
 
 			// 마이크 UI 활성화
-			MurphyPlayer->SetMicUIState(true);
+			// MurphyPlayer->SetMicUIState(true);
 		}
 
 		if (IsAIResultTriggerResponse(ResponseData))

@@ -57,8 +57,8 @@ void UFeedbackCardWidget::InitializeCard(const FPlayReportFeedbackCardData& Card
 	SetTextBlockText(txt_Summary, CardData.Summary);
 	SetTextBlockText(txt_OriginalUtterances, FString::Join(CardData.OriginalUtterances, TEXT("\n")));
 	SetTextBlockText(txt_SuggestedExpressions, FString::Join(CardData.SuggestedExpressions, TEXT("\n")));
-	SetTextBlockText(txt_PracticePrompt, CardData.PracticePrompt);
-	SetTextBlockText(txt_AnswerExample, CardData.AnswerExample);
+	// SetTextBlockText(txt_PracticePrompt, CardData.PracticePrompt);
+	// SetTextBlockText(txt_AnswerExample, CardData.AnswerExample);
 
 	const int32 StarCount = GetStarCountFromPriority(CardData.Priority);
 	SetStarVisibility(img_Star1, StarCount >= 1);

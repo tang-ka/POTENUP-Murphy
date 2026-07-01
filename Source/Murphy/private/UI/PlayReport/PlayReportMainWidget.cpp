@@ -44,7 +44,6 @@ void UPlayReportMainWidget::NativeConstruct()
 
 void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 {
-	// TODO: 현진 텍스트 색 수정
 	// === 성공 여부 표시 ===
 	if (txt_Result)
 	{
@@ -62,8 +61,17 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 	
 	// === 상단 영역 (총점, 티어) 갱신 ===
 	if (txt_TotalScore)
-	{
-		txt_TotalScore->SetText(FText::AsNumber(ReportData.TotalScore));
+	{		
+		if (ReportData.bIsGameClear)
+		{
+			txt_TotalScore->SetText(FText::AsNumber(ReportData.TotalScore));
+			txt_TotalScore->SetColorAndOpacity(FSlateColor(FLinearColor(0.409698f,1.0f,0.247795f)));
+		}
+		else
+		{
+			txt_TotalScore->SetText(FText::AsNumber(ReportData.TotalScore));
+			txt_TotalScore->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 0.055f, 0.026f)));
+		}
 	}
 
 	if (txt_TierName)

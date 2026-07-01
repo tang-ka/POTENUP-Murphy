@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "FeedbackMainWidget.generated.h"
 
+class UButton;
 struct FPlayReportData;
 class UTextBlock;
 class UScrollBox;
@@ -29,17 +30,28 @@ protected:
 	TSubclassOf<UFeedbackCardWidget> FeedbackCardClass;
 	
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_Overall;				// 최종 총평
-
-	UPROPERTY(meta =(BindWidget))
 	TObjectPtr<UTextBlock> txt_MainImprovement;		// 핵심 개선 가이드
 	
 	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_NextPracticePrompt;	// 다음 플레이 추천 연습 문제
+	TObjectPtr<UButton> btn_GoMain;
 	
-	UPROPERTY(meta =(BindWidget))
-	TObjectPtr<UTextBlock> txt_NextAnswerExample;	// 다음 플레이 추천 모범 답안
+	// UPROPERTY(meta =(BindWidget))
+	// TObjectPtr<UTextBlock> txt_Overall;				// 최종 총평
+
+	
+	// UPROPERTY(meta =(BindWidget))
+	// TObjectPtr<UTextBlock> txt_NextPracticePrompt;	// 다음 플레이 추천 연습 문제
+	// 
+	// UPROPERTY(meta =(BindWidget))
+	// TObjectPtr<UTextBlock> txt_NextAnswerExample;	// 다음 플레이 추천 모범 답안
 	
 public:
 	void DisplayFeedback(const FPlayReportData& ReportData);
+	
+protected:
+	virtual void NativeConstruct() override;
+	
+private:
+	UFUNCTION()
+	void HandleBtnGoMainClicked();
 };

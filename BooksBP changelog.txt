@@ -1,0 +1,19 @@
+V2
+- Resorted directories
+- Added 4 cover atlas arch style material
+- added billboards for easier selections
+
+V1.4
+- Added 'Cover' blueprints, Book03 and materials for use with simple custom material atlas
+- Added examples in demo level
+
+V1.3
+- added odessa inspired bookshelf mesh with material variations
+- added 5 book end meshes with material variations
+- added 2 shorter book shelves and material variations
+- added more examples to example level
+- added more colourful book cover variations
+- increased some values for sliders in book blueprint
+- fixed missing random node in book material
+- added more folder materials
+- added a simplified version for single books instead of using the standard book material for single books 

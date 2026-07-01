@@ -14,8 +14,14 @@ class MURPHY_API UMyMicWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
+public:
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> Recording;
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> ShowMic;
 	
 public:
 	void SetRecordingState(bool bIsRecording);
+	void RecordingAnimation(bool bIsRecording);
 	
 };

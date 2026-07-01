@@ -87,6 +87,14 @@ void UMainHUD::UpdateMicState(bool bIsRecording)
 	}
 }
 
+void UMainHUD::UpdateMicAnimation(bool bIsRecording)
+{
+	if (WBP_MyMic)
+	{
+		WBP_MyMic->RecordingAnimation(bIsRecording);
+	}
+}
+
 void UMainHUD::UpdateCaption(const FString& CaptionText)
 {
 	if (!bCaptionInteractionActive || !WBP_PlayerCaption)

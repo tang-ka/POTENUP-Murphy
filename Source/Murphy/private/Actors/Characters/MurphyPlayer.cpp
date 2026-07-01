@@ -476,8 +476,9 @@ void AMurphyPlayer::STTRecordStart(const FInputActionValue& Value)
 
 	STTWebSocketComp->Connect(SessionPayload);
 	VoiceRecorderComp->StartRecording();
-
-	SetMicUIState(false);
+	
+	SetMicUIState(true);
+	SetMicAnimation(true);
 	SetChatState(EPlayerChatState::Recording);
 	RecordTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 }
@@ -500,6 +501,7 @@ void AMurphyPlayer::STTRecordEnd(const FInputActionValue& Value)
 
 	VoiceRecorderComp->StopRecording(TEXT(""), false);
 	SetMicUIState(false);
+	SetMicAnimation(false);
 	SetChatState(EPlayerChatState::WaitingForAI);
 }
 
@@ -782,5 +784,13 @@ void AMurphyPlayer::SetMicUIState(bool bIsRecording)
 	if (MainHUDInstance != nullptr)
 	{
 		MainHUDInstance->UpdateMicState(bIsRecording);
+	}
+}
+
+void AMurphyPlayer::SetMicAnimation(bool bIsRecording)
+{
+	if (MainHUDInstance != nullptr)
+	{
+		MainHUDInstance->UpdateMicAnimation(bIsRecording);
 	}
 }

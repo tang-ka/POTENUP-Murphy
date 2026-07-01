@@ -94,6 +94,14 @@ void UMainHUD::UpdateCaption(const FString& CaptionText)
 		return;
 	}
 
+	if (CaptionText.IsEmpty())
+	{
+		// STT 이벤트는 도착했지만 인식된 텍스트가 아직 없는 상태 → "..."로 표시
+		WBP_PlayerCaption->SetCaption(TEXT("..."));
+		WBP_PlayerCaption->SetCaptionVisible(true);
+		return;
+	}
+
 	WBP_PlayerCaption->SetCaption(CaptionText);
 	WBP_PlayerCaption->SetCaptionVisible(true);
 }
@@ -107,13 +115,14 @@ void UMainHUD::SetCaptionInteractionActive(bool bIsActive)
 		return;
 	}
 
-	if (bCaptionInteractionActive)
+	if (!bCaptionInteractionActive)
 	{
-		WBP_PlayerCaption->SetCaptionVisible(true);
-		return;
+		// 대화 종료 시에만 즉시 숨김 + 텍스트 초기화
+		WBP_PlayerCaption->ClearCaption();
 	}
 
-	WBP_PlayerCaption->ClearCaption();
+	// bIsActive == true 인 경우 여기서 강제로 켜지 않는다.
+	// 실제 표시는 STT 텍스트가 도착하는 UpdateCaption()에서만 수행 (STT 나올 때만 켜짐)
 }
 
 void UMainHUD::ClearCaption()

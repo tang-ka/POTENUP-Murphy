@@ -40,7 +40,7 @@ protected:
 	
 	// 점수별 색상 세팅
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	FLinearColor PerfectColor = FLinearColor(0.2f, 0.8f, 0.4f);		// 100
+	FLinearColor PerfectColor = FLinearColor(0.979f, 0.382f, 0.0f);		// 100
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
 	FLinearColor ExcellentColor = FLinearColor(0.4f, 0.f, 0.9f);		// 90~99
@@ -52,7 +52,7 @@ protected:
 	FLinearColor NormalColor = FLinearColor(0.6f, 0.8f, 0.2f);		// 50~69
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Murphy|PlayReport")
-	FLinearColor PoorColor = FLinearColor(0.9f, 0.6f, 0.4f);			// 50 미만
+	FLinearColor PoorColor = FLinearColor(1.0f, 0.3f, 0.4f);			// 50 미만
 	
 private:
 	// 점수에 따라 알맞은 색상 선택하는 내부 함수

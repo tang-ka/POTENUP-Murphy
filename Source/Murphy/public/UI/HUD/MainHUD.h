@@ -44,6 +44,7 @@ public:
 	void RequestToggleBag();
 	void RequestTogglePhone();
 	void UpdateMicState(bool bIsRecording);
+	void UpdateMicAnimation(bool bIsRecording);
 	void UpdateCaption(const FString& CaptionText);
 	void SetCaptionInteractionActive(bool bIsActive);
 	void ClearCaption();

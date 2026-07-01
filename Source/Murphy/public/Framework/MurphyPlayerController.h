@@ -115,6 +115,8 @@ public:
 	// 최종 점수판 신호 응답 후 결과 조회 API를 호출합니다.
 	UFUNCTION()
 	void OnFinalScoreboardSignalResponse(const FAIResponseData& ResponseData);
+
+	void RequestAIResultForSession(const FString& SessionId);
 	
 	// 1분 타임아웃 시 AgentNPCBase가 호출할 함수
 	void SendTimeoutAudioToAI();
@@ -161,7 +163,6 @@ private:
 	FAIRequestData GenerateFinalScoreboardSignalRequestData();
 	bool IsAIResultTriggerResponse(const FAIResponseData& ResponseData) const;
 	bool ShouldTriggerFinalScoreboardForLevel(FName EnteredLevelName) const;
-	void RequestAIResultForSession(const FString& SessionId);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
 	FName FinalScoreboardTriggerLevelName = NAME_None;

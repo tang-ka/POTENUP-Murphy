@@ -125,10 +125,14 @@ void UPlayerViewComponent::TickThirdPersonFocusAlign(float DeltaSeconds)
 
 	if (AController* Controller = OwnerCharacter->GetController())
 	{
-		FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), ThirdPersonFocusCamRot, DeltaSeconds, RotationInterpSpeed);
+		FRotator TargetCamRot = TargetRot;
+		TargetCamRot.Pitch = ThirdPersonFocusCamRot.Pitch;
+		TargetCamRot.Roll = ThirdPersonFocusCamRot.Roll;
+
+		FRotator CamRot = FMath::RInterpTo(Controller->GetControlRotation(), TargetCamRot, DeltaSeconds, RotationInterpSpeed);
 		Controller->SetControlRotation(CamRot);
 
-		bCamAligned = Controller->GetControlRotation().Equals(ThirdPersonFocusCamRot, AlignToleranceDeg);
+		bCamAligned = Controller->GetControlRotation().Equals(TargetCamRot, AlignToleranceDeg);
 	}
 
 	if (bActorAligned && bCamAligned)

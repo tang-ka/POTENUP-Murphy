@@ -27,6 +27,16 @@ void UTranslateDialogManager::AddDialog(FName InCategoryName, const FDialogEntry
 	OnDialogAdded.Broadcast(InCategoryName, Entry);
 }
 
+void UTranslateDialogManager::SetActiveCategory(FName InCategoryName)
+{
+	ActiveCategory = InCategoryName;
+}
+
+FName UTranslateDialogManager::GetActiveCategory() const
+{
+	return ActiveCategory;
+}
+
 bool UTranslateDialogManager::HasCategory(FName InCategoryName) const
 {
 	return DialogDataMap.Contains(InCategoryName);

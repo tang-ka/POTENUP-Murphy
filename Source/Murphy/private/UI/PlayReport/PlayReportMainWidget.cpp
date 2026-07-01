@@ -8,6 +8,7 @@
 #include "Components/TextBlock.h"
 #include "Data/GameDataTypes.h"
 #include "Manager/DataManager.h"
+#include "UI/PlayReport/FeedbackMainWidget.h"
 #include "UI/PlayReport/PlayReportItemWidget.h" 
 
 void UPlayReportMainWidget::NativeConstruct()
@@ -126,6 +127,10 @@ void UPlayReportMainWidget::DisplayReport(const FPlayReportData& ReportData)
 		item_ProblemSolving->InitializeItem(TEXT("Problem Solving"), TEXT("문제해결력"), ReportData.ProblemSolvingScore);
 	}
 	
+	if (WBP_FeedbackMain)
+	{
+		WBP_FeedbackMain->DisplayFeedback(ReportData);
+	}
 }
 
 void UPlayReportMainWidget::OnNextButtonClicked()

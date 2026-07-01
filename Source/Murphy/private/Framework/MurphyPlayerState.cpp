@@ -148,6 +148,7 @@ FPlayReportData AMurphyPlayerState::BuildPlayReportDataFromAIResult(const FAIRes
 	const FAIOutGameFeedback& OutGameFeedback = InResult.out_game_feedback;
 
 	ReportData.TierName = FinalResult.tier;
+	ReportData.bIsGameClear = !FinalResult.tier.Equals(TEXT("Iron"), ESearchCase::IgnoreCase);
 	ReportData.TotalScore = FinalResult.final_score_100 > 0 ? FinalResult.final_score_100 : Scores.overall;
 	ReportData.ComprehensionScore = Scores.comprehension;
 	ReportData.ClarityScore = Scores.clarity;

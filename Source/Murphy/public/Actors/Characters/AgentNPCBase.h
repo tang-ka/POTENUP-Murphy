@@ -210,7 +210,7 @@ protected:
 	// 타이핑 연출 시작 및 종료 내부 함수
 	void StartTypingWait();
 	void StopTypingWait();
-	void RequestAIResultForCurrentSession();
+	void RequestAIResultForCurrentSession(bool bShowUI = false);
 	
 public:
 	// NPC음성 재생 끝났을 때 호출 될 함수

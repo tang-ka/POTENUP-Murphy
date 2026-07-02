@@ -782,7 +782,7 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 			}
 		}
 
-		RequestAIResultForCurrentSession();
+		RequestAIResultForCurrentSession(true); // 배드엔딩의 경우 즉시 표출
 	}
 	
 	// ==========================================================
@@ -991,6 +991,12 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	// if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	{
+		bool bShouldShowUI = false;
+		if (ResponseData.next_node_id == TEXT("BAG_999_COMPLETE"))
+		{
+			bShouldShowUI = true;
+		}
+
 		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
 		if (ResponseData.next_node_id == TEXT("FLIGHT_999_COMPLETE"))
 		{
@@ -1011,11 +1017,9 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 				}
 			}
 		}
-		//. 수하물에서 시나리오 끝난 경우 Report UI 띄우기
-		else if (ResponseData.next_node_id == TEXT("BAG_999_COMPLETE"))
-		{
-			RequestAIResultForCurrentSession();
-		}
+
+		// 비행기, 입국심사, 수하물 챕터 공통적으로 AI 결과 조회를 요청하되, UI 표출 여부만 조절
+		RequestAIResultForCurrentSession(bShouldShowUI);
 		
 		if (IsValid(InteractionBox))
 		{
@@ -1027,13 +1031,13 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	}
 }
 
-void AAgentNPCBase::RequestAIResultForCurrentSession()
+void AAgentNPCBase::RequestAIResultForCurrentSession(bool bShowUI)
 {
 	if (UWorld* World = GetWorld())
 	{
 		if (AMurphyPlayerController* MPC = Cast<AMurphyPlayerController>(World->GetFirstPlayerController()))
 		{
-			MPC->RequestAIResultForSession(CurrentSessionId);
+			MPC->RequestAIResultForSession(CurrentSessionId, bShowUI);
 		}
 	}
 }

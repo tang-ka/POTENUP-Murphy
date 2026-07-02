@@ -501,12 +501,12 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 
 		if (IsAIResultTriggerResponse(ResponseData))
 		{
-			RequestAIResultForSession(ResultSessionId);
+			RequestAIResultForSession(ResultSessionId, true);
 		}
 	}
 }
 
-void AMurphyPlayerController::OnAIResultReceived(const FAIResultResponse& ResultData)
+void AMurphyPlayerController::OnAIResultReceived_Silent(const FAIResultResponse& ResultData)
 {
 	if (ResultData.session_id.IsEmpty() && ResultData.contract_version.IsEmpty())
 	{
@@ -522,12 +522,21 @@ void AMurphyPlayerController::OnAIResultReceived(const FAIResultResponse& Result
 	}
 
 	MurphyPlayerState->SaveAIResult(ResultData);
-	PRINTLOGW_JW(TEXT("[AIResult] 최종 결과 저장 완료: session_id=%s, tier=%s, score=%d"),
+	PRINTLOGW_JW(TEXT("[AIResult] 최종 결과(Silent) 저장 완료: session_id=%s, tier=%s, score=%d"),
 		*ResultData.session_id,
 		*ResultData.final_result.tier,
 		ResultData.final_result.final_score_100);
+}
 
-	// UI 표시 및 데이터 바인딩
+void AMurphyPlayerController::OnAIResultReceived_ShowUI(const FAIResultResponse& ResultData)
+{
+	// 1. 데이터 저장 (Silent와 동일)
+	OnAIResultReceived_Silent(ResultData);
+	
+	AMurphyPlayerState* MurphyPlayerState = GetPlayerState<AMurphyPlayerState>();
+	if (!MurphyPlayerState) return;
+
+	// 2. UI 표시 및 데이터 바인딩
 	if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
 	{
 		if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
@@ -541,7 +550,7 @@ void AMurphyPlayerController::OnAIResultReceived(const FAIResultResponse& Result
 		}
 	}
 
-	// 성적표 조작을 위한 인풋 모드 설정
+	// 3. 성적표 조작을 위한 인풋 모드 설정
 	bShowMouseCursor = true;
 	FInputModeUIOnly InputMode;
 	SetInputMode(InputMode);
@@ -558,7 +567,7 @@ void AMurphyPlayerController::OnFinalScoreboardSignalResponse(const FAIResponseD
 		*ResponseData.next_node_id,
 		*ResponseData.next_action);
 
-	RequestAIResultForSession(ResultSessionId);
+	RequestAIResultForSession(ResultSessionId, true);
 }
 
 FString AMurphyPlayerController::GetOrCreateAIPlaySessionId()
@@ -611,7 +620,7 @@ bool AMurphyPlayerController::ShouldTriggerFinalScoreboardForLevel(FName Entered
 		&& EnteredLevelName == FinalScoreboardTriggerLevelName;
 }
 
-void AMurphyPlayerController::RequestAIResultForSession(const FString& SessionId)
+void AMurphyPlayerController::RequestAIResultForSession(const FString& SessionId, bool bShowUI)
 {
 	const FString TrimmedSessionId = SessionId.TrimStartAndEnd();
 	if (TrimmedSessionId.IsEmpty())
@@ -630,7 +639,14 @@ void AMurphyPlayerController::RequestAIResultForSession(const FString& SessionId
 	}
 
 	FOnAIResultReceived Callback;
-	Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResultReceived);
+	if (bShowUI)
+	{
+		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResultReceived_ShowUI);
+	}
+	else
+	{
+		Callback.BindDynamic(this, &AMurphyPlayerController::OnAIResultReceived_Silent);
+	}
 	NetSubsystem->RequestAIResult(TrimmedSessionId, Callback);
 }
 

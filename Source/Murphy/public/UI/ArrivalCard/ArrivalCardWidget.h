@@ -39,6 +39,10 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> Btn_Close;
 	
+	// Animation
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> Blink;
+	
 protected:
 	virtual void NativeConstruct() override;
 	
@@ -51,6 +55,9 @@ public:
 	
 	UFUNCTION()
 	void OnCloseClicked();
+	
+	UFUNCTION()
+	void Blinking(bool bIsBlink);
 
 private:
 	// 텍스트 입력 검사 함수

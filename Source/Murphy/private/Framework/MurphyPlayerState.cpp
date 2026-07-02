@@ -132,7 +132,15 @@ void AMurphyPlayerState::ServerEnsureOwnedItems_Implementation(const TArray<FNam
 void AMurphyPlayerState::SaveAIResult(const FAIResultResponse& InResult)
 {
 	LastAIResult = InResult;
-	LastPlayReportData = BuildPlayReportDataFromAIResult(InResult);
+	FPlayReportData NewData = BuildPlayReportDataFromAIResult(InResult);
+	
+	// 새로 받은 피드백 카드들을 누적 리스트에 추가
+	AccumulatedFeedbackCards.Append(NewData.FeedbackCards);
+	
+	// 최종 데이터의 피드백 카드를 '누적된 전체 리스트'로 교체
+	NewData.FeedbackCards = AccumulatedFeedbackCards;
+	
+	LastPlayReportData = NewData;
 	bHasPlayReportData = true;
 
 	OnPlayReportDataUpdated.Broadcast();

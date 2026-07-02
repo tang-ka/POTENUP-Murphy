@@ -233,6 +233,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
 	bool bHasPlayReportData = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|PlayReport", meta = (AllowPrivateAccess = "true"))
+	TArray<FPlayReportFeedbackCardData> AccumulatedFeedbackCards;
 #pragma endregion
 
 };

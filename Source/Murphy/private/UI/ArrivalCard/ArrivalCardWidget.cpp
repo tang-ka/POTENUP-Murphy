@@ -3,6 +3,7 @@
 
 #include "UI/ArrivalCard/ArrivalCardWidget.h"
 
+#include "Murphy.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/TextBlock.h"
@@ -52,7 +53,7 @@ void UArrivalCardWidget::SetReadOnlyData(const FText& InSurname, const FText& In
 	
 	// 텍스트 복사
 	txt_SurnameDisplay->SetText(InSurname);
-	txt_GivennameDisplay->SetText(InGivenname);
+	txt_GivennameDisplay->SetText(InGivenname);  
 	
 	etxt_Surname->SetVisibility(ESlateVisibility::Collapsed);
 	etxt_Givenname->SetVisibility(ESlateVisibility::Collapsed);
@@ -62,7 +63,21 @@ void UArrivalCardWidget::SetReadOnlyData(const FText& InSurname, const FText& In
 
 void UArrivalCardWidget::OnCloseClicked()
 {
+	Blinking(false);
+	
 	RemoveFromParent();
+}
+
+void UArrivalCardWidget::Blinking(bool bIsBlink)
+{
+	if (bIsBlink)
+	{
+		PlayAnimation(Blink, 0, 0, EUMGSequencePlayMode::PingPong);
+	}
+	else
+	{
+		StopAnimation(Blink);
+	}
 }
 
 void UArrivalCardWidget::OnSurnameTextChanged(const FText& Text)
@@ -140,13 +155,11 @@ void UArrivalCardWidget::UpdateUI()
 			FString CombinedStr = FString::Printf(TEXT("%s (%s)"), *FoundLoc->NameEN, *FoundLoc->NameKR);
 			txt_VisitLocation->SetText(FText::FromString(CombinedStr));
             
-			// [성공] 화면에 초록색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 장소: %s"), *CombinedStr));
+			PRINTLOG_HJ(TEXT("[Row 성공] 장소: %s"), *CombinedStr);
 		}
 		else
 		{
-			// [실패] 데이터 테이블에 해당 ID(RowName)가 없을 때 빨간색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("[Row 실패] 장소 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *LocID));
+			PRINTLOG_HJ(TEXT("[Row 성공] 장소 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *LocID);
 		}
 	}
 
@@ -158,13 +171,11 @@ void UArrivalCardWidget::UpdateUI()
 			FString CombinedStr = FString::Printf(TEXT("%s (%s)"), *FoundItm->NameEN, *FoundItm->NameKR);
 			txt_CustomsItem->SetText(FText::FromString(CombinedStr));
 
-			// [성공] 화면에 초록색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[Row 성공] 물품: %s"), *CombinedStr));
+			PRINTLOG_HJ(TEXT("[Row 성공] 물품: %s"), *CombinedStr);
 		}
 		else
 		{
-			// [실패] 데이터 테이블에 해당 ID(RowName)가 없을 때 빨간색으로 띄움
-			if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("[Row 실패] 물품 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *ItmID));
+			PRINTLOG_HJ(TEXT("[Row 실패] 물품 ID '%s'를 데이터 테이블에서 찾을 수 없음!"), *ItmID);
 		}
 	}
 }
@@ -176,5 +187,6 @@ void UArrivalCardWidget::InitFromItemUse_Implementation(const FItemTableRow& Ite
 	{
 		SetReadOnlyData(FText::FromString(PS->SavedSurname), FText::FromString(PS->SavedGivenname));
 		UpdateUI();
+		Blinking(true);
 	}
 }

@@ -114,13 +114,16 @@ public:
 
 	// 최종 결과 조회 API 응답을 PlayerState에 저장합니다.
 	UFUNCTION()
-	void OnAIResultReceived(const FAIResultResponse& ResultData);
+	void OnAIResultReceived_Silent(const FAIResultResponse& ResultData);
+
+	UFUNCTION()
+	void OnAIResultReceived_ShowUI(const FAIResultResponse& ResultData);
 
 	// 최종 점수판 신호 응답 후 결과 조회 API를 호출합니다.
 	UFUNCTION()
 	void OnFinalScoreboardSignalResponse(const FAIResponseData& ResponseData);
 
-	void RequestAIResultForSession(const FString& SessionId);
+	void RequestAIResultForSession(const FString& SessionId, bool bShowUI);
 	
 	// 1분 타임아웃 시 AgentNPCBase가 호출할 함수
 	void SendTimeoutAudioToAI();

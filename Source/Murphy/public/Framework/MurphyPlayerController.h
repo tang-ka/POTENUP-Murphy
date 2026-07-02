@@ -64,6 +64,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyQuestConditionMet(FName TargetID, EQuestCondition Condition);
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyPrologueAINodeReached(FName NodeId);
+
 private:
 	void BindLocalQuestStateSources();
 	void EnsurePrologueRequiredItemsInBag();

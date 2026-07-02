@@ -57,6 +57,8 @@
 #include "Framework/Airplane/AirplaneGameMode.h"
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
+#include "Framework/Prologue/PrologueGameMode.h"
+#include "Framework/Prologue/PrologueGameState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/BagPopupWidget.h"
@@ -305,6 +307,20 @@ void AMurphyPlayerController::ServerNotifyQuestConditionMet_Implementation(FName
 	PRINTLOGW_JW(TEXT("[Quest] MurphyGameStateBase가 없어 퀘스트 완료 이벤트를 처리하지 못했습니다. TargetID: %s"), *TargetID.ToString());
 }
 
+void AMurphyPlayerController::ServerNotifyPrologueAINodeReached_Implementation(FName NodeId)
+{
+	if (NodeId.IsNone())
+	{
+		return;
+	}
+
+	APrologueGameMode* PrologueGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<APrologueGameMode>() : nullptr;
+	if (PrologueGameMode)
+	{
+		PrologueGameMode->HandleAINodeReached(NodeId);
+	}
+}
+
 void AMurphyPlayerController::BindLocalQuestStateSources()
 {
 	if (!IsLocalController())
@@ -456,6 +472,11 @@ void AMurphyPlayerController::OnAIResponseReceived(const FAIResponseData& Respon
 		PRINTLOGW_JW(TEXT("response.next_node_id: %s"), *ResponseData.next_node_id);
 		PRINTLOGW_JW(TEXT("response.npc.text: %s"), *ResponseData.npc.text);
 		PRINTLOGW_JW(TEXT("갱신된 Local CurrentNodeId: %s"), *CurrentNPC->GetCurrentNodeId());
+
+		if (ResponseData.next_action == TEXT("ADVANCE") && !ResponseData.next_node_id.IsEmpty())
+		{
+			ServerNotifyPrologueAINodeReached(FName(*ResponseData.next_node_id));
+		}
 
 		// AI 응답이 도착해 대화가 끝나면 NPC점유 해제 및 상태 초기화
 		if (AMurphyPlayer* MurphyPlayer = Cast<AMurphyPlayer>(GetPawn()))
@@ -727,6 +748,11 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 	NotifyAIResultTriggerLevelEntered(FName(TEXT("SubLevel_BaggageClaim")));
 
 	EnsurePrologueRequiredItemsInBag();
+
+	if (APrologueGameState* PrologueGameState = GetWorld() ? GetWorld()->GetGameState<APrologueGameState>() : nullptr)
+	{
+		PrologueGameState->ApplyBaggageCustomsHoldActorState();
+	}
 
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)

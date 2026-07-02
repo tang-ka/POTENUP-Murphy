@@ -109,6 +109,27 @@ void APrologueGameMode::OnImmigrationLevelShown()
 void APrologueGameMode::OnBaggageClaimLevelShown()
 {
 	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);
+
+	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
+	{
+		PrologueGameState->SetBaggageCustomsHoldActorsActive(false);
+	}
+}
+
+void APrologueGameMode::HandleAINodeReached(FName NodeId)
+{
+	if (NodeId != BaggageCustomsHoldNodeId)
+	{
+		return;
+	}
+
+	APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	if (!PrologueGameState || PrologueGameState->GetCurrentScenario() != EScenarioType::Prologue_Baggage)
+	{
+		return;
+	}
+
+	PrologueGameState->SetBaggageCustomsHoldActorsActive(true);
 }
 
 void APrologueGameMode::StartScenarioIfNeeded(EScenarioType ScenarioType)

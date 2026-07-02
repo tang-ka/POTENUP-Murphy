@@ -15,6 +15,8 @@ class MURPHY_API APrologueGameMode : public AMurphyGameModeBase
 public:
 	APrologueGameMode();
 
+	void HandleAINodeReached(FName NodeId);
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -27,4 +29,7 @@ private:
 	void OnBaggageClaimLevelShown();
 
 	void StartScenarioIfNeeded(EScenarioType ScenarioType);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Baggage Claim", meta = (AllowPrivateAccess = "true"))
+	FName BaggageCustomsHoldNodeId = TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD");
 };

@@ -144,14 +144,7 @@ void AMurphyPlayer::SetupLocalPlayerUI()
 		if (MainHUDInstance != nullptr)
 		{
 			MainHUDInstance->AddToViewport();
-
-			// 캐릭터 빙의 시 마우스를 기본(게임 전용) 상태로 초기화
-			if (APlayerController* PC = Cast<APlayerController>(GetController()))
-			{
-				PC->SetShowMouseCursor(false);
-				PC->SetInputMode(FInputModeGameOnly());
-				PRINTLOG_SH(TEXT("SetupLocalPlayerUI: 마우스 입력 모드 기본값(GameOnly) 초기화 완료"));
-			}
+			// 입력모드/커서는 HUD 생성이 아니라 각 레벨 BP가 결정한다. (여기서 강제하지 않음)
 		}
 	}
 

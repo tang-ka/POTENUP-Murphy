@@ -35,6 +35,10 @@ protected:
 	// PlayerState의 SelectedCharacter 값에 따라 스폰할 폰 클래스를 분기한다.
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
+	// PlayerState의 SelectedCharacter 값에 따라 스폰 위치(PlayerStart)를 분기한다.
+	// 레벨의 PlayerStart에 PlayerStartTag("Boy" / "Girl")를 설정해야 동작한다.
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+
 	// 필요 인원 도착 시 레벨 시네마틱 시퀀스를 1회 시작한다.
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 

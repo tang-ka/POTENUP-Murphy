@@ -30,6 +30,9 @@ UCLASS()
 class MURPHY_API AMurphyGameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()
+	
+protected:
+	virtual void BeginPlay() override;
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -68,9 +71,6 @@ public:
 	{
 		return LevelCinematic;
 	}
-
-protected:
-	virtual void BeginPlay() override;
 
 	const FScenarioTableRow* GetCurrentScenarioData() const;
 

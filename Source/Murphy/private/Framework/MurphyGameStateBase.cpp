@@ -1,7 +1,9 @@
 #include "Framework/MurphyGameStateBase.h"
 
+#include "Actors/Characters/MurphyPlayer.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Manager/DataManager.h"
+#include "Murphy.h"
 #include "Net/UnrealNetwork.h"
 #include "Quest/QuestRuntimeHelper.h"
 
@@ -14,6 +16,33 @@ void AMurphyGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AMurphyGameStateBase, SharedCurrentSubQuestIndex);
 	DOREPLIFETIME(AMurphyGameStateBase, ScenarioCompletedPlayers);
 	DOREPLIFETIME(AMurphyGameStateBase, CurrentResultState);
+	DOREPLIFETIME(AMurphyGameStateBase, ChatViewMode);
+}
+
+void AMurphyGameStateBase::SetChatViewMode(EChatViewMode NewMode)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	ChatViewMode = NewMode;
+	PRINTLOG_SH(TEXT("[GameState] ChatViewMode(%d) 설정"), static_cast<int32>(ChatViewMode));
+}
+
+void AMurphyGameStateBase::OnRep_ChatViewMode()
+{
+	// 클라이언트: 복제된 시점 모드를 로컬 컨트롤 폰에 반영
+	APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	if (!PC)
+	{
+		return;
+	}
+
+	if (AMurphyPlayer* LocalPlayer = Cast<AMurphyPlayer>(PC->GetPawn()))
+	{
+		LocalPlayer->ApplyChatViewMode();
+	}
 }
 
 void AMurphyGameStateBase::StartScenario(EScenarioType NewScenario)

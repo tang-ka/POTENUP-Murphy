@@ -11,6 +11,16 @@
 #include "GameFramework/PlayerStart.h"
 #include "EngineUtils.h"
 
+void AMurphyGameModeBase::InitGameState()
+{
+	Super::InitGameState();
+
+	if (AMurphyGameStateBase* MurphyGameState = GetGameState<AMurphyGameStateBase>())
+	{
+		MurphyGameState->SetChatViewMode(ChatViewMode);
+	}
+}
+
 UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
 	const AMurphyPlayerState* MurphyPS = InController ? InController->GetPlayerState<AMurphyPlayerState>() : nullptr;

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/GameDataTypes.h"
+#include "Components/PlayerViewComponent.h" // EChatViewMode 사용
 #include "GameFramework/GameStateBase.h"
 #include "MurphyGameStateBase.generated.h"
 
@@ -47,6 +48,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Murphy|Quest")
 	const TArray<FQuestRuntimeData>& GetSharedActiveQuests() const { return SharedActiveQuests; }
 
+	// 씬 단위 대화 시점 모드 (GameMode 값을 복제해 클라에도 전달)
+	UFUNCTION(BlueprintPure, Category = "Murphy|View")
+	EChatViewMode GetChatViewMode() const
+	{
+		return ChatViewMode;
+	}
+
+	// 서버 전용: GameMode가 InitGameState에서 호출해 복제 값 세팅
+	void SetChatViewMode(EChatViewMode NewMode);
+
 	const FScenarioTableRow* GetCurrentScenarioData() const;
 
 	// PlayerController RPC가 도착하면 ScenarioData 정책에 따라 개인/공유 저장소로 라우팅합니다.
@@ -91,6 +102,9 @@ protected:
 	UFUNCTION()
 	void OnRep_ScenarioCompletedPlayers();
 
+	UFUNCTION()
+	void OnRep_ChatViewMode();
+
 private:
 	// 개인 시나리오는 모든 플레이어의 PlayerState에 각각 같은 시나리오를 시작시킵니다.
 	void StartPersonalScenarioForAllPlayers(const FScenarioTableRow* ScenarioData);
@@ -130,6 +144,10 @@ private:
 	// 현재 게임 클리어/오버 상태
 	UPROPERTY(ReplicatedUsing = OnRep_GameResultState, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|GameResult", meta = (AllowPrivateAccess = "true"))
 	EGameResultState CurrentResultState = EGameResultState::Playing;
+
+	// GameMode의 씬 단위 시점 설정을 클라에 전달하기 위한 복제 값
+	UPROPERTY(ReplicatedUsing = OnRep_ChatViewMode, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|View", meta = (AllowPrivateAccess = "true"))
+	EChatViewMode ChatViewMode = EChatViewMode::ThirdPersonFocus;
 
 	UFUNCTION()
 	void OnRep_GameResultState();

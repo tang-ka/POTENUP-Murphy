@@ -46,7 +46,12 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void PawnClientRestart() override;
 	// virtual void Tick(float DeltaSeconds) override; // PlayerViewComponent::TickComponent으로 이전
+
+public:
+	// GameState의 복제된 ChatViewMode를 읽어 로컬 시점에 반영 (서버/클라 공통 진입점)
+	void ApplyChatViewMode();
 
 protected:
 #pragma region Components

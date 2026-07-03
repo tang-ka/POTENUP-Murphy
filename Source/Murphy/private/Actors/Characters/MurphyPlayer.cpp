@@ -19,6 +19,7 @@
 #include "Framework/InteractableInterface.h"
 #include "Components/CapsuleComponent.h"
 #include "Framework/MurphyPlayerController.h"
+#include "Framework/MurphyGameStateBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Murphy.h"
 #include "Camera/CameraComponent.h"
@@ -51,23 +52,13 @@ void AMurphyPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// GameMode 단위 ChatViewMode 설정을 읽어와 덮어씀 (GameMode 없으면 기존 EditAnywhere 기본값 사용)
-	if (AMurphyGameModeBase* MurphyGameMode = GetWorld()->GetAuthGameMode<AMurphyGameModeBase>())
-	{
-		ChatViewMode = MurphyGameMode->ChatViewMode;
-		PRINTLOG_SH(TEXT("BeginPlay: GameMode ChatViewMode(%d) 적용"), static_cast<int32>(ChatViewMode));
-	}
-
 	if (PlayerViewComp)
 	{
 		PlayerViewComp->OnViewTransitionComplete.AddDynamic(this, &AMurphyPlayer::HandleViewTransitionComplete);
-
-		// 기내 씬 등: 시작부터 1인칭 자유시점 고정
-		if (ChatViewMode == EChatViewMode::FirstPersonLocked)
-		{
-			PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
-		}
 	}
+
+	// 시점 모드 적용은 GameState 복제 값 기준 (클라 포함)
+	ApplyChatViewMode();
 
 	if (STTWebSocketComp)
 	{
@@ -85,6 +76,47 @@ void AMurphyPlayer::BeginPlay()
 		VoiceRecorderComp->OnAudioChunkReady.AddDynamic(this, &AMurphyPlayer::OnSTTAudioChunkReady);
 	}
 
+}
+
+void AMurphyPlayer::ApplyChatViewMode()
+{
+	// 카메라 시점은 로컬 전용 관심사이므로 로컬 컨트롤 폰에서만 적용
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// GameState 복제 값을 우선 사용 (서버·클라 공통), 없으면 서버 GameMode 폴백
+	if (AMurphyGameStateBase* MurphyGameState = World->GetGameState<AMurphyGameStateBase>())
+	{
+		ChatViewMode = MurphyGameState->GetChatViewMode();
+		PRINTLOG_SH(TEXT("ApplyChatViewMode: GameState ChatViewMode(%d) 적용"), static_cast<int32>(ChatViewMode));
+	}
+	else if (AMurphyGameModeBase* MurphyGameMode = World->GetAuthGameMode<AMurphyGameModeBase>())
+	{
+		ChatViewMode = MurphyGameMode->ChatViewMode;
+		PRINTLOG_SH(TEXT("ApplyChatViewMode: GameMode ChatViewMode(%d) 적용"), static_cast<int32>(ChatViewMode));
+	}
+
+	// 기내 씬 등: 시작부터 1인칭 자유시점 고정
+	if (PlayerViewComp && ChatViewMode == EChatViewMode::FirstPersonLocked)
+	{
+		PlayerViewComp->RequestViewState(EPlayerViewState::FirstPersonTalk);
+	}
+}
+
+void AMurphyPlayer::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+
+	// 클라에서 이 폰을 로컬 소유하게 된 시점에도 한 번 더 시점 적용 (복제 타이밍 보정)
+	ApplyChatViewMode();
 }
 
 void AMurphyPlayer::PossessedBy(AController* NewController)

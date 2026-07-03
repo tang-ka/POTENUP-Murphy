@@ -32,6 +32,9 @@ public:
 	void TriggerGameOver();
 
 protected:
+	// GameState 생성 직후 서버에서 ChatViewMode를 GameState로 복사 (클라 복제용)
+	virtual void InitGameState() override;
+
 	// PlayerState의 SelectedCharacter 값에 따라 스폰할 폰 클래스를 분기한다.
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 

@@ -8,6 +8,8 @@
 #include "Framework/MurphyGameStateBase.h"
 #include "Manager/CinematicSequenceSubsystem.h"
 #include "Engine/GameInstance.h"
+#include "GameFramework/PlayerStart.h"
+#include "EngineUtils.h"
 
 UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
@@ -46,6 +48,44 @@ UClass* AMurphyGameModeBase::GetDefaultPawnClassForController_Implementation(ACo
 
 	PRINTLOG_SH(TEXT("GetDefaultPawnClassForController 경고 — 선택값(%s)에 맞는 폰 클래스 미설정, 기본 폰으로 대체"), *UEnum::GetValueAsString(MurphyPS->SelectedCharacter));
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
+AActor* AMurphyGameModeBase::ChoosePlayerStart_Implementation(AController* Player)
+{
+	const AMurphyPlayerState* MurphyPS = Player ? Player->GetPlayerState<AMurphyPlayerState>() : nullptr;
+	if (!MurphyPS)
+	{
+		PRINTLOG_SH(TEXT("ChoosePlayerStart — PlayerState 없음, 기본 선택으로 폴백"));
+		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	FName TargetTag = NAME_None;
+	switch (MurphyPS->SelectedCharacter)
+	{
+	case EPlayerCharacterType::BoyCharacter:
+		TargetTag = FName(TEXT("Boy"));
+		break;
+	case EPlayerCharacterType::GirlCharacter:
+		TargetTag = FName(TEXT("Girl"));
+		break;
+	default:
+		break;
+	}
+
+	if (TargetTag != NAME_None)
+	{
+		for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+		{
+			if (It->PlayerStartTag == TargetTag)
+			{
+				PRINTLOG_SH(TEXT("ChoosePlayerStart — 태그(%s) PlayerStart 선택"), *TargetTag.ToString());
+				return *It;
+			}
+		}
+		PRINTLOG_SH(TEXT("ChoosePlayerStart — 태그(%s)에 맞는 PlayerStart 없음, 기본 선택으로 폴백"), *TargetTag.ToString());
+	}
+
+	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
 void AMurphyGameModeBase::TriggerGameOver()

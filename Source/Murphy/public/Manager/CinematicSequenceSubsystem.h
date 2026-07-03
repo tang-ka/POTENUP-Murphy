@@ -30,8 +30,8 @@ class MURPHY_API UCinematicSequenceSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
-	/** 서버 전용. 레벨 시퀀스 재생 시작. */
-	void StartLevelSequence(UCinematicSequenceData* Sequence);
+	/** 각 머신 로컬 재생. 레벨 진입 인트로 시퀀스를 로컬 매니저로 구동한다. (서버 조율 없음) */
+	void StartLevelSequenceLocal(UCinematicSequenceData* Sequence);
 
 	bool IsRunning() const { return bRunning; }
 

@@ -111,21 +111,5 @@ void AMurphyGameModeBase::HandleStartingNewPlayer_Implementation(APlayerControll
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
-	if (bCinematicSequenceStarted || !LevelCinematic)
-	{
-		return;
-	}
-
-	// 필요 인원이 모두 도착했을 때 1회 시작 (RPC가 전원에게 가도록).
-	if (GetNumPlayers() < RequiredPlayersToStart)
-	{
-		return;
-	}
-
-	bCinematicSequenceStarted = true;
-
-	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	{
-		Seq->StartLevelSequence(LevelCinematic);
-	}
+	// 레벨 인트로 시네마틱은 각 머신의 GameState(TryPlayLevelIntro)가 로컬 재생한다.
 }

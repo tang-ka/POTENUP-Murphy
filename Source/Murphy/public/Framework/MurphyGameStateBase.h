@@ -7,6 +7,7 @@
 #include "MurphyGameStateBase.generated.h"
 
 class AMurphyPlayerState;
+class UCinematicSequenceData;
 struct FQuestRuntimeEvent;
 
 /**
@@ -57,6 +58,19 @@ public:
 
 	// 서버 전용: GameMode가 InitGameState에서 호출해 복제 값 세팅
 	void SetChatViewMode(EChatViewMode NewMode);
+
+	// 이 레벨 진입 시 로컬 재생할 인트로 시네마틱 (레벨별 GameState BP에서 지정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Cinematic")
+	TObjectPtr<UCinematicSequenceData> LevelCinematic;
+
+	UFUNCTION(BlueprintPure, Category = "Murphy|Cinematic")
+	UCinematicSequenceData* GetLevelCinematic() const
+	{
+		return LevelCinematic;
+	}
+
+protected:
+	virtual void BeginPlay() override;
 
 	const FScenarioTableRow* GetCurrentScenarioData() const;
 
@@ -148,6 +162,10 @@ private:
 	// GameMode의 씬 단위 시점 설정을 클라에 전달하기 위한 복제 값
 	UPROPERTY(ReplicatedUsing = OnRep_ChatViewMode, VisibleAnywhere, BlueprintReadOnly, Category = "Murphy|View", meta = (AllowPrivateAccess = "true"))
 	EChatViewMode ChatViewMode = EChatViewMode::ThirdPersonFocus;
+
+	// 레벨 진입 시 로컬 인트로 재생 (머신당 1회)
+	void TryPlayLevelIntro();
+	bool bLevelIntroPlayed = false;
 
 	UFUNCTION()
 	void OnRep_GameResultState();

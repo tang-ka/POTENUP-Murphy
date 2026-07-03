@@ -3,7 +3,10 @@
 #include "Actors/Characters/MurphyPlayer.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Manager/DataManager.h"
+#include "Manager/CinematicSequenceSubsystem.h"
 #include "Murphy.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "Quest/QuestRuntimeHelper.h"
 
@@ -28,6 +31,42 @@ void AMurphyGameStateBase::SetChatViewMode(EChatViewMode NewMode)
 
 	ChatViewMode = NewMode;
 	PRINTLOG_SH(TEXT("[GameState] ChatViewMode(%d) 설정"), static_cast<int32>(ChatViewMode));
+}
+
+void AMurphyGameStateBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 서버·클라 모두 자기 GameState의 기본값(LevelCinematic)을 읽어 로컬 재생
+	TryPlayLevelIntro();
+}
+
+void AMurphyGameStateBase::TryPlayLevelIntro()
+{
+	if (bLevelIntroPlayed || !LevelCinematic)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || World->GetNetMode() == NM_DedicatedServer)
+	{
+		// 데디 서버는 화면이 없으므로 재생하지 않음
+		return;
+	}
+
+	UGameInstance* GameInstance = World->GetGameInstance();
+	UCinematicSequenceSubsystem* SequenceSubsystem = GameInstance
+		? GameInstance->GetSubsystem<UCinematicSequenceSubsystem>()
+		: nullptr;
+	if (!SequenceSubsystem)
+	{
+		return;
+	}
+
+	bLevelIntroPlayed = true;
+	SequenceSubsystem->StartLevelSequenceLocal(LevelCinematic);
+	PRINTLOG_SH(TEXT("[GameState] 레벨 인트로 시네마틱 로컬 재생 시작"));
 }
 
 void AMurphyGameStateBase::OnRep_ChatViewMode()

@@ -115,15 +115,23 @@ void AMurphyPlayer::PawnClientRestart()
 {
 	Super::PawnClientRestart();
 
-	// 클라에서 이 폰을 로컬 소유하게 된 시점에도 한 번 더 시점 적용 (복제 타이밍 보정)
+	// 클라에서 이 폰을 로컬 소유하게 된 시점: 시점 적용 + 로컬 UI 생성
+	// (PossessedBy는 서버 전용이라 클라에서는 여기서 HUD를 만들어야 함)
 	ApplyChatViewMode();
+	SetupLocalPlayerUI();
 }
 
 void AMurphyPlayer::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// Possess 이후에 호출되므로 IsLocallyControlled()가 정상 동작함
+	// 서버/스탠드얼론: 로컬 소유면 여기서 UI 생성 (클라는 PawnClientRestart에서 처리)
+	SetupLocalPlayerUI();
+}
+
+void AMurphyPlayer::SetupLocalPlayerUI()
+{
+	// 로컬 소유 플레이어에서만 UI/입력 초기화
 	if (!IsLocallyControlled())
 	{
 		return;
@@ -138,11 +146,11 @@ void AMurphyPlayer::PossessedBy(AController* NewController)
 			MainHUDInstance->AddToViewport();
 
 			// 캐릭터 빙의 시 마우스를 기본(게임 전용) 상태로 초기화
-			if (APlayerController* PC = Cast<APlayerController>(NewController))
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
 			{
 				PC->SetShowMouseCursor(false);
 				PC->SetInputMode(FInputModeGameOnly());
-				PRINTLOG_SH(TEXT("PossessedBy: 마우스 입력 모드 기본값(GameOnly) 초기화 완료"));
+				PRINTLOG_SH(TEXT("SetupLocalPlayerUI: 마우스 입력 모드 기본값(GameOnly) 초기화 완료"));
 			}
 		}
 	}
@@ -158,7 +166,7 @@ void AMurphyPlayer::PossessedBy(AController* NewController)
 		}
 	}
 
-	PRINTLOG_SH(TEXT("PossessedBy: MainHUD 및 SystemMenu 생성 완료"));
+	PRINTLOG_SH(TEXT("SetupLocalPlayerUI: MainHUD 및 SystemMenu 생성 완료"));
 }
 
 // void AMurphyPlayer::Tick(float DeltaSeconds)

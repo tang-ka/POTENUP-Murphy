@@ -53,6 +53,9 @@ public:
 	// GameState의 복제된 ChatViewMode를 읽어 로컬 시점에 반영 (서버/클라 공통 진입점)
 	void ApplyChatViewMode();
 
+	// 로컬 소유 플레이어의 HUD/시스템메뉴/입력모드 초기화 (서버는 PossessedBy, 클라는 PawnClientRestart에서 호출)
+	void SetupLocalPlayerUI();
+
 protected:
 #pragma region Components
 	// === VoiceRecorder ===

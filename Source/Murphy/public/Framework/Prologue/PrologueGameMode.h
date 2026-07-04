@@ -17,6 +17,8 @@ public:
 
 	void HandleAINodeReached(FName NodeId);
 
+	void NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer);
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -30,6 +32,10 @@ private:
 
 	void StartScenarioIfNeeded(EScenarioType ScenarioType);
 
+	// 시퀀스(전체 영상) 완료 후 퀘스트 시작 
+	UFUNCTION()
+	void HandleSequenceCompleted();
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Baggage Claim", meta = (AllowPrivateAccess = "true"))
 	FName BaggageCustomsHoldNodeId = TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD");
 };

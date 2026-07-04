@@ -17,9 +17,11 @@ class MURPHY_API AAirplaneGameMode : public AMurphyGameModeBase
 public:
 	AAirplaneGameMode();
 
-	// 시퀀스(전체 영상) 완료 후 기내 NPC 상호작용 박스를 좌우 반전한다.
+	// 시퀀스(전체 영상) 완료 후 퀘스트 시작 + 기내 NPC 상호작용 박스를 좌우 반전한다.
 	UFUNCTION()
-	void HandleCinematicComplete();
+	void HandleSequenceCompleted();
+	UFUNCTION()
+	void HandleWriteArrivalCard();
 
 	// 기내 시나리오 완료 후 설정된 다음 레벨로 모든 플레이어를 이동시킵니다.
 	void CompleteScenarioAndTravel();

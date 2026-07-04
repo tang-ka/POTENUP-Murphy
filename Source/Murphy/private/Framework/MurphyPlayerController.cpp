@@ -739,6 +739,7 @@ void AMurphyPlayerController::TransitionToBaggageClaim()
 	// 검정(HoldingBlack) 도달 시 스왑을 태우기 위해 로컬 PlayId 발급 + Hold 신호 1회 구독.
 	BaggageClaimCinematicPlayId = NextLocalCinematicPlayId++;
 	CinematicManager->OnReachedHold.AddUniqueDynamic(this, &AMurphyPlayerController::HandleBaggageClaimCinematicReachedHold);
+	
 
 	// bAutoReleaseHold=false: 스왑/로드가 끝난 뒤 OnBaggageClaimLevelShown에서 직접 ReleaseHold로 리빌한다.
 	CinematicManager->PlayMedia(Request, BaggageClaimCinematicPlayId, /*bInAutoReleaseHold*/ false);
@@ -824,9 +825,10 @@ void AMurphyPlayerController::OnBaggageClaimLevelShown()
 	{
 		PrologueGameState->ApplyBaggageCustomsHoldActorState();
 	}
-
+	
 	ShowLevelEnterToastAfterCinematic(FText::FromString(TEXT("수하물 수취장")));
 
+	Server_NotifyBaggageClaimLevelReady();
 	Server_RequestReposition(TEXT("SubLevel_BaggageClaim"));
 
 	// 스왑/로드 완료 - 검정 아래에서 리포지션까지 마쳤으니 검정을 풀어 새 레벨을 드러낸다. (로컬 리빌)
@@ -874,6 +876,18 @@ void AMurphyPlayerController::HandleCinematicCompletedForLevelEnterToast(int32 P
 	PendingLevelEnterToastName.Reset();
 
 	ShowLevelEnterToastAfterCinematic(LevelName);
+}
+
+void AMurphyPlayerController::Server_NotifyBaggageClaimLevelReady_Implementation()
+{
+	APrologueGameMode* PrologueGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<APrologueGameMode>() : nullptr;
+	if (!PrologueGameMode)
+	{
+		PRINTLOG_SH(TEXT("Server_NotifyBaggageClaimLevelReady: PrologueGameMode가 아닙니다."));
+		return;
+	}
+
+	PrologueGameMode->NotifyBaggageClaimLevelReady(this);
 }
 
 void AMurphyPlayerController::RequestAirplaneScenarioCompleteTravel()

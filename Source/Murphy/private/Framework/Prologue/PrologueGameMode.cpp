@@ -9,6 +9,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "Manager/CinematicSequenceSubsystem.h"
 #include "Manager/LevelStreamingSubsystem.h"
 
 APrologueGameMode::APrologueGameMode()
@@ -49,11 +50,27 @@ void APrologueGameMode::BeginPlay()
 	{
 		BaggageClaimLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnBaggageClaimLevelShown);
 	}
+	
+	// 시퀀스 완료 시 퀘스트 시작 + NPC 반전 후처리를 연결한다.
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &APrologueGameMode::HandleSequenceCompleted);
+	}
 }
 
 void APrologueGameMode::OnImmigrationLevelShown()
 {
-	StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+	// StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+	
+	// 퀘스트 시작은 HandleSequenceCompleted에서 한다.
+	// LevelCinematic이 없으면(테스트/에디터 환경) 여기서 즉시 시작한다 (fallback).
+	if (!LevelCinematic)
+	{
+		StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+		PRINTLOG_SH(TEXT("[Prologue] LevelCinematic 없음 — Immigration 시나리오 즉시 시작"));
+	}
+
+	// Pawn 리포지션 (스폰 위치 설정)
 
 	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
 	if (!LevelSubsystem)
@@ -107,8 +124,15 @@ void APrologueGameMode::OnImmigrationLevelShown()
 }
 
 void APrologueGameMode::OnBaggageClaimLevelShown()
+{	
+	NotifyBaggageClaimLevelReady(nullptr);
+}
+
+void APrologueGameMode::NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer)
 {
-	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);
+	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);	
+	PRINTLOG_JW(TEXT("[Prologue] BaggageClaim 준비 완료 — Baggage 시나리오 시작 (ReadyPlayer=%s)"),
+		ReadyPlayer ? *ReadyPlayer->GetName() : TEXT("LevelShown"));
 
 	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
 	{
@@ -130,6 +154,26 @@ void APrologueGameMode::HandleAINodeReached(FName NodeId)
 	}
 
 	PrologueGameState->SetBaggageCustomsHoldActorsActive(true);
+}
+
+void APrologueGameMode::HandleSequenceCompleted()
+{
+	// Prologue의 서버 전역 LevelCinematic은 Immigration 진입 시퀀스만 담당한다.
+	// BaggageClaim 전환 시네마틱은 PlayerController의 로컬 CinematicManager 흐름에서 처리된다.
+
+	APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	if (!PrologueGameState)
+	{
+		return;
+	}
+
+	const EScenarioType Current = PrologueGameState->GetCurrentScenario();
+
+	if (Current == EScenarioType::None)
+	{
+		StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+		PRINTLOG_JW(TEXT("[Prologue] 시네마틱 완료 — Immigration 시나리오 시작"));
+	}
 }
 
 void APrologueGameMode::StartScenarioIfNeeded(EScenarioType ScenarioType)

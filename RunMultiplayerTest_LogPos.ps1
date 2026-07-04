@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$EXE      = "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor.exe"
-$UPROJECT = "C:\PU_Project\_TeamProjects\ALLKILL\POTENUP-Murphy\Murphy.uproject"
+$EXE      = "E:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor.exe"
+$UPROJECT = "E:\_BackUps\POTENUP-Murphy\Murphy.uproject"
 $MAP      = "/Game/Maps/Lv_Lobby"
 $MARGIN   = 30
 

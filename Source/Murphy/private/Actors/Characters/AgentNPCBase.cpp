@@ -336,7 +336,8 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 				{
 					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
 					{
-						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						// MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						MainHUD->BeginTranslateConversation(NPCName, FText::FromName(NPCName));
 						MainHUD->AddAgentDialog(NPCName.ToString(), LastNpcMessage);
 					}
 				}
@@ -348,7 +349,8 @@ void AAgentNPCBase::OnInteractionBoxBeginOverlap(UPrimitiveComponent* Overlapped
 				{
 					if (UMainHUD* MainHUD = MurphyPlayer->GetMainHUD())
 					{
-						MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						// MainHUD->BeginTranslateConversation(GetScenarioCategoryName(), FText::FromName(NPCName));
+						MainHUD->BeginTranslateConversation(NPCName, FText::FromName(NPCName));
 					}
 				}
 			}
@@ -767,8 +769,8 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 	// 	bIsScenarioCompleted = true;
 	// }
 	
-	// if (ResponseData.next_node_id == TEXT("IMM_BAD_END_VERBAL_ABUSE"))
-	if (ResponseData.next_node_id.Contains(TEXT("BAD_END_VERBAL_ABUSE")))
+	// ① 욕설 배드엔딩 — Contains 패턴으로 전 챕터 커버 (FLIGHT/IMM/BAG)
+	if (ResponseData.next_node_id.Contains(TEXT("BAD_END")))
 	{
 		PRINTLOGW_JW(TEXT("[AgentNPC] 욕으로 인한 시나리오 중단!!"));
 		bIsScenarioCompleted = true;
@@ -782,7 +784,18 @@ void AAgentNPCBase::ProcessDialogueResponse(const FAIResponseData& ResponseData)
 			}
 		}
 
-		RequestAIResultForCurrentSession(true); // 배드엔딩의 경우 즉시 표출
+		RequestAIResultForCurrentSession(true);
+	}
+	// ② 일반 실패 엔딩 — StartsWith 패턴으로 전 챕터 커버
+	// 현재: END_SECONDARY_INSPECTION, END_BAGGAGE_REPORT_INCOMPLETE
+	// 미래: END_* 규칙을 따르는 새 실패 노드 추가 시 자동 처리
+	else if (ResponseData.next_node_id.StartsWith(TEXT("END_")))
+	{
+		PRINTLOGW_JW(TEXT("[AgentNPC] 심사 실패로 인한 시나리오 종료: %s"), *ResponseData.next_node_id);
+		bIsScenarioCompleted = true;
+
+		// TriggerGameOver 호출 없음 (욕설이 아닌 일반 실패)
+		RequestAIResultForCurrentSession(true);
 	}
 	
 	// ==========================================================
@@ -991,11 +1004,8 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 	// if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	if (ResponseData.next_action == TEXT("COMPLETE_CHAPTER"))
 	{
-		bool bShouldShowUI = false;
-		if (ResponseData.next_node_id == TEXT("BAG_999_COMPLETE"))
-		{
-			bShouldShowUI = true;
-		}
+		// ProcessDialogueResponse에서 BAD_END 또는 END_* 노드를 이미 처리한 경우
+		// (bIsScenarioCompleted == true) COMPLETE_CHAPTER의 중복 API 호출을 방지합니다.
 
 		//. 비행기에서 시나리오 끝난 경우 억까 상황 받아오기
 		if (ResponseData.next_node_id == TEXT("FLIGHT_999_COMPLETE"))
@@ -1013,13 +1023,23 @@ void AAgentNPCBase::UpdateSessionStateFromResponse(const FAIResponseData& Respon
 						ResponseData.game_state.assigned_visit_location_id,
 						ResponseData.game_state.random_customs_item.item_id);
 					
-					PRINTLOG_JW(TEXT("⚠️억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item.item_id);
+					PRINTLOG_JW(TEXT("억까 상황 : %s / %s"), *ResponseData.game_state.assigned_visit_location_id, *ResponseData.game_state.random_customs_item.item_id);
 				}
 			}
 		}
 
-		// 비행기, 입국심사, 수하물 챕터 공통적으로 AI 결과 조회를 요청하되, UI 표출 여부만 조절
-		RequestAIResultForCurrentSession(bShouldShowUI);
+		// BAD_END_* 또는 END_* 노드는 ProcessDialogueResponse에서 이미 처리했으므로
+		// next_node_id를 직접 확인해 중복 API 호출을 방지합니다.
+		const bool bIsFailureEndingNode = ResponseData.next_node_id.Contains(TEXT("BAD_END"))
+			|| ResponseData.next_node_id.StartsWith(TEXT("END_"));
+
+		if (!bIsFailureEndingNode)
+		{
+			// BAG_999_COMPLETE(최종 챕터 완료)만 ShowUI, 나머지 챕터 완료는 Silent
+			const bool bShouldShowUI = (ResponseData.next_node_id == TEXT("BAG_999_COMPLETE"));
+			// 비행기, 입국심사, 수하물 챕터 공통으로 AI 결과 조회를 요청하되, UI 표출 여부만 조절
+			RequestAIResultForCurrentSession(bShouldShowUI);
+		}
 		
 		if (IsValid(InteractionBox))
 		{

@@ -51,7 +51,7 @@ void APrologueGameMode::BeginPlay()
 		BaggageClaimLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnBaggageClaimLevelShown);
 	}
 	
-	// 시퀀스 완료 시 퀘스트 시작 + NPC 반전 후처리를 연결한다.
+	// Immigration 진입 시네마틱 완료 시 퀘스트 시작을 연결한다.
 	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
 	{
 		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &APrologueGameMode::HandleSequenceCompleted);
@@ -60,10 +60,8 @@ void APrologueGameMode::BeginPlay()
 
 void APrologueGameMode::OnImmigrationLevelShown()
 {
-	// StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
-	
-	// 퀘스트 시작은 HandleSequenceCompleted에서 한다.
-	// LevelCinematic이 없으면(테스트/에디터 환경) 여기서 즉시 시작한다 (fallback).
+	// LevelCinematic이 있으면 HandleSequenceCompleted에서 시작하고,
+	// 없으면 Airplane과 동일하게 즉시 시작한다 (fallback).
 	if (!LevelCinematic)
 	{
 		StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
@@ -125,14 +123,22 @@ void APrologueGameMode::OnImmigrationLevelShown()
 
 void APrologueGameMode::OnBaggageClaimLevelShown()
 {	
-	NotifyBaggageClaimLevelReady(nullptr);
+	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
+	{
+		PrologueGameState->SetBaggageCustomsHoldActorsActive(false);
+	}
 }
 
 void APrologueGameMode::NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer)
 {
+	if (!ReadyPlayer)
+	{
+		return;
+	}
+
 	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);	
 	PRINTLOG_JW(TEXT("[Prologue] BaggageClaim 준비 완료 — Baggage 시나리오 시작 (ReadyPlayer=%s)"),
-		ReadyPlayer ? *ReadyPlayer->GetName() : TEXT("LevelShown"));
+		*ReadyPlayer->GetName());
 
 	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
 	{

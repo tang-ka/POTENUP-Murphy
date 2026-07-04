@@ -7,6 +7,8 @@
 #include "Framework/MurphyGameModeBase.h"
 #include "PrologueGameMode.generated.h"
 
+class APlayerController;
+
 UCLASS()
 class MURPHY_API APrologueGameMode : public AMurphyGameModeBase
 {

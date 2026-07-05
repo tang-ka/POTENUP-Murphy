@@ -43,6 +43,9 @@ public:
 	void SetActiveNPC(AAgentNPCBase* NewNPC);
 	AAgentNPCBase* GetTargetNPC() const { return TargetNPC; }
 
+	// 기내 씬: 완료한 플레이어가 로컬에서 가장 가까운(=짝) NPC의 InteractionBox X를 반전한다.
+	void FlipNearestAirplaneNPCBoxLocal();
+
 	// UI처럼 ActorComponent를 직접 소유하지 않는 호출자가 퀘스트 완료 조건을 통보하는 로컬 진입점입니다.
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Quest")
 	bool NotifyQuestConditionFromLocal(FName TargetID, EQuestCondition Condition);

@@ -39,6 +39,10 @@ void UWriteArrivalCardWidget::OnCompleteClicked()
 			{
 				// 주의: TEXT("Item_ArrivalCard") 부분은 해당 퀘스트의 실제 TargetID 이름으로 변경해 주세요.
 				MurphyPC->NotifyQuestConditionFromLocal(TEXT("Item_ArrivalCard"), EQuestCondition::GetItem);
+
+				// 서버의 박스 반전은 복제되지 않으므로, 완료한 플레이어가 자기 로컬에서
+				// 가장 가까운(=짝) NPC 박스만 직접 반전한다.
+				MurphyPC->FlipNearestAirplaneNPCBoxLocal();
 			}
 		}
 	}

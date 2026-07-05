@@ -48,6 +48,7 @@
 #include "Misc/Guid.h"
 
 #include "Murphy.h"
+#include "Components/BoxComponent.h"
 #include "Manager/CinematicManagerSubsystem.h"
 #include "Manager/DataManager.h"
 #include "Manager/LevelStreamingSubsystem.h"
@@ -249,6 +250,59 @@ void AMurphyPlayerController::SetActiveNPC(AAgentNPCBase* NewNPC)
 			MainHUD->SetCaptionInteractionActive(bHasActiveNPC);
 		}
 	}
+}
+
+void AMurphyPlayerController::FlipNearestAirplaneNPCBoxLocal()
+{
+	APawn* MyPawn = GetPawn();
+	if (!MyPawn)
+	{
+		PRINTLOG_SH(TEXT("[Airplane] 로컬 박스 반전 실패: Pawn이 없습니다."));
+		return;
+	}
+
+	const FVector PlayerLocation = MyPawn->GetActorLocation();
+
+	TArray<AActor*> FoundNPCs;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAgentNPCBase::StaticClass(), FoundNPCs);
+
+	AAgentNPCBase* NearestNPC = nullptr;
+	float NearestDistSq = TNumericLimits<float>::Max();
+
+	for (AActor* Actor : FoundNPCs)
+	{
+		AAgentNPCBase* NPC = Cast<AAgentNPCBase>(Actor);
+		if (!NPC)
+		{
+			continue;
+		}
+
+		const float DistSq = FVector::DistSquared(PlayerLocation, NPC->GetActorLocation());
+		if (DistSq < NearestDistSq)
+		{
+			NearestDistSq = DistSq;
+			NearestNPC = NPC;
+		}
+	}
+
+	if (!NearestNPC)
+	{
+		PRINTLOG_SH(TEXT("[Airplane] 로컬 박스 반전 실패: NPC를 찾지 못했습니다."));
+		return;
+	}
+
+	UBoxComponent* InteractionBox = NearestNPC->FindComponentByClass<UBoxComponent>();
+	if (!InteractionBox)
+	{
+		PRINTLOG_SH(TEXT("[Airplane] 로컬 박스 반전 실패: %s의 InteractionBox가 없습니다."), *NearestNPC->GetName());
+		return;
+	}
+
+	FVector LocalLoc = InteractionBox->GetRelativeLocation();
+	LocalLoc.X *= -1.0f;
+	InteractionBox->SetRelativeLocation(LocalLoc);
+
+	PRINTLOG_SH(TEXT("[Airplane] (Local) 가장 가까운 NPC %s InteractionBox X 반전 (%f)"), *NearestNPC->GetName(), LocalLoc.X);
 }
 
 bool AMurphyPlayerController::NotifyQuestConditionFromLocal(FName TargetID, EQuestCondition Condition)

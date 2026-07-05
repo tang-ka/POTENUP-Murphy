@@ -389,11 +389,9 @@ void AMurphyPlayerState::ServerSetArrivalData_Implementation(const FString& InSu
 	AddOwnedItemIfMissing(FName(TEXT("Item_ArrivalCard")));
 	OnArrivalDataUpdated.Broadcast();
 	
-	// GameMode를 가져와 시네마틱 완료(혹은 입국심사 완료) 후속 처리를 실행합니다.
-	if (AAirplaneGameMode* GM = Cast<AAirplaneGameMode>(GetWorld()->GetAuthGameMode()))
-	{
-		GM->HandleCinematicComplete(); 
-	}
+	// 박스 반전은 완료 버튼을 누른 클라 로컬에서 가장 가까운 NPC 1명만 처리한다.
+	// (서버 전체순회 반전은 호스트 이중 반전 + 무관 NPC 흔들림을 유발하므로 여기서 호출하지 않는다.)
+	// HandleCinematicComplete 함수 정의 자체는 유지한다.
 }
 
 void AMurphyPlayerState::SetCustomsAssignment(const FString& InLocationID, const FString& InItemID)

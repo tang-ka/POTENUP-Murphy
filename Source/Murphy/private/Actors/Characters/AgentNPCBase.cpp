@@ -173,15 +173,18 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 	// 계산된 결과를 ABP가 읽어갈 수 있도록 멤버 변수에 저장
 	bEnableIK = bShouldLookAtPlayer;
     
-	// 최종적으로 쳐다보는 것이 승인되었을 때만 플레이어 좌표 갱신 (서버에서만 갱신 후 리플리케이트)
-	if (bEnableIK && IsValid(CurrentInteractPlayer) && HasAuthority())
+	// 최종적으로 쳐다보는 것이 승인되었을 때만 로컬 플레이어 기준으로 좌표 갱신
+	if (bEnableIK && IsValid(CurrentInteractPlayer))
 	{
 		if (APawn* PlayerPawn = Cast<APawn>(CurrentInteractPlayer))
 		{
-			if (ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerPawn))
+			AController* PlayerController = PlayerPawn->GetController();
+			if (PlayerController && PlayerController->IsLocalController())
 			{
-				// 1. 플레이어 캐릭터의 하위 컴포넌트들 중 "Body"라는 이름의 스켈레탈 메시 컴포넌트를 찾습니다.
-				USkeletalMeshComponent* PlayerBodyMesh = nullptr;
+				if (ACharacter* PlayerCharacter = Cast<ACharacter>(PlayerPawn))
+				{
+					// 1. 플레이어 캐릭터의 하위 컴포넌트들 중 "Body"라는 이름의 스켈레탈 메시 컴포넌트를 찾습니다.
+					USkeletalMeshComponent* PlayerBodyMesh = nullptr;
              
 				TArray<USkeletalMeshComponent*> PlayerMeshes;
 				PlayerCharacter->GetComponents<USkeletalMeshComponent>(PlayerMeshes);
@@ -218,6 +221,7 @@ void AAgentNPCBase::Tick(float DeltaSeconds)
 			{
 				// 캐릭터 계열이 아닐 경우 액터 중심점 + 대략적인 눈높이
 				TargetLookAtLocation = PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+			}
 			}
 		}
 	}

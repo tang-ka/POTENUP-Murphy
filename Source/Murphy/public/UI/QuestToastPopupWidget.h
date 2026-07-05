@@ -37,6 +37,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Txt_Content;
 
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> Pop;
+	
 private:
 	FTimerHandle LifeTimeHandle;
 	float LifeTime = 0.f;

@@ -49,6 +49,7 @@ void UQuestToastPopupWidget::SetIcon(UTexture2D* IconTexture)
 
 void UQuestToastPopupWidget::StartLifeTimeCountdown()
 {
+	PlayAnimation(Pop);
 	GetWorld()->GetTimerManager().SetTimer(
 		LifeTimeHandle,
 		this,

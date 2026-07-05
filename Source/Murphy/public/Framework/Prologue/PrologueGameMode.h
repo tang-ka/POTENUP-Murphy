@@ -5,7 +5,10 @@
 #include "CoreMinimal.h"
 #include "Data/GameDataTypes.h"
 #include "Framework/MurphyGameModeBase.h"
+#include "TimerManager.h"
 #include "PrologueGameMode.generated.h"
+
+class APlayerController;
 
 UCLASS()
 class MURPHY_API APrologueGameMode : public AMurphyGameModeBase
@@ -17,6 +20,12 @@ public:
 
 	void HandleAINodeReached(FName NodeId);
 
+	UFUNCTION()
+	void HandleSequenceCompleted();
+
+	void NotifyImmigrationLevelReady(APlayerController* ReadyPlayer);
+	void NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer);
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -29,7 +38,14 @@ private:
 	void OnBaggageClaimLevelShown();
 
 	void StartScenarioIfNeeded(EScenarioType ScenarioType);
+	void StartImmigrationScenarioAfterCinematic();
+	float GetImmigrationScenarioStartDelay() const;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Immigration", meta = (AllowPrivateAccess = "true"))
+	bool bRequireImmigrationCinematicBeforeScenario = true;
+
+	FTimerHandle ImmigrationScenarioStartTimerHandle;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Baggage Claim", meta = (AllowPrivateAccess = "true"))
 	FName BaggageCustomsHoldNodeId = TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD");
 };

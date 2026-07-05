@@ -6,9 +6,11 @@
 #include "Framework/MurphyPlayerController.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Framework/Prologue/PrologueGameState.h"
+#include "Data/CinematicSequenceData.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
+#include "Manager/CinematicSequenceSubsystem.h"
 #include "Manager/LevelStreamingSubsystem.h"
 
 APrologueGameMode::APrologueGameMode()
@@ -49,11 +51,32 @@ void APrologueGameMode::BeginPlay()
 	{
 		BaggageClaimLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnBaggageClaimLevelShown);
 	}
+	
+	// Immigration 진입 시네마틱 완료 시 퀘스트 시작을 연결한다.
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &APrologueGameMode::HandleSequenceCompleted);
+	}
 }
 
 void APrologueGameMode::OnImmigrationLevelShown()
 {
-	StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+	// LevelCinematic이 있으면 HandleSequenceCompleted에서 시작하고,
+	// 없으면 기본적으로 즉시 시작하지 않는다. Prologue Immigration은 진입 시네마틱이 퀘스트 시작 게이트다.
+	if (!LevelCinematic)
+	{
+		if (bRequireImmigrationCinematicBeforeScenario)
+		{
+			PRINTLOG_SH(TEXT("[Prologue] LevelCinematic 없음 — Immigration 시나리오 자동 시작 보류"));
+		}
+		else
+		{
+			StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+			PRINTLOG_SH(TEXT("[Prologue] LevelCinematic 없음 — Immigration 시나리오 즉시 시작"));
+		}
+	}
+
+	// Pawn 리포지션 (스폰 위치 설정)
 
 	ULevelStreamingSubsystem* LevelSubsystem = GetGameInstance()->GetSubsystem<ULevelStreamingSubsystem>();
 	if (!LevelSubsystem)
@@ -107,8 +130,42 @@ void APrologueGameMode::OnImmigrationLevelShown()
 }
 
 void APrologueGameMode::OnBaggageClaimLevelShown()
+{	
+	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
+	{
+		PrologueGameState->SetBaggageCustomsHoldActorsActive(false);
+	}
+}
+
+void APrologueGameMode::NotifyImmigrationLevelReady(APlayerController* ReadyPlayer)
 {
-	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);
+	if (!ReadyPlayer)
+	{
+		return;
+	}
+
+	if (LevelCinematic || bRequireImmigrationCinematicBeforeScenario)
+	{
+		PRINTLOG_JW(TEXT("[Prologue] Immigration 준비 완료 — 시나리오 시작은 진입 시네마틱 완료를 기다림 (ReadyPlayer=%s)"),
+			*ReadyPlayer->GetName());
+		return;
+	}
+
+	StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+	PRINTLOG_JW(TEXT("[Prologue] Immigration 준비 완료 — LevelCinematic 없음 fallback으로 Immigration 시나리오 시작 (ReadyPlayer=%s)"),
+		*ReadyPlayer->GetName());
+}
+
+void APrologueGameMode::NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer)
+{
+	if (!ReadyPlayer)
+	{
+		return;
+	}
+
+	StartScenarioIfNeeded(EScenarioType::Prologue_Baggage);	
+	PRINTLOG_JW(TEXT("[Prologue] BaggageClaim 준비 완료 — Baggage 시나리오 시작 (ReadyPlayer=%s)"),
+		*ReadyPlayer->GetName());
 
 	if (APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>())
 	{
@@ -130,6 +187,66 @@ void APrologueGameMode::HandleAINodeReached(FName NodeId)
 	}
 
 	PrologueGameState->SetBaggageCustomsHoldActorsActive(true);
+}
+
+void APrologueGameMode::HandleSequenceCompleted()
+{
+	// Prologue의 서버 전역 LevelCinematic은 Immigration 진입 시퀀스만 담당한다.
+	// BaggageClaim 전환 시네마틱은 PlayerController의 로컬 CinematicManager 흐름에서 처리된다.
+	if (!LevelCinematic)
+	{
+		PRINTLOG_SH(TEXT("[Prologue] 시네마틱 완료 이벤트 수신 — LevelCinematic 없음, Immigration 시나리오 시작 보류"));
+		return;
+	}
+
+	APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	if (!PrologueGameState)
+	{
+		return;
+	}
+
+	const EScenarioType Current = PrologueGameState->GetCurrentScenario();
+
+	if (Current == EScenarioType::None)
+	{
+		const float StartDelay = GetImmigrationScenarioStartDelay();
+		if (StartDelay > KINDA_SMALL_NUMBER)
+		{
+			GetWorldTimerManager().SetTimer(
+				ImmigrationScenarioStartTimerHandle,
+				this,
+				&APrologueGameMode::StartImmigrationScenarioAfterCinematic,
+				StartDelay,
+				false);
+			PRINTLOG_JW(TEXT("[Prologue] 시네마틱 완료 — 화면 복귀 후 Immigration 시나리오 시작 대기 (Delay=%.2f)"), StartDelay);
+			return;
+		}
+
+		StartImmigrationScenarioAfterCinematic();
+	}
+}
+
+void APrologueGameMode::StartImmigrationScenarioAfterCinematic()
+{
+	APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	if (!PrologueGameState || PrologueGameState->GetCurrentScenario() != EScenarioType::None)
+	{
+		return;
+	}
+
+	StartScenarioIfNeeded(EScenarioType::Prologue_Immigration);
+	PRINTLOG_JW(TEXT("[Prologue] 시네마틱 완료 — Immigration 시나리오 시작"));
+}
+
+float APrologueGameMode::GetImmigrationScenarioStartDelay() const
+{
+	if (!LevelCinematic || LevelCinematic->Entries.IsEmpty())
+	{
+		return 0.f;
+	}
+
+	const FCinematicEntry& LastEntry = LevelCinematic->Entries.Last();
+	return FMath::Max(0.f, LastEntry.Fade.FadeFromBlackDuration);
 }
 
 void APrologueGameMode::StartScenarioIfNeeded(EScenarioType ScenarioType)

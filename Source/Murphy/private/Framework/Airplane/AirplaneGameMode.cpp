@@ -32,21 +32,16 @@ void AAirplaneGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// 시퀀스 전체 완료 시 NPC 상호작용 박스 반전 후처리를 연결.
-	// if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	// {
-	// 	Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleCinematicComplete);
-	// }
+	// 시퀀스 완료 시 퀘스트 시작 + NPC 반전 후처리를 연결한다.
+	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
+	{
+		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleSequenceCompleted);
+	}
 }
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-
-	if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
-	{
-		AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
-	}
 
 	if (NewPlayer == nullptr)
 	{
@@ -66,10 +61,32 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 	}
 
 	// 시네마틱 시퀀스 시작은 베이스(AMurphyGameModeBase)가 LevelCinematic DA로 처리한다.
+	
+	// 시네마틱이 없으면 즉시 시나리오를 시작한다 (fallback).
+	// LevelCinematic이 있는 경우는 HandleSequenceCompleted에서 StartScenario가 호출된다.
+	if (!LevelCinematic)
+	{
+		if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
+		{
+			AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
+			PRINTLOG_SH(TEXT("[Airplane] LevelCinematic 없음 — 시나리오 즉시 시작"));
+		}
+	}
 }
 
-void AAirplaneGameMode::HandleCinematicComplete()
+void AAirplaneGameMode::HandleSequenceCompleted()
 {
+	// 1. 시네마틱이 끝난 시점에 시나리오(퀘스트)를 시작한다.
+	if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
+	{
+		AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
+		PRINTLOG_SH(TEXT("[Airplane] 시네마틱 완료 — 시나리오 시작"));
+	}
+}
+
+void AAirplaneGameMode::HandleWriteArrivalCard()
+{
+	// 2. NPC 상호작용 박스 X 반전.
 	TArray<AActor*> FoundNPCs;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AAgentNPCBase::StaticClass(), FoundNPCs);
 

@@ -238,11 +238,9 @@ void UUIManagerSubsystem::HandleScenarioStateChanged(EScenarioType NewScenario)
 void UUIManagerSubsystem::HandleQuestStarted(FName QuestID, FText QuestTitle, FText QuestDescription)
 {
     // QuestTitle이 비어있으면 "돌발 미션" 폴백 텍스트 사용
-    const FText DisplayTitle = QuestTitle.IsEmpty()
-        ? FText::FromString(TEXT("돌발 미션"))
-        : QuestTitle;
+    const FText DisplayTitle = QuestTitle.IsEmpty() ? FText::FromString(TEXT("돌발 미션")) : QuestTitle;
 
-    ShowQuestToast(DisplayTitle, QuestDescription, 5);
+    ShowQuestToast(DisplayTitle, QuestDescription, 3);
 }
 
 void UUIManagerSubsystem::ReplayActiveQuestStarts(const TArray<FQuestRuntimeData>& ActiveQuests)

@@ -66,9 +66,30 @@ void AMurphyGameStateBase::TryPlayLevelIntro()
 	}
 
 	bLevelIntroPlayed = true;
+
+	// 인트로는 게임플레이 입력 모드에서 재생돼야 스킵(스페이스바)이 먹고,
+	// 종료 후 입력이 이전 UI가 남긴 UIOnly로 굳지 않는다.
+	if (APlayerController* LocalPC = World->GetFirstPlayerController())
+	{
+		LocalPC->SetInputMode(FInputModeGameOnly());
+		LocalPC->bShowMouseCursor = false;
+	}
+
 	SequenceSubsystem->OnSequenceCompleted.AddUniqueDynamic(this, &AMurphyGameStateBase::HandleLevelIntroFinished);
 	SequenceSubsystem->StartLevelSequenceLocal(LevelCinematic);
 	PRINTLOG_SH(TEXT("[GameState] 레벨 인트로 시네마틱 로컬 재생 시작"));
+}
+
+void AMurphyGameStateBase::RestoreInputModeAfterIntro(APlayerController* LocalPC)
+{
+	if (!LocalPC)
+	{
+		return;
+	}
+
+	// 기본: 이동 씬 (GameOnly + 커서 off)
+	LocalPC->bShowMouseCursor = false;
+	LocalPC->SetInputMode(FInputModeGameOnly());
 }
 
 void AMurphyGameStateBase::HandleLevelIntroFinished()
@@ -76,6 +97,10 @@ void AMurphyGameStateBase::HandleLevelIntroFinished()
 	// 재생·완료 감지는 각 머신 로컬. 서버 권위 StartScenario만 통보로 트리거한다.
 	UWorld* World = GetWorld();
 	APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+
+	// 시네마틱이 껐던 커서/입력모드를 레벨별 기본값으로 복원 (시작이 아닌 '종료' 시점).
+	RestoreInputModeAfterIntro(PC);
+
 	AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(PC);
 	if (!MurphyPC)
 	{

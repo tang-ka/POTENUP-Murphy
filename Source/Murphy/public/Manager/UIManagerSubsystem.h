@@ -17,6 +17,7 @@ class UUserWidget;
 class AMurphyGameStateBase;
 class AMurphyPlayerState;
 class UTransitionWidget;
+class UCinematicManagerSubsystem;
 enum class EScenarioType : uint8;
 
 UCLASS()
@@ -73,8 +74,15 @@ private:
 	UFUNCTION()
 	void HandleQuestStarted(FName QuestID, FText QuestTitle, FText QuestDescription);
 
+	// 레벨 진입 시네마틱이 로컬에서 완전히 밝아진(OnCompleted) 뒤 보류된 퀘스트 토스트를 표시한다.
+	UFUNCTION()
+	void HandleCinematicCompletedForQuestToast(int32 PlayId);
+
 	void ReplayActiveQuestStarts(const TArray<FQuestRuntimeData>& ActiveQuests);
-	
+
+	// 로컬 GameInstance의 CinematicManagerSubsystem 조회.
+	UCinematicManagerSubsystem* GetLocalCinematicManager() const;
+
 private:
 	UPROPERTY()
 	TSubclassOf<UCommonPopupWidget> CachedPopupClass;
@@ -99,4 +107,14 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AMurphyGameStateBase> BoundGameState;
+
+	// 시네마틱 재생 중 시작된 퀘스트 토스트를 로컬 시네마틱 완료까지 보류하는 큐.
+	struct FPendingQuestToast
+	{
+		FText Title;
+		FText Content;
+		float LifeTime = 0.f;
+	};
+	TArray<FPendingQuestToast> PendingQuestToasts;
+	bool bQuestToastWaitingCinematic = false;
 };

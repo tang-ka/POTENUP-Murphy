@@ -7,11 +7,13 @@
 #include "Settings/UIManagerSettings.h"
 #include "UI/Base/CommonPopupWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Manager/DataManager.h"
+#include "Manager/CinematicManagerSubsystem.h"
 #include "UI/LevelEnterToastPopupWidget.h"
 #include "UI/QuestToastPopupWidget.h"
 #include "UI/TransitionWidget.h"
@@ -44,6 +46,16 @@ void UUIManagerSubsystem::Deinitialize()
         BoundGameState->OnScenarioStateChanged.RemoveDynamic(this, &UUIManagerSubsystem::HandleScenarioStateChanged);
         BoundGameState->OnSharedQuestStarted.RemoveDynamic(this, &UUIManagerSubsystem::HandleQuestStarted);
         BoundGameState = nullptr;
+    }
+
+    if (bQuestToastWaitingCinematic)
+    {
+        if (UCinematicManagerSubsystem* CinematicManager = GetLocalCinematicManager())
+        {
+            CinematicManager->OnCompleted.RemoveDynamic(this, &UUIManagerSubsystem::HandleCinematicCompletedForQuestToast);
+        }
+        bQuestToastWaitingCinematic = false;
+        PendingQuestToasts.Reset();
     }
 
     Super::Deinitialize();
@@ -240,7 +252,54 @@ void UUIManagerSubsystem::HandleQuestStarted(FName QuestID, FText QuestTitle, FT
     // QuestTitle이 비어있으면 "돌발 미션" 폴백 텍스트 사용
     const FText DisplayTitle = QuestTitle.IsEmpty() ? FText::FromString(TEXT("돌발 미션")) : QuestTitle;
 
+    // 레벨 진입 시네마틱이 아직 로컬에서 재생 중이면, 검정에서 완전히 밝아진 뒤
+    // (레벨 진입 토스트와 동일한 CinematicManager::OnCompleted 시점) 표시한다.
+    if (UCinematicManagerSubsystem* CinematicManager = GetLocalCinematicManager())
+    {
+        if (CinematicManager->IsPlaying())
+        {
+            FPendingQuestToast Pending;
+            Pending.Title = DisplayTitle;
+            Pending.Content = QuestDescription;
+            Pending.LifeTime = 3.f;
+            PendingQuestToasts.Add(Pending);
+
+            if (!bQuestToastWaitingCinematic)
+            {
+                CinematicManager->OnCompleted.AddUniqueDynamic(this, &UUIManagerSubsystem::HandleCinematicCompletedForQuestToast);
+                bQuestToastWaitingCinematic = true;
+            }
+
+            PRINTLOG_SH(TEXT("[UI] 퀘스트 토스트 보류 — 시네마틱 완료 대기 (Quest=%s)"), *QuestID.ToString());
+            return;
+        }
+    }
+
     ShowQuestToast(DisplayTitle, QuestDescription, 3);
+}
+
+void UUIManagerSubsystem::HandleCinematicCompletedForQuestToast(int32 PlayId)
+{
+    if (UCinematicManagerSubsystem* CinematicManager = GetLocalCinematicManager())
+    {
+        CinematicManager->OnCompleted.RemoveDynamic(this, &UUIManagerSubsystem::HandleCinematicCompletedForQuestToast);
+    }
+    bQuestToastWaitingCinematic = false;
+
+    TArray<FPendingQuestToast> Flush = MoveTemp(PendingQuestToasts);
+    PendingQuestToasts.Reset();
+
+    for (const FPendingQuestToast& Toast : Flush)
+    {
+        ShowQuestToast(Toast.Title, Toast.Content, Toast.LifeTime);
+    }
+}
+
+UCinematicManagerSubsystem* UUIManagerSubsystem::GetLocalCinematicManager() const
+{
+    const ULocalPlayer* LP = GetLocalPlayer();
+    UGameInstance* GameInstance = LP ? LP->GetGameInstance() : nullptr;
+    return GameInstance ? GameInstance->GetSubsystem<UCinematicManagerSubsystem>() : nullptr;
 }
 
 void UUIManagerSubsystem::ReplayActiveQuestStarts(const TArray<FQuestRuntimeData>& ActiveQuests)

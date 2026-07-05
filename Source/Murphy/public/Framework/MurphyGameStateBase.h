@@ -8,6 +8,7 @@
 
 class AMurphyPlayerState;
 class UCinematicSequenceData;
+class APlayerController;
 struct FQuestRuntimeEvent;
 
 /**
@@ -33,6 +34,10 @@ class MURPHY_API AMurphyGameStateBase : public AGameStateBase
 	
 protected:
 	virtual void BeginPlay() override;
+
+	// 인트로 시네마틱 '종료' 후 적용할 입력 모드. 기본은 이동 씬용(GameOnly + 커서 off).
+	// 마우스 UI가 필요한 씬(기내 등)은 파생 GameState에서 override.
+	virtual void RestoreInputModeAfterIntro(APlayerController* LocalPC);
 
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

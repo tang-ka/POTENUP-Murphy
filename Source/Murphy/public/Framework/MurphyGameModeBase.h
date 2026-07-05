@@ -21,6 +21,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Murphy|Game")
 	void TriggerGameOver();
 
+	// 각 머신 로컬 인트로 완료를 PlayerController RPC로 전달받는 서버측 진입점.
+	// 파생 GameMode가 시나리오 시작 시점을 결정한다.
+	virtual void NotifyIntroCinematicFinished();
+
 protected:
 	// GameState 생성 직후 서버에서 ChatViewMode를 GameState로 복사 (클라 복제용)
 	virtual void InitGameState() override;
@@ -33,10 +37,6 @@ protected:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
-
-	// 각 머신 로컬 인트로 완료를 PlayerController RPC로 전달받는 서버측 진입점.
-	// 파생 GameMode가 시나리오 시작 시점을 결정한다.
-	virtual void NotifyIntroCinematicFinished();
 
 private:
 	// Boy 선택 시 스폰할 폰 클래스

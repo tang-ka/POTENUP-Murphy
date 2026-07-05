@@ -12,7 +12,9 @@
 void UWriteArrivalCardWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
+	// 커서/입력모드는 레벨 블루프린트(Airplane)가 위젯 생성 시 전담한다. 여기서 세팅하지 않는다.
+
 	if (btn_Complete)
 	{
 		btn_Complete->OnClicked.AddDynamic(this, &UWriteArrivalCardWidget::OnCompleteClicked);

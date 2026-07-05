@@ -14,5 +14,8 @@ UCLASS()
 class MURPHY_API AAirplaneGameState : public AMurphyGameStateBase
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void RestoreInputModeAfterIntro(APlayerController* LocalPC) override;
 };
 

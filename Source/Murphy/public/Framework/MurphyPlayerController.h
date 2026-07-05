@@ -153,6 +153,9 @@ public:
 	void Server_RequestReposition(const FName& SubLevelName);
 
 	UFUNCTION(Server, Reliable)
+	void Server_NotifyImmigrationLevelReady();
+
+	UFUNCTION(Server, Reliable)
 	void Server_NotifyBaggageClaimLevelReady();
 	
 	UFUNCTION(Server, Reliable)

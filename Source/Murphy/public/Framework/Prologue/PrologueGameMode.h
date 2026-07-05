@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Data/GameDataTypes.h"
 #include "Framework/MurphyGameModeBase.h"
+#include "TimerManager.h"
 #include "PrologueGameMode.generated.h"
 
 class APlayerController;
@@ -19,6 +20,10 @@ public:
 
 	void HandleAINodeReached(FName NodeId);
 
+	UFUNCTION()
+	void HandleSequenceCompleted();
+
+	void NotifyImmigrationLevelReady(APlayerController* ReadyPlayer);
 	void NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer);
 	
 protected:
@@ -33,10 +38,13 @@ private:
 	void OnBaggageClaimLevelShown();
 
 	void StartScenarioIfNeeded(EScenarioType ScenarioType);
+	void StartImmigrationScenarioAfterCinematic();
+	float GetImmigrationScenarioStartDelay() const;
 
-	// 시퀀스(전체 영상) 완료 후 퀘스트 시작 
-	UFUNCTION()
-	void HandleSequenceCompleted();
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Immigration", meta = (AllowPrivateAccess = "true"))
+	bool bRequireImmigrationCinematicBeforeScenario = true;
+
+	FTimerHandle ImmigrationScenarioStartTimerHandle;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Baggage Claim", meta = (AllowPrivateAccess = "true"))
 	FName BaggageCustomsHoldNodeId = TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD");

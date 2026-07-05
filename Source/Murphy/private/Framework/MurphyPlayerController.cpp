@@ -56,6 +56,7 @@
 #include "Manager/ScenarioSubsystem.h"
 #include "Manager/UIManagerSubsystem.h"
 #include "Data/CinematicSequenceData.h"
+#include "Framework/MurphyGameModeBase.h"
 #include "Framework/Airplane/AirplaneGameMode.h"
 #include "Framework/MurphyGameStateBase.h"
 #include "Framework/MurphyPlayerState.h"
@@ -953,6 +954,18 @@ void AMurphyPlayerController::Server_NotifyBaggageClaimLevelReady_Implementation
 	}
 
 	PrologueGameMode->NotifyBaggageClaimLevelReady(this);
+}
+
+void AMurphyPlayerController::Server_NotifyIntroCinematicFinished_Implementation()
+{
+	AMurphyGameModeBase* MurphyGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<AMurphyGameModeBase>() : nullptr;
+	if (!MurphyGameMode)
+	{
+		PRINTLOG_SH(TEXT("Server_NotifyIntroCinematicFinished: GameMode를 찾지 못했습니다."));
+		return;
+	}
+
+	MurphyGameMode->NotifyIntroCinematicFinished();
 }
 
 void AMurphyPlayerController::RequestAirplaneScenarioCompleteTravel()

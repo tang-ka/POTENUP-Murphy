@@ -17,9 +17,7 @@ class MURPHY_API AAirplaneGameMode : public AMurphyGameModeBase
 public:
 	AAirplaneGameMode();
 
-	// 시퀀스(전체 영상) 완료 후 퀘스트 시작 + 기내 NPC 상호작용 박스를 좌우 반전한다.
-	UFUNCTION()
-	void HandleSequenceCompleted();
+	// 기내 NPC 상호작용 박스를 좌우 반전한다.
 	UFUNCTION()
 	void HandleWriteArrivalCard();
 
@@ -30,6 +28,9 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+
+	// 인트로 시네마틱 완료 통보 시 기내 시나리오를 시작한다.
+	virtual void NotifyIntroCinematicFinished() override;
 
 	// 기내 시나리오 완료 후 이동할 LevelStreamingSettings의 레벨 키입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Murphy|Airplane")

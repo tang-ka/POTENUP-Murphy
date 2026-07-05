@@ -160,6 +160,10 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_NotifyBaggageClaimLevelReady();
+
+	// 각 머신의 로컬 인트로 시네마틱 완료를 서버로 통보한다. 서버는 첫 통보에 시나리오를 시작한다.
+	UFUNCTION(Server, Reliable)
+	void Server_NotifyIntroCinematicFinished();
 	
 	UFUNCTION(Server, Reliable)
 	void Server_RequestAirplaneScenarioCompleteTravel();

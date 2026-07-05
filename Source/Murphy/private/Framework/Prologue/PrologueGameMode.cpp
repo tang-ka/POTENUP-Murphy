@@ -51,18 +51,17 @@ void APrologueGameMode::BeginPlay()
 	{
 		BaggageClaimLevel->OnLevelShown.AddDynamic(this, &APrologueGameMode::OnBaggageClaimLevelShown);
 	}
-	
-	// Immigration 진입 시네마틱 완료 시 퀘스트 시작을 연결한다.
-	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	{
-		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &APrologueGameMode::HandleSequenceCompleted);
-	}
+
+	// 인트로 시네마틱 완료 감지·재생은 각 머신 GameState가 로컬로 처리하고,
+	// 완료 통보는 PlayerController RPC → NotifyIntroCinematicFinished로 들어온다.
 }
 
 void APrologueGameMode::OnImmigrationLevelShown()
 {
-	// LevelCinematic이 있으면 HandleSequenceCompleted에서 시작하고,
+	// LevelCinematic이 있으면 완료 통보(NotifyIntroCinematicFinished)에서 시작하고,
 	// 없으면 기본적으로 즉시 시작하지 않는다. Prologue Immigration은 진입 시네마틱이 퀘스트 시작 게이트다.
+	const APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	const UCinematicSequenceData* LevelCinematic = PrologueGameState ? PrologueGameState->GetLevelCinematic() : nullptr;
 	if (!LevelCinematic)
 	{
 		if (bRequireImmigrationCinematicBeforeScenario)
@@ -144,6 +143,8 @@ void APrologueGameMode::NotifyImmigrationLevelReady(APlayerController* ReadyPlay
 		return;
 	}
 
+	const APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	const UCinematicSequenceData* LevelCinematic = PrologueGameState ? PrologueGameState->GetLevelCinematic() : nullptr;
 	if (LevelCinematic || bRequireImmigrationCinematicBeforeScenario)
 	{
 		PRINTLOG_JW(TEXT("[Prologue] Immigration 준비 완료 — 시나리오 시작은 진입 시네마틱 완료를 기다림 (ReadyPlayer=%s)"),
@@ -189,13 +190,13 @@ void APrologueGameMode::HandleAINodeReached(FName NodeId)
 	PrologueGameState->SetBaggageCustomsHoldActorsActive(true);
 }
 
-void APrologueGameMode::HandleSequenceCompleted()
+void APrologueGameMode::NotifyIntroCinematicFinished()
 {
-	// Prologue의 서버 전역 LevelCinematic은 Immigration 진입 시퀀스만 담당한다.
+	// Prologue의 LevelCinematic은 Immigration 진입 시퀀스만 담당한다.
 	// BaggageClaim 전환 시네마틱은 PlayerController의 로컬 CinematicManager 흐름에서 처리된다.
-	if (!LevelCinematic)
+	// 첫 클라 완료 통보 시 1회만 시나리오 시작을 예약한다.
+	if (bImmigrationScenarioStartRequested)
 	{
-		PRINTLOG_SH(TEXT("[Prologue] 시네마틱 완료 이벤트 수신 — LevelCinematic 없음, Immigration 시나리오 시작 보류"));
 		return;
 	}
 
@@ -205,25 +206,34 @@ void APrologueGameMode::HandleSequenceCompleted()
 		return;
 	}
 
-	const EScenarioType Current = PrologueGameState->GetCurrentScenario();
-
-	if (Current == EScenarioType::None)
+	const UCinematicSequenceData* LevelCinematic = PrologueGameState->GetLevelCinematic();
+	if (!LevelCinematic)
 	{
-		const float StartDelay = GetImmigrationScenarioStartDelay();
-		if (StartDelay > KINDA_SMALL_NUMBER)
-		{
-			GetWorldTimerManager().SetTimer(
-				ImmigrationScenarioStartTimerHandle,
-				this,
-				&APrologueGameMode::StartImmigrationScenarioAfterCinematic,
-				StartDelay,
-				false);
-			PRINTLOG_JW(TEXT("[Prologue] 시네마틱 완료 — 화면 복귀 후 Immigration 시나리오 시작 대기 (Delay=%.2f)"), StartDelay);
-			return;
-		}
-
-		StartImmigrationScenarioAfterCinematic();
+		PRINTLOG_SH(TEXT("[Prologue] 인트로 완료 통보 — LevelCinematic 없음, Immigration 시나리오 시작 보류"));
+		return;
 	}
+
+	if (PrologueGameState->GetCurrentScenario() != EScenarioType::None)
+	{
+		return;
+	}
+
+	bImmigrationScenarioStartRequested = true;
+
+	const float StartDelay = GetImmigrationScenarioStartDelay();
+	if (StartDelay > KINDA_SMALL_NUMBER)
+	{
+		GetWorldTimerManager().SetTimer(
+			ImmigrationScenarioStartTimerHandle,
+			this,
+			&APrologueGameMode::StartImmigrationScenarioAfterCinematic,
+			StartDelay,
+			false);
+		PRINTLOG_JW(TEXT("[Prologue] 인트로 완료 — 화면 복귀 후 Immigration 시나리오 시작 대기 (Delay=%.2f)"), StartDelay);
+		return;
+	}
+
+	StartImmigrationScenarioAfterCinematic();
 }
 
 void APrologueGameMode::StartImmigrationScenarioAfterCinematic()
@@ -240,6 +250,8 @@ void APrologueGameMode::StartImmigrationScenarioAfterCinematic()
 
 float APrologueGameMode::GetImmigrationScenarioStartDelay() const
 {
+	const APrologueGameState* PrologueGameState = GetGameState<APrologueGameState>();
+	const UCinematicSequenceData* LevelCinematic = PrologueGameState ? PrologueGameState->GetLevelCinematic() : nullptr;
 	if (!LevelCinematic || LevelCinematic->Entries.IsEmpty())
 	{
 		return 0.f;

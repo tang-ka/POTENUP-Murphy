@@ -1,6 +1,7 @@
 #include "Framework/MurphyGameStateBase.h"
 
 #include "Actors/Characters/MurphyPlayer.h"
+#include "Framework/MurphyPlayerController.h"
 #include "Framework/MurphyPlayerState.h"
 #include "Manager/DataManager.h"
 #include "Manager/CinematicSequenceSubsystem.h"
@@ -65,8 +66,24 @@ void AMurphyGameStateBase::TryPlayLevelIntro()
 	}
 
 	bLevelIntroPlayed = true;
+	SequenceSubsystem->OnSequenceCompleted.AddUniqueDynamic(this, &AMurphyGameStateBase::HandleLevelIntroFinished);
 	SequenceSubsystem->StartLevelSequenceLocal(LevelCinematic);
 	PRINTLOG_SH(TEXT("[GameState] 레벨 인트로 시네마틱 로컬 재생 시작"));
+}
+
+void AMurphyGameStateBase::HandleLevelIntroFinished()
+{
+	// 재생·완료 감지는 각 머신 로컬. 서버 권위 StartScenario만 통보로 트리거한다.
+	UWorld* World = GetWorld();
+	APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+	AMurphyPlayerController* MurphyPC = Cast<AMurphyPlayerController>(PC);
+	if (!MurphyPC)
+	{
+		return;
+	}
+
+	MurphyPC->Server_NotifyIntroCinematicFinished();
+	PRINTLOG_SH(TEXT("[GameState] 로컬 인트로 완료 — 서버 통보"));
 }
 
 void AMurphyGameStateBase::OnRep_ChatViewMode()

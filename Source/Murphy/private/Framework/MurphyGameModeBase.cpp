@@ -113,3 +113,8 @@ void AMurphyGameModeBase::HandleStartingNewPlayer_Implementation(APlayerControll
 
 	// 레벨 인트로 시네마틱은 각 머신의 GameState(TryPlayLevelIntro)가 로컬 재생한다.
 }
+
+void AMurphyGameModeBase::NotifyIntroCinematicFinished()
+{
+	// 베이스 기본 동작 없음. 파생 GameMode가 시나리오 시작을 구현한다.
+}

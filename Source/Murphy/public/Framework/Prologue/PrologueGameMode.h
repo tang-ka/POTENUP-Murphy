@@ -20,15 +20,15 @@ public:
 
 	void HandleAINodeReached(FName NodeId);
 
-	UFUNCTION()
-	void HandleSequenceCompleted();
-
 	void NotifyImmigrationLevelReady(APlayerController* ReadyPlayer);
 	void NotifyBaggageClaimLevelReady(APlayerController* ReadyPlayer);
 	
 protected:
 	virtual void BeginPlay() override;
-	
+
+	// 인트로 시네마틱 완료 통보 시 Immigration 시나리오 시작을 결정한다.
+	virtual void NotifyIntroCinematicFinished() override;
+
 private:
 	// 서버에서 Immigration 레벨이 보이면 모든 PC에 Pawn 스폰
 	UFUNCTION()
@@ -45,6 +45,9 @@ private:
 	bool bRequireImmigrationCinematicBeforeScenario = true;
 
 	FTimerHandle ImmigrationScenarioStartTimerHandle;
+
+	// 첫 클라 완료 통보로만 1회 시나리오 시작하도록 막는 가드
+	bool bImmigrationScenarioStartRequested = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Murphy|Baggage Claim", meta = (AllowPrivateAccess = "true"))
 	FName BaggageCustomsHoldNodeId = TEXT("BAG_004_STAFF_REDIRECT_TO_CUSTOMS_HOLD");

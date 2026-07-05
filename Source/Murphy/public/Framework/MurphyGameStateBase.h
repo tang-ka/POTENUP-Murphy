@@ -167,6 +167,10 @@ private:
 	void TryPlayLevelIntro();
 	bool bLevelIntroPlayed = false;
 
+	// 로컬 인트로 재생 완료 시(각 머신) 서버에 통보하기 위한 핸들러
+	UFUNCTION()
+	void HandleLevelIntroFinished();
+
 	UFUNCTION()
 	void OnRep_GameResultState();
 };

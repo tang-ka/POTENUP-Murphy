@@ -31,12 +31,6 @@ AAirplaneGameMode::AAirplaneGameMode()
 void AAirplaneGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	// 시퀀스 완료 시 퀘스트 시작 + NPC 반전 후처리를 연결한다.
-	if (UCinematicSequenceSubsystem* Seq = GetGameInstance()->GetSubsystem<UCinematicSequenceSubsystem>())
-	{
-		Seq->OnSequenceCompleted.AddUniqueDynamic(this, &AAirplaneGameMode::HandleSequenceCompleted);
-	}
 }
 
 void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -60,27 +54,25 @@ void AAirplaneGameMode::HandleStartingNewPlayer_Implementation(APlayerController
 		PRINTLOG_SH(TEXT("HandleStartingNewPlayer: MurphyPlayer 캐스팅 실패 (Pawn 없음)"));
 	}
 
-	// 시네마틱 시퀀스 시작은 베이스(AMurphyGameModeBase)가 LevelCinematic DA로 처리한다.
-	
+	// 시네마틱 재생은 각 머신 GameState(TryPlayLevelIntro)가 로컬로 처리한다.
+
 	// 시네마틱이 없으면 즉시 시나리오를 시작한다 (fallback).
-	// LevelCinematic이 있는 경우는 HandleSequenceCompleted에서 StartScenario가 호출된다.
-	if (!LevelCinematic)
+	// 시네마틱이 있으면 각 클라의 완료 통보(NotifyIntroCinematicFinished)에서 시작한다.
+	AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>();
+	if (AirplaneGameState && !AirplaneGameState->GetLevelCinematic())
 	{
-		if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
-		{
-			AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
-			PRINTLOG_SH(TEXT("[Airplane] LevelCinematic 없음 — 시나리오 즉시 시작"));
-		}
+		AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
+		PRINTLOG_SH(TEXT("[Airplane] LevelCinematic 없음 — 시나리오 즉시 시작"));
 	}
 }
 
-void AAirplaneGameMode::HandleSequenceCompleted()
+void AAirplaneGameMode::NotifyIntroCinematicFinished()
 {
-	// 1. 시네마틱이 끝난 시점에 시나리오(퀘스트)를 시작한다.
+	// 첫 클라 완료 통보 시 1회 시작. StartScenario가 중복 호출을 가드한다.
 	if (AAirplaneGameState* AirplaneGameState = GetGameState<AAirplaneGameState>())
 	{
 		AirplaneGameState->StartScenario(EScenarioType::Tutorial_Airplane);
-		PRINTLOG_SH(TEXT("[Airplane] 시네마틱 완료 — 시나리오 시작"));
+		PRINTLOG_SH(TEXT("[Airplane] 인트로 완료 통보 — 시나리오 시작"));
 	}
 }
 

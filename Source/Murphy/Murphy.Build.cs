@@ -14,16 +14,29 @@ public class Murphy : ModuleRules
 			"CoreUObject", 
 			"Engine", 
 			"InputCore",
-			"EnhancedInput"
+			"EnhancedInput",
+			"DeveloperSettings",
+			"AudioCapture",
+			"AudioCaptureCore",
+			"AudioMixer",
+			"SignalProcessing",
+			"HTTP",
+			"Json",
+			"JsonUtilities",
+			"UMG",
+			"MediaAssets",
+			"WebSockets",
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
-
 		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
+		// Online features
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+		});
 
 		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
 	}

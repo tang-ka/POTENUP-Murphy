@@ -76,6 +76,35 @@ DerivedDataCache/*
 
 # JetBrains IDE (Rider)
 .idea/
+Plugins/Developer/RiderLink/
 
 # Rider
 *.DotSettings.user
+
+# Meta Human
+Content/MetaHumans/Kristofer/SourceAssets/Kristofer.uasset
+Content/MetaHumans/Amelia/SourceAssets/Amelia.uasset
+Content/MetaHumans/Gavin/SourceAssets/Gavin.uasset
+Content/MetaHumans/Vincent/SourceAssets/Vincent.uasset
+Content/MetaHumans/Bernice/SourceAssets/Bernice.uasset
+Content/MetaHumans/Cooper/SourceAssets/Cooper.uasset
+Content/MetaHumans/Kellan/SourceAssets/Kellan.uasset
+Content/MetaHumans/Natalia/SourceAssets/Natalia.uasset
+Content/MetaHumans/Skye/SourceAssets/Skye.uasset
+Content/MetaHumans/Taro/SourceAssets/Taro.uasset
+Content/MetaHumans/Vivian/SourceAssets/Vivian.uasset
+Content/MetaHumans/karina/Face/SKM_MH_karina_FaceMesh.uasset
+Content/MetaHumans/NewMetaHumanCharacter/Face/SKM_NewMetaHumanCharacter_FaceMesh.uasset
+Content/Won/MH_Character/Karina/MH_karina.uasset
+Content/Won/MH_Character/Karina/karina/Face/SKM_MH_karina_FaceMesh.uasset
+
+
+
+# Large Assets
+Content/CitySampleCrowd/Character/Male/NormalWeight/Textures/blazer/T_m_nrw_blazer_BN.uasset
+Content/CitySampleCrowd/Character/Male/NormalWeight/Textures/slacks/T_m_nrw_slacks_BN.uasset
+Content/CitySampleCrowd/Character/Shared/Materials/Clothing/Textures/leather/leather-sjqecg1c_Normal_VT.uasset
+
+# Personal Agent
+PersonalAgent/*
+AGENTS.md
